@@ -70,7 +70,7 @@ model ProviderProfile {
 
   user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   category ServiceCategory @relation(fields: [categoryId], references: [id])
-  bookings Booking[]
+  bookings Booking[]      @relation("BookingProviderProfile")
 
   @@index([userId])
   @@index([categoryId])
@@ -90,8 +90,8 @@ model Booking {
   updatedAt   DateTime @updatedAt
 
   client   User           @relation("ClientBookings", fields: [clientId], references: [id])
-  provider User           @relation("ProviderBookings", fields: [providerId], references: [id])
-  providerProfile ProviderProfile @relation(fields: [providerId], references: [userId])
+  provider User           @relation("ProviderBookings", fields: [providerId], references: [id], map: "Booking_provider_user_fkey")
+  providerProfile ProviderProfile @relation("BookingProviderProfile", fields: [providerId], references: [userId], map: "Booking_provider_profile_fkey")
   review   Review?
 
   @@index([clientId])
