@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  firebaseUid   String?  @unique
+  email         String   @unique
+  name          String
+  password      String?
+  photoUrl      String?
+  role          String   @default("client") // client, provider, admin
+  phone         String?
+  location      String?
+  latitude      Float?
+  longitude     Float?
+  isVerified    Boolean  @default(false)
+  isPro         Boolean  @default(false)
+  proExpiry     DateTime?
+  isBlocked     Boolean  @default(false)
+  fcmToken      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  providerProfile ProviderProfile?
+  bookingsAsClient Booking[] @relation("ClientBookings")
+  bookingsAsProvider Booking[] @relation("ProviderBookings")
+  reviewsGiven Review[] @relation("ReviewAuthor")
+  reviewsReceived Review[] @relation("ReviewTarget")
+  sentMessages ChatMessage[] @relation("MessageSender")
+  verifications VerificationDoc[]
+  subscriptions Subscription[]
+}
+
+model ServiceCategory {
+  id          String @id @default(cuid())
+  name        String
+  icon        String?
+  description String?
+  order       Int    @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  providers ProviderProfile[]
+}
+
+model ProviderProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  categoryId    String
+  experience    String?
+  skills        String?
+  description   String?
+  hourlyRate    Float?
+  availability  String   @default("available") // available, busy, offline
+  rating        Float    @default(0)
+  totalReviews  Int      @default(0)
+  totalBookings Int      @default(0)
+  portfolioUrls String?  // JSON array of image URLs
+  isFeatured    Boolean  @default(false)
+  isVerified    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category ServiceCategory @relation(fields: [categoryId], references: [id])
+  bookings Booking[]
+
+  @@index([userId])
+  @@index([categoryId])
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  clientId    String
+  providerId  String
+  service     String
+  description String?
+  date        DateTime
+  time        String?
+  status      String   @default("pending") // pending, accepted, in_progress, completed, cancelled, disputed
+  address     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  client   User           @relation("ClientBookings", fields: [clientId], references: [id])
+  provider User           @relation("ProviderBookings", fields: [providerId], references: [id])
+  providerProfile ProviderProfile @relation(fields: [providerId], references: [userId])
+  review   Review?
+
+  @@index([clientId])
+  @@index([providerId])
+  @@index([status])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  authorId   String
+  targetId   String
+  rating     Int
+  comment    String?
+  photoUrls  String?  // JSON array
+  createdAt  DateTime @default(now())
+
+  author User    @relation("ReviewAuthor", fields: [authorId], references: [id])
+  target User    @relation("ReviewTarget", fields: [targetId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([targetId])
+}
+
+model ChatConversation {
+  id           String   @id @default(cuid())
+  participantA String
+  participantB String
+  bookingId    String?
+  lastMessage  String?
+  lastMessageAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@index([participantA])
+  @@index([participantB])
+}
+
+model ChatMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  type           String   @default("text") // text, image, voice, location
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User             @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+model VerificationDoc {
+  id         String   @id @default(cuid())
+  userId     String
+  docType    String   // aadhaar, selfie, address_proof
+  docUrl     String
+  status     String   @default("pending") // pending, verified, rejected
+  reviewedBy String?
+  reviewNote String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Subscription {
+  id              String   @id @default(cuid())
+  userId          String
+  plan            String   @default("pro")
+  razorpayOrderId String?
+  razorpayPaymentId String?
+  amount          Float
+  currency        String   @default("INR")
+  status          String   @default("active") // active, expired, cancelled
+  startDate       DateTime @default(now())
+  endDate         DateTime
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String   // booking, chat, review, system, pro
+  isRead    Boolean  @default(false)
+  relatedId String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}

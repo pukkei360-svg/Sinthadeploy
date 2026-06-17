@@ -1,0 +1,414 @@
+'use client'
+
+import { useState } from 'react'
+import { useAppStore } from '@/lib/store'
+import { apiFetch } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth'
+import { auth } from '@/lib/firebase'
+
+
+export default function AuthScreen() {
+  const { navigate, setUser, viewParams } = useAppStore()
+  const { toast } = useToast()
+  const [tab, setTab] = useState<'login' | 'register'>('login')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [firebaseError, setFirebaseError] = useState<string | null>(null)
+
+  // Login form
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+
+  // Register form
+  const [regName, setRegName] = useState('')
+  const [regEmail, setRegEmail] = useState('')
+  const [regPassword, setRegPassword] = useState('')
+  const [regConfirm, setRegConfirm] = useState('')
+
+  const isAdmin = viewParams?.role === 'admin'
+  const [adminId, setAdminId] = useState('')
+
+  // Convert admin ID to Firebase email
+  const getAdminEmail = (id: string) => `${id.toLowerCase().trim()}@sintha.app`
+
+  // Sync Firebase user to our backend database
+  const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string) => {
+    try {
+      const data = await apiFetch('/auth/sync', {
+        method: 'POST',
+        body: JSON.stringify({ firebaseUid, email, name, photoUrl }),
+      })
+      return data
+    } catch (err) {
+      console.error('Backend sync error:', err)
+      throw err
+    }
+  }
+
+  const handleEmailLogin = async () => {
+    // For admin login, use admin ID mapped to email
+    const emailToUse = isAdmin ? getAdminEmail(adminId) : loginEmail
+    const passwordToUse = loginPassword
+
+    if ((!isAdmin && !loginEmail) || (isAdmin && !adminId) || !passwordToUse) {
+      toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' })
+      return
+    }
+    setLoading(true)
+    setFirebaseError(null)
+    try {
+      // Authenticate with Firebase
+      const credential = await signInWithEmailAndPassword(auth, emailToUse, passwordToUse)
+      const firebaseUser = credential.user
+
+      // Sync to backend
+      const data = await syncUserToBackend(
+        firebaseUser.uid,
+        firebaseUser.email || emailToUse,
+        firebaseUser.displayName || (isAdmin ? adminId : emailToUse.split('@')[0]),
+        firebaseUser.photoURL || undefined
+      )
+
+      setUser(data.user, firebaseUser.uid)
+
+      if (data.user.role === 'admin') {
+        navigate('admin-dashboard')
+      } else if (data.user.role === 'provider') {
+        navigate('provider-dashboard')
+      } else if (data.user.role === 'client') {
+        navigate('home')
+      } else {
+        navigate('role-select')
+      }
+
+      toast({ title: 'Welcome back!', description: `Signed in as ${data.user.name}` })
+    } catch (err: unknown) {
+      const message = (err as Error).message || 'Login failed'
+      // Translate Firebase errors to user-friendly messages
+      if (message.includes('auth/invalid-credential') || message.includes('auth/wrong-password')) {
+        setFirebaseError('Invalid email or password. Please check your credentials.')
+      } else if (message.includes('auth/user-not-found')) {
+        setFirebaseError('No account found with this email. Please register first.')
+      } else if (message.includes('auth/too-many-requests')) {
+        setFirebaseError('Too many failed attempts. Please try again later.')
+      } else if (message.includes('auth/invalid-email')) {
+        setFirebaseError('Please enter a valid email address.')
+      } else if (message.includes('auth/network-request-failed')) {
+        setFirebaseError('Network error. Please check your internet connection.')
+      } else {
+        setFirebaseError(message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEmailRegister = async () => {
+    if (!regName || !regEmail || !regPassword || !regConfirm) {
+      toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' })
+      return
+    }
+    if (regPassword.length < 6) {
+      toast({ title: 'Error', description: 'Password must be at least 6 characters', variant: 'destructive' })
+      return
+    }
+    if (regPassword !== regConfirm) {
+      toast({ title: 'Error', description: 'Passwords do not match', variant: 'destructive' })
+      return
+    }
+    setLoading(true)
+    setFirebaseError(null)
+    try {
+      // Create Firebase account
+      const credential = await createUserWithEmailAndPassword(auth, regEmail, regPassword)
+
+      // Update display name in Firebase
+      await updateProfile(credential.user, { displayName: regName })
+
+      // Sync to backend
+      const data = await syncUserToBackend(
+        credential.user.uid,
+        regEmail,
+        regName,
+        credential.user.photoURL || undefined
+      )
+
+      setUser(data.user, credential.user.uid)
+      navigate('role-select')
+
+      toast({ title: 'Account Created!', description: 'Welcome to SINTHA' })
+    } catch (err: unknown) {
+      const message = (err as Error).message || 'Registration failed'
+      if (message.includes('auth/email-already-in-use')) {
+        setFirebaseError('This email is already registered. Please login instead.')
+      } else if (message.includes('auth/weak-password')) {
+        setFirebaseError('Password is too weak. Use at least 6 characters.')
+      } else if (message.includes('auth/invalid-email')) {
+        setFirebaseError('Please enter a valid email address.')
+      } else if (message.includes('auth/network-request-failed')) {
+        setFirebaseError('Network error. Please check your internet connection.')
+      } else {
+        setFirebaseError(message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
+      {/* Header */}
+      <div className="p-4">
+        <button onClick={() => navigate('landing')} className="text-gray-600 hover:text-gray-800">
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+      </div>
+
+      <div className="flex-1 flex items-start justify-center px-4 pt-4 pb-8">
+        <Card className="w-full max-w-md shadow-xl border-0">
+          <CardHeader className="text-center pb-2">
+            <h1 className="text-3xl font-extrabold sintha-gradient-text">SINTHA</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {isAdmin ? 'Admin Login' : 'Your trusted service marketplace'}
+            </p>
+          </CardHeader>
+          <CardContent>
+            {/* Firebase Error Banner */}
+            {firebaseError && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-red-700">{firebaseError}</p>
+                </div>
+                <button onClick={() => setFirebaseError(null)} className="text-red-400 hover:text-red-600 text-sm">&times;</button>
+              </div>
+            )}
+
+            {/* Tab Toggle */}
+            {!isAdmin && (
+              <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+                <button
+                  className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${
+                    tab === 'login' ? 'bg-white shadow text-blue-600' : 'text-gray-500'
+                  }`}
+                  onClick={() => { setTab('login'); setFirebaseError(null) }}
+                >
+                  Login
+                </button>
+                <button
+                  className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${
+                    tab === 'register' ? 'bg-white shadow text-blue-600' : 'text-gray-500'
+                  }`}
+                  onClick={() => { setTab('register'); setFirebaseError(null) }}
+                >
+                  Register
+                </button>
+              </div>
+            )}
+
+            {tab === 'login' || isAdmin ? (
+              <div className="space-y-4">
+                {isAdmin && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 text-center">
+                    Admin Access Only
+                  </div>
+                )}
+                {isAdmin ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="admin-id">Admin ID</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="admin-id"
+                        type="text"
+                        placeholder="Enter Admin ID"
+                        className="pl-10"
+                        value={adminId}
+                        onChange={(e) => setAdminId(e.target.value)}
+                        autoComplete="username"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="you@example.com"
+                        className="pl-10"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        autoComplete="email"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="login-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Enter password"
+                      className="pl-10 pr-10"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleEmailLogin()}
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-3 text-gray-400"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                {/* Forgot Password Link — not shown for admin */}
+                {!isAdmin && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => navigate('forgot-password')}
+                      className="text-sm text-blue-600 font-medium hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+                <Button
+                  className="w-full sintha-gradient text-white font-semibold py-6"
+                  onClick={handleEmailLogin}
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </Button>
+                <p className="text-xs text-center text-gray-400 mt-4">
+                  New here?{' '}
+                  <button
+                    onClick={() => setTab('register')}
+                    className="text-blue-600 font-semibold hover:underline"
+                  >
+                    Register to create your account
+                  </button>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reg-name">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="reg-name"
+                      placeholder="Your full name"
+                      className="pl-10"
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="reg-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      className="pl-10"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="reg-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Min. 6 characters"
+                      className="pl-10"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-confirm">Confirm Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="reg-confirm"
+                      type="password"
+                      placeholder="Confirm password"
+                      className="pl-10"
+                      value={regConfirm}
+                      onChange={(e) => setRegConfirm(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleEmailRegister()}
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </div>
+                <Button
+                  className="w-full sintha-gradient text-white font-semibold py-6"
+                  onClick={handleEmailRegister}
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  {loading ? 'Creating Account...' : 'Create Account'}
+                </Button>
+
+                <p className="text-xs text-center text-gray-400 mt-2">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => setTab('login')}
+                    className="text-blue-600 font-semibold hover:underline"
+                  >
+                    Sign In
+                  </button>
+                </p>
+              </div>
+            )}
+
+            {/* WhatsApp Support */}
+            {!isAdmin && (
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => {
+                    const msg = encodeURIComponent('Hi SINTHA Support, I need help with my account.')
+                    window.open(`https://wa.me/917005151875?text=${msg}`, '_blank')
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-green-600 hover:text-green-700 transition-colors"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  <span className="text-sm font-semibold">Need help? Chat with us on WhatsApp</span>
+                </button>
+                <p className="text-[11px] text-center text-gray-400 mt-1">7005151875</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
