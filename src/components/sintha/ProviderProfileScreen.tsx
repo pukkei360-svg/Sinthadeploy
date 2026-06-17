@@ -41,14 +41,22 @@ export default function ProviderProfileScreen() {
   }, [providerId, providers])
 
   // Check if user has booked this provider
+  // IMPORTANT: Use provider.userId (User ID) — NOT providerId (ProviderProfile ID).
+  // Booking.providerId references User.id in Prisma schema, so the bookings API
+  // expects the provider's User ID, not their ProviderProfile ID.
   useEffect(() => {
     const checkBooking = async () => {
-      if (!user || !providerId) {
+      if (!user || !provider) {
+        setCheckingBooking(false)
+        return
+      }
+      const providerUserId = provider.userId
+      if (!providerUserId) {
         setCheckingBooking(false)
         return
       }
       try {
-        const data = await apiFetch(`/bookings?clientId=${user.id}&providerId=${providerId}`)
+        const data = await apiFetch(`/bookings?clientId=${user.id}&providerId=${providerUserId}`)
         const bookings = data.bookings || []
         // Has booking if any booking exists (any status except 'cancelled')
         const activeBooking = bookings.find((b: { status: string }) => b.status !== 'cancelled')
@@ -60,7 +68,7 @@ export default function ProviderProfileScreen() {
       }
     }
     checkBooking()
-  }, [user, providerId])
+  }, [user, provider])
 
   if (loading) {
     return (
