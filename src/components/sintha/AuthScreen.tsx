@@ -62,31 +62,29 @@ export default function AuthScreen() {
   // ─────────────────────────────────────────────────────────────
   // Detect if we're running inside an Android WebView APK
   // ─────────────────────────────────────────────────────────────
-  // WebView can't reliably do Firebase signInWithPopup (popup gets blocked
-  // or fails silently). On WebView we use signInWithRedirect instead, which
-  // opens the Google sign-in page in a full browser tab, then redirects
-  // back to the app with the auth result.
+  // WebView can't reliably do Firebase Google Sign-In because the OAuth
+  // redirect opens in the system browser (Chrome) and never returns to
+  // the APK. We hide the Google button in WebView and show email/password.
   //
-  // IMPORTANT: We do NOT call getRedirectResult() here. After a redirect,
-  // Firebase automatically fires onAuthStateChanged in page.tsx, which
-  // handles syncing to the backend and routing based on role. Calling
-  // getRedirectResult() in addition to onAuthStateChanged causes a race
-  // condition where the user might be routed twice or the redirect result
-  // might not fire reliably in WebView.
-  const isWebView = typeof window !== 'undefined' && (
+  // Detection logic — must be specific to avoid hiding Google on regular
+  // mobile browsers (Chrome, Firefox, Samsung Internet):
+  //   - Android + "wv" token in user agent → modern Android System WebView
+  //   - Android + "WebView" token → some wrapper-specific WebViews
+  //   - iOS + window.navigator.standalone === true → "Add to Home Screen"
+  //
+  // We do NOT use window.opener as a signal because it's null in regular
+  // browser tabs too, which would incorrectly hide Google on Android Chrome.
+  const isAndroidWebView = typeof window !== 'undefined' && (
     /Android/i.test(navigator.userAgent) && (
-      /wv/i.test(navigator.userAgent) ||  // Android System WebView
-      /WebView/i.test(navigator.userAgent) ||
-      window.matchMedia('(display-mode: standalone)').matches ||  // PWA/APK mode
-      !(window.opener && window.opener !== window)  // no popup support
+      /\bwv\b/i.test(navigator.userAgent) ||  // Modern Android System WebView
+      /WebView/i.test(navigator.userAgent)    // Some wrapper WebViews
     )
   )
 
-  // Also treat iOS Safari "Add to Home Screen" as WebView for the same reason
   const isIOSStandalone = typeof window !== 'undefined' &&
     window.navigator.standalone === true
 
-  const useRedirect = isWebView || isIOSStandalone
+  const useRedirect = isAndroidWebView || isIOSStandalone
 
   // Sync Firebase user to our backend database
   const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string) => {
