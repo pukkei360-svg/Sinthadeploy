@@ -14,6 +14,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  signInWithPopup,
+  GoogleAuthProvider,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 
@@ -201,6 +203,75 @@ export default function AuthScreen() {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Google Sign-In
+  // ─────────────────────────────────────────────────────────────
+  // Uses Firebase signInWithPopup. On mobile/APK, the popup may fall
+  // back to a redirect — but signInWithPopup handles this transparently
+  // in modern firebase/auth (v9+).
+  //
+  // After Google auth, we sync the user to our backend via /api/auth/google
+  // (which creates or updates the User row in Postgres).
+  const handleGoogleSignIn = async () => {
+    setLoading(true)
+    setFirebaseError(null)
+    try {
+      const provider = new GoogleAuthProvider()
+      // Always show account picker, even if user is already signed in to
+      // one Google account in this browser. This is important for shared
+      // devices and APK WebViews.
+      provider.setCustomParameters({ prompt: 'select_account' })
+
+      const credential = await signInWithPopup(auth, provider)
+      const firebaseUser = credential.user
+
+      // Sync to our backend
+      const data = await apiFetch('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          photoUrl: firebaseUser.photoURL || undefined,
+        }),
+      })
+
+      setUser(data.user, firebaseUser.uid)
+
+      // Route based on role (same logic as email login)
+      if (data.user.role === 'admin') {
+        navigate('admin-dashboard')
+      } else if (data.user.role === 'provider') {
+        navigate('provider-dashboard')
+      } else if (data.user.role === 'client') {
+        navigate('home')
+      } else {
+        // New user (no role set yet) → role selection screen
+        navigate('role-select')
+      }
+
+      toast({
+        title: data.user.role ? `Welcome back, ${data.user.name}!` : 'Account Created!',
+        description: data.user.role ? 'Signed in with Google' : 'Welcome to SINTHA',
+      })
+    } catch (err: unknown) {
+      const message = (err as Error).message || 'Google sign-in failed'
+      if (message.includes('auth/popup-closed-by-user')) {
+        setFirebaseError('Sign-in cancelled. Tap "Continue with Google" to try again.')
+      } else if (message.includes('auth/popup-blocked')) {
+        setFirebaseError('Pop-up was blocked by your browser. Please allow pop-ups for this site.')
+      } else if (message.includes('auth/cancelled-popup-request')) {
+        // User opened a second popup — ignore silently
+      } else if (message.includes('auth/network-request-failed')) {
+        setFirebaseError('Network error. Please check your internet connection.')
+      } else {
+        setFirebaseError(message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
       {/* Header */}
@@ -228,6 +299,39 @@ export default function AuthScreen() {
                 </div>
                 <button onClick={() => setFirebaseError(null)} className="text-red-400 hover:text-red-600 text-sm">&times;</button>
               </div>
+            )}
+
+            {/* Google Sign-In button — not shown for admin login */}
+            {!isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed mb-4"
+                >
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+                  ) : (
+                    /* Official Google "G" logo (multi-color) — inline SVG so it
+                       works in APK WebView without external image fetch */
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                  )}
+                  <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
+                </button>
+
+                {/* Divider between Google and email/password */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">or</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+              </>
             )}
 
             {/* Tab Toggle */}
