@@ -28,8 +28,25 @@ export default function ChatRoomScreen() {
       if (!user) return
       setLoading(true)
 
-      // SECURITY CHECK: Verify booking exists before opening chat
-      if (providerId && providerId !== user.id) {
+      // ──────────────────────────────────────────────────────────────
+      // BOOKING-LOCK POLICY
+      // ──────────────────────────────────────────────────────────────
+      // - Providers open chat from their inbox → always allow (no lock)
+      //   They are the service provider, clients booked THEM.
+      // - Admins → always allow
+      // - Clients opening an EXISTING conversation (from chat-list) → allow
+      //   (the conversation only exists because a booking was made)
+      // - Clients starting a NEW chat with a provider → must have a booking
+      // ──────────────────────────────────────────────────────────────
+      const isProvider = user.role === 'provider'
+      const isAdmin = user.role === 'admin'
+      const openingFromInbox = !!existingConvId
+
+      if (isProvider || isAdmin || openingFromInbox) {
+        // No booking check needed
+        setBookingVerified(true)
+      } else if (providerId && providerId !== user.id) {
+        // Client starting a NEW chat — verify booking exists
         try {
           const bookingData = await apiFetch(`/bookings?clientId=${user.id}&providerId=${providerId}`)
           const bookings = bookingData.bookings || []
@@ -41,19 +58,21 @@ export default function ChatRoomScreen() {
           }
           setBookingVerified(true)
         } catch {
-          // If we can't verify, allow only if there's an existing conversation (e.g. from chat-list)
-          if (!existingConvId) {
-            setBookingVerified(false)
-            setLoading(false)
-            return
-          }
-          setBookingVerified(true)
+          // API failed — can't verify, so lock to be safe
+          setBookingVerified(false)
+          setLoading(false)
+          return
         }
       } else {
+        // No providerId specified (shouldn't happen, but default to allow)
         setBookingVerified(true)
       }
 
+      // ──────────────────────────────────────────────────────────────
+      // LOAD OR CREATE CONVERSATION
+      // ──────────────────────────────────────────────────────────────
       if (existingConvId) {
+        // Opening from chat-list inbox → just load messages
         setConversationId(existingConvId)
         try {
           const data = await apiFetch(`/chat/conversations/${existingConvId}/messages`)
@@ -62,6 +81,7 @@ export default function ChatRoomScreen() {
           setMessages([])
         }
       } else if (providerId && providerId !== user.id) {
+        // Starting a new chat with a provider → create/find conversation
         try {
           const convData = await apiFetch('/chat/conversations', {
             method: 'POST',
