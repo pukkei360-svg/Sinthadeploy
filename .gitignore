@@ -30,25 +30,44 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (NEVER commit real secrets — only .env.example is committed)
+.env
+.env.local
+.env.production
+.env.development
 
 # vercel
 .vercel
 
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-local-*
-.claude
-.z-ai-config
+
+# logs
 *.log
 dev.log
-dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
+
+# local database files (SQLite — not used on Vercel)
+*.db
+*.db-journal
+/db/
+/prisma/*.db
+/prisma/migrations/dev/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# sandbox-specific
+.zscripts/
+.claude
+.z-ai-config
+local-*
+prompt
+test
 /skills/
+/examples/
+/mini-services/
+/upload/
+/download/

@@ -1,0 +1,12 @@
+{
+  "build": {
+    "env": {
+      "NODE_VERSION": "20.x"
+    }
+  },
+  "functions": {
+    "src/app/api/**/route.ts": {
+      "maxDuration": 30
+    }
+  }
+}
