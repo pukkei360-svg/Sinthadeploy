@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { validateEmail } from '@/lib/email-validation'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -28,12 +29,27 @@ export default function AuthScreen() {
   // Login form
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  // Track whether the user has interacted with the email field (for showing errors only after blur)
+  const [loginEmailTouched, setLoginEmailTouched] = useState(false)
 
   // Register form
   const [regName, setRegName] = useState('')
   const [regEmail, setRegEmail] = useState('')
   const [regPassword, setRegPassword] = useState('')
   const [regConfirm, setRegConfirm] = useState('')
+  const [regEmailTouched, setRegEmailTouched] = useState(false)
+
+  // Compute email validation results (re-validated on every keystroke)
+  const loginEmailValidation = useMemo(() => validateEmail(loginEmail), [loginEmail])
+  const regEmailValidation = useMemo(() => validateEmail(regEmail), [regEmail])
+
+  // Apply suggestion (when user clicks the "Did you mean X?" prompt)
+  const applyLoginSuggestion = () => {
+    if (loginEmailValidation.suggestion) setLoginEmail(loginEmailValidation.suggestion)
+  }
+  const applyRegSuggestion = () => {
+    if (regEmailValidation.suggestion) setRegEmail(regEmailValidation.suggestion)
+  }
 
   const isAdmin = viewParams?.role === 'admin'
   const [adminId, setAdminId] = useState('')
@@ -62,6 +78,16 @@ export default function AuthScreen() {
 
     if ((!isAdmin && !loginEmail) || (isAdmin && !adminId) || !passwordToUse) {
       toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' })
+      return
+    }
+    // Validate email format BEFORE calling Firebase (saves a network round-trip)
+    if (!isAdmin && !loginEmailValidation.valid) {
+      setLoginEmailTouched(true)
+      toast({
+        title: 'Invalid Email',
+        description: loginEmailValidation.reason || 'Please enter a valid email address',
+        variant: 'destructive',
+      })
       return
     }
     setLoading(true)
@@ -116,6 +142,16 @@ export default function AuthScreen() {
   const handleEmailRegister = async () => {
     if (!regName || !regEmail || !regPassword || !regConfirm) {
       toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' })
+      return
+    }
+    // Validate email format BEFORE calling Firebase (saves a network round-trip)
+    if (!regEmailValidation.valid) {
+      setRegEmailTouched(true)
+      toast({
+        title: 'Invalid Email',
+        description: regEmailValidation.reason || 'Please enter a valid email address',
+        variant: 'destructive',
+      })
       return
     }
     if (regPassword.length < 6) {
@@ -248,12 +284,40 @@ export default function AuthScreen() {
                         id="login-email"
                         type="email"
                         placeholder="you@example.com"
-                        className="pl-10"
+                        className={`pl-10 pr-10 ${
+                          loginEmailTouched && loginEmail && !loginEmailValidation.valid
+                            ? 'border-red-400 focus-visible:border-red-500'
+                            : loginEmail && loginEmailValidation.valid
+                            ? 'border-green-400 focus-visible:border-green-500'
+                            : ''
+                        }`}
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
+                        onBlur={() => setLoginEmailTouched(true)}
                         autoComplete="email"
                       />
+                      {loginEmail && loginEmailValidation.valid && (
+                        <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                      )}
+                      {loginEmailTouched && loginEmail && !loginEmailValidation.valid && (
+                        <XCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
+                      )}
                     </div>
+                    {/* Real-time email validation feedback */}
+                    {loginEmailTouched && loginEmail && !loginEmailValidation.valid && (
+                      <div className="text-xs text-red-600 flex flex-col gap-1">
+                        <span>{loginEmailValidation.reason}</span>
+                        {loginEmailValidation.suggestion && (
+                          <button
+                            type="button"
+                            onClick={applyLoginSuggestion}
+                            className="text-left text-blue-600 hover:underline font-medium"
+                          >
+                            Use {loginEmailValidation.suggestion} →
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="space-y-2">
@@ -331,12 +395,40 @@ export default function AuthScreen() {
                       id="reg-email"
                       type="email"
                       placeholder="you@example.com"
-                      className="pl-10"
+                      className={`pl-10 pr-10 ${
+                        regEmailTouched && regEmail && !regEmailValidation.valid
+                          ? 'border-red-400 focus-visible:border-red-500'
+                          : regEmail && regEmailValidation.valid
+                          ? 'border-green-400 focus-visible:border-green-500'
+                          : ''
+                      }`}
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
+                      onBlur={() => setRegEmailTouched(true)}
                       autoComplete="email"
                     />
+                    {regEmail && regEmailValidation.valid && (
+                      <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                    )}
+                    {regEmailTouched && regEmail && !regEmailValidation.valid && (
+                      <XCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
+                    )}
                   </div>
+                  {/* Real-time email validation feedback */}
+                  {regEmailTouched && regEmail && !regEmailValidation.valid && (
+                    <div className="text-xs text-red-600 flex flex-col gap-1">
+                      <span>{regEmailValidation.reason}</span>
+                      {regEmailValidation.suggestion && (
+                        <button
+                          type="button"
+                          onClick={applyRegSuggestion}
+                          className="text-left text-blue-600 hover:underline font-medium"
+                        >
+                          Use {regEmailValidation.suggestion} →
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="reg-password">Password</Label>
