@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,8 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
@@ -27,7 +29,6 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [firebaseError, setFirebaseError] = useState<string | null>(null)
-
   // Login form
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -58,6 +59,92 @@ export default function AuthScreen() {
 
   // Convert admin ID to Firebase email
   const getAdminEmail = (id: string) => `${id.toLowerCase().trim()}@sintha.app`
+
+  // ─────────────────────────────────────────────────────────────
+  // Detect if we're running inside an Android WebView APK
+  // ─────────────────────────────────────────────────────────────
+  // WebView can't reliably do Firebase signInWithPopup (popup gets blocked
+  // or fails silently). On WebView we use signInWithRedirect instead, which
+  // opens the Google sign-in page in a full browser tab, then redirects
+  // back to the app with the auth result.
+  const isWebView = typeof window !== 'undefined' && (
+    /Android/i.test(navigator.userAgent) && (
+      /wv/i.test(navigator.userAgent) ||  // Android System WebView
+      /WebView/i.test(navigator.userAgent) ||
+      window.matchMedia('(display-mode: standalone)').matches ||  // PWA/APK mode
+      !(window.opener && window.opener !== window)  // no popup support
+    )
+  )
+
+  // Also treat iOS Safari "Add to Home Screen" as WebView for the same reason
+  const isIOSStandalone = typeof window !== 'undefined' &&
+    window.navigator.standalone === true
+
+  const useRedirect = isWebView || isIOSStandalone
+
+  // ─────────────────────────────────────────────────────────────
+  // Handle redirect result on page load
+  // ─────────────────────────────────────────────────────────────
+  // When signInWithRedirect is used, Google redirects back to the app
+  // URL after sign-in. Firebase stores the result in the URL hash or
+  // sessionStorage, and getRedirectResult() retrieves it.
+  useEffect(() => {
+    let cancelled = false
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth)
+        if (cancelled) return
+        if (!result) return  // No redirect result — normal page load
+
+        // We have a successful Google sign-in from a redirect
+        setLoading(true)
+        const firebaseUser = result.user
+
+        // Sync to backend
+        const data = await apiFetch('/auth/google', {
+          method: 'POST',
+          body: JSON.stringify({
+            firebaseUid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+            photoUrl: firebaseUser.photoURL || undefined,
+          }),
+        })
+
+        if (cancelled) return
+        setUser(data.user, firebaseUser.uid)
+
+        if (data.user.role === 'admin') {
+          navigate('admin-dashboard')
+        } else if (data.user.role === 'provider') {
+          navigate('provider-dashboard')
+        } else if (data.user.role === 'client') {
+          navigate('home')
+        } else {
+          navigate('role-select')
+        }
+
+        toast({
+          title: data.user.role ? `Welcome back, ${data.user.name}!` : 'Account Created!',
+          description: data.user.role ? 'Signed in with Google' : 'Welcome to SINTHA',
+        })
+      } catch (err: unknown) {
+        if (cancelled) return
+        const message = (err as Error).message || 'Google sign-in failed'
+        if (message.includes('auth/popup-closed-by-user')) {
+          setFirebaseError('Sign-in cancelled. Tap "Continue with Google" to try again.')
+        } else if (message.includes('auth/network-request-failed')) {
+          setFirebaseError('Network error. Please check your internet connection.')
+        } else {
+          setFirebaseError(message)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    handleRedirectResult()
+    return () => { cancelled = true }
+  }, [navigate, setUser, toast])
 
   // Sync Firebase user to our backend database
   const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string) => {
@@ -206,22 +293,32 @@ export default function AuthScreen() {
   // ─────────────────────────────────────────────────────────────
   // Google Sign-In
   // ─────────────────────────────────────────────────────────────
-  // Uses Firebase signInWithPopup. On mobile/APK, the popup may fall
-  // back to a redirect — but signInWithPopup handles this transparently
-  // in modern firebase/auth (v9+).
+  // Uses signInWithPopup on desktop browsers (better UX — no redirect).
+  // Uses signInWithRedirect on Android WebView APKs and iOS standalone
+  // mode, because popups get blocked or fail silently in WebViews.
   //
-  // After Google auth, we sync the user to our backend via /api/auth/google
-  // (which creates or updates the User row in Postgres).
+  // After Google auth:
+  //   - Popup path: gets credential immediately, syncs to backend, routes
+  //   - Redirect path: page reloads, useEffect above calls getRedirectResult()
+  //     and does the same sync + routing
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setFirebaseError(null)
     try {
       const provider = new GoogleAuthProvider()
       // Always show account picker, even if user is already signed in to
-      // one Google account in this browser. This is important for shared
-      // devices and APK WebViews.
+      // one Google account in this browser. Important for shared devices.
       provider.setCustomParameters({ prompt: 'select_account' })
 
+      if (useRedirect) {
+        // Mobile / APK / WebView path — use redirect
+        // The result will be handled by the useEffect above when the
+        // page reloads after the redirect.
+        await signInWithRedirect(auth, provider)
+        return  // Page will redirect — no further code runs here
+      }
+
+      // Desktop browser path — use popup
       const credential = await signInWithPopup(auth, provider)
       const firebaseUser = credential.user
 
@@ -238,7 +335,7 @@ export default function AuthScreen() {
 
       setUser(data.user, firebaseUser.uid)
 
-      // Route based on role (same logic as email login)
+      // Route based on role
       if (data.user.role === 'admin') {
         navigate('admin-dashboard')
       } else if (data.user.role === 'provider') {
@@ -246,7 +343,6 @@ export default function AuthScreen() {
       } else if (data.user.role === 'client') {
         navigate('home')
       } else {
-        // New user (no role set yet) → role selection screen
         navigate('role-select')
       }
 
