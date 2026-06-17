@@ -25,7 +25,7 @@ export default function AdminCategoriesScreen() {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const data = await apiFetch('/categories')
+        const data = await apiFetch('/categories', { cacheTtl: 30 * 1000 })
         setCategories(data.categories || [])
       } catch {
         // Use store data

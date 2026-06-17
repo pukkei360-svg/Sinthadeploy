@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// Cache categories for 10 minutes on browser, 1 hour on CDN.
+// Categories rarely change, so this saves mobile data on every page load.
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400',
+};
+
 export async function GET() {
   try {
     const categories = await db.serviceCategory.findMany({
@@ -13,7 +19,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ categories });
+    return NextResponse.json({ categories }, { headers: CACHE_HEADERS });
   } catch (error) {
     console.error('Fetch categories error:', error);
     return NextResponse.json(

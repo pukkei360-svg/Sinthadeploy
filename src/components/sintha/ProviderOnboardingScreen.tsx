@@ -50,7 +50,7 @@ export default function ProviderOnboardingScreen() {
     const loadCategories = async () => {
       try {
         await apiFetch('/seed', { method: 'POST' })
-        const catData = await apiFetch('/categories')
+        const catData = await apiFetch('/categories', { cacheTtl: 5 * 60 * 1000 })
         setCategories(catData.categories || [])
       } catch (err) {
         console.error('Failed to load categories:', err)

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { clearApiCache } from './api'
 
 export type View =
   | 'landing'
@@ -271,6 +272,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     })
     localStorage.removeItem('sintha_user')
     localStorage.removeItem('sintha_token')
+    // Clear the API cache so the next user (after re-login) doesn't see
+    // the previous user's cached data.
+    clearApiCache()
   },
 
   setAuthReady: (ready: boolean) => set({ isAuthReady: ready }),

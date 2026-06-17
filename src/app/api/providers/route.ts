@@ -79,6 +79,13 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / limit),
       },
+    }, {
+      headers: {
+        // Cache provider lists for 2 min on browser, 10 min on CDN.
+        // Providers don't change often, and stale-while-revalidate
+        // serves cached data instantly while fetching fresh in background.
+        'Cache-Control': 'public, max-age=120, s-maxage=600, stale-while-revalidate=3600',
+      },
     });
   } catch (error) {
     console.error('Fetch providers error:', error);

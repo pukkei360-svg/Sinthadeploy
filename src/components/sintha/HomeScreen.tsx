@@ -40,9 +40,12 @@ export default function HomeScreen() {
         if (categories.length === 0) {
           try { await apiFetch('/seed', { method: 'POST' }) } catch {}
         }
+        // Cache categories for 5 min and providers for 2 min on the client.
+        // Returning users see the home screen instantly from cache while
+        // fresh data loads in the background (stale-while-revalidate).
         const [catData, provData] = await Promise.all([
-          apiFetch('/categories'),
-          apiFetch('/providers?limit=20&sort=featured'),
+          apiFetch('/categories', { cacheTtl: 5 * 60 * 1000 }),
+          apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 2 * 60 * 1000 }),
         ])
         setCategories(catData.categories || [])
         setProviders(provData.providers || [])

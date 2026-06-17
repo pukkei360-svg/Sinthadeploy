@@ -23,7 +23,7 @@ export default function CategoryScreen() {
     const loadProviders = async () => {
       setLoading(true)
       try {
-        const data = await apiFetch(`/providers?category=${categoryId}`)
+        const data = await apiFetch(`/providers?category=${categoryId}`, { cacheTtl: 2 * 60 * 1000 })
         setLocalProviders(data.providers || [])
       } catch {
         // Use store data as fallback
