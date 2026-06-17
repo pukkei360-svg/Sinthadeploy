@@ -233,8 +233,19 @@ export default function ProviderProfileScreen() {
         <div className="max-w-lg mx-auto flex gap-3">
           <Button
             variant="outline"
-            className={`flex-1 py-6 font-semibold ${!hasBooking ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={checkingBooking}
+            className={`flex-1 py-6 font-semibold ${
+              checkingBooking
+                ? 'opacity-60 cursor-wait'
+                : !hasBooking
+                ? 'opacity-50 cursor-not-allowed'
+                : ''
+            }`}
             onClick={() => {
+              // Ignore clicks while the booking check is still running.
+              // This prevents the "Booking Required" toast from firing
+              // during the ~200-500ms window before the API responds.
+              if (checkingBooking) return
               if (!hasBooking) {
                 toast({
                   title: 'Booking Required',
@@ -246,7 +257,8 @@ export default function ProviderProfileScreen() {
               navigate('chat-room', { providerId: provider.userId, providerName: provider.user?.name || 'Provider' })
             }}
           >
-            <MessageCircle className="h-4 w-4 mr-2" /> {hasBooking ? 'Chat' : 'Chat 🔒'}
+            <MessageCircle className="h-4 w-4 mr-2" />
+            {checkingBooking ? 'Checking...' : hasBooking ? 'Chat' : 'Chat 🔒'}
           </Button>
           <Button
             className="flex-1 sintha-gradient text-white py-6 font-semibold"
@@ -255,12 +267,17 @@ export default function ProviderProfileScreen() {
             <Calendar className="h-4 w-4 mr-2" /> {hasBooking ? 'Book Again' : 'Book Now'}
           </Button>
         </div>
-        {!hasBooking && !checkingBooking && (
+        {checkingBooking && (
+          <p className="text-[11px] text-center text-gray-400 mt-2">
+            Checking your bookings...
+          </p>
+        )}
+        {!checkingBooking && !hasBooking && (
           <p className="text-[11px] text-center text-gray-500 mt-2">
             🔒 Book this provider first to unlock chat
           </p>
         )}
-        {hasBooking && (
+        {!checkingBooking && hasBooking && (
           <p className="text-[11px] text-center text-green-600 mt-2">
             ✅ Chat unlocked — you have a booking with this provider
           </p>
