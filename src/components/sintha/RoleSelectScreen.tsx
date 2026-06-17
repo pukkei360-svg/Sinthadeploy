@@ -72,7 +72,18 @@ export default function RoleSelectScreen() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-gray-800 text-lg">Continue as Client</h3>
-              <p className="text-sm text-gray-500 mt-1">
+              {/* Meitei Mayek tagline: "Thabk nekkadaba thoubu" = I want to hire services */}
+              <p
+                className="text-base text-gray-700 mt-1 font-medium"
+                style={{ fontFamily: 'var(--font-meetei-mayek), sans-serif' }}
+                lang="mni-Mtei"
+              >
+                ꯊꯕꯛ ꯅꯦꯀꯗꯕ ꯊꯧꯕꯨ
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5 italic">
+                Thabk nekkadaba thoubu
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
                 Find and book trusted service providers in Manipur
               </p>
               <div className="flex items-center gap-3 mt-2">
@@ -109,7 +120,18 @@ export default function RoleSelectScreen() {
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-gray-800 text-lg">Continue as Provider</h3>
-              <p className="text-sm text-gray-500 mt-1">
+              {/* Meitei Mayek tagline: "Thabk sugadaba sinmi" = I want to provide services */}
+              <p
+                className="text-base text-gray-700 mt-1 font-medium"
+                style={{ fontFamily: 'var(--font-meetei-mayek), sans-serif' }}
+                lang="mni-Mtei"
+              >
+                ꯊꯕꯛ ꯁꯨꯒꯗꯕ ꯁꯤꯟꯃꯤ
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5 italic">
+                Thabk sugadaba sinmi
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
                 Offer your services and grow your business with zero commission
               </p>
               <div className="flex items-center gap-3 mt-2">
