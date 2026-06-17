@@ -15,7 +15,7 @@ const ADMIN_EMAIL = 'sintha37@sintha.app';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { firebaseUid, email, name, photoUrl } = body;
+    const { firebaseUid, email, name, photoUrl, phone } = body;
 
     if (!firebaseUid || !email) {
       return NextResponse.json(
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       const updateData: Record<string, string | undefined> = {};
       if (name && name !== user.name) updateData.name = name;
       if (photoUrl && photoUrl !== user.photoUrl) updateData.photoUrl = photoUrl;
+      if (phone && phone !== user.phone) updateData.phone = phone;
       // Ensure admin role is preserved
       if (isAdmin && user.role !== 'admin') updateData.role = 'admin';
 
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
           photoUrl: photoUrl || user.photoUrl,
           name: name || user.name,
         };
+        // Save phone number if provided and not already set
+        if (phone && !user.phone) updateData.phone = phone;
         // Ensure admin role
         if (isAdmin && user.role !== 'admin') updateData.role = 'admin';
 
@@ -72,6 +75,7 @@ export async function POST(request: NextRequest) {
             email,
             name: name || email.split('@')[0],
             photoUrl: photoUrl || null,
+            phone: phone || null,
             role: isAdmin ? 'admin' : '',
           },
         });

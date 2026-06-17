@@ -1,22 +1,22 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle, CheckCircle2, XCircle, Phone, MessageSquare } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { validateEmail } from '@/lib/email-validation'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
-  signInWithPopup,
-  signInWithRedirect,
-  GoogleAuthProvider,
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+  ConfirmationResult,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 
@@ -60,31 +60,206 @@ export default function AuthScreen() {
   const getAdminEmail = (id: string) => `${id.toLowerCase().trim()}@sintha.app`
 
   // ─────────────────────────────────────────────────────────────
-  // Detect if we're running inside an Android WebView APK
+  // Phone OTP Authentication
   // ─────────────────────────────────────────────────────────────
-  // WebView can't reliably do Firebase Google Sign-In because the OAuth
-  // redirect opens in the system browser (Chrome) and never returns to
-  // the APK. We hide the Google button in WebView and show email/password.
+  // Two-step flow:
+  //  1. User enters phone number → we send OTP via Firebase
+  //  2. User enters 6-digit OTP → we verify → user is signed in
   //
-  // Detection logic — must be specific to avoid hiding Google on regular
-  // mobile browsers (Chrome, Firefox, Samsung Internet):
-  //   - Android + "wv" token in user agent → modern Android System WebView
-  //   - Android + "WebView" token → some wrapper-specific WebViews
-  //   - iOS + window.navigator.standalone === true → "Add to Home Screen"
-  //
-  // We do NOT use window.opener as a signal because it's null in regular
-  // browser tabs too, which would incorrectly hide Google on Android Chrome.
-  const isAndroidWebView = typeof window !== 'undefined' && (
-    /Android/i.test(navigator.userAgent) && (
-      /\bwv\b/i.test(navigator.userAgent) ||  // Modern Android System WebView
-      /WebView/i.test(navigator.userAgent)    // Some wrapper WebViews
-    )
-  )
+  // After successful verification, Firebase fires onAuthStateChanged
+  // (listened to by page.tsx), which syncs the user to the backend
+  // and routes based on role.
+  const [phoneMode, setPhoneMode] = useState(false)  // show phone form?
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [otp, setOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)  // step 1 done?
+  const [resendTimer, setResendTimer] = useState(0)  // countdown
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
+  const [recaptchaReady, setRecaptchaReady] = useState(false)
 
-  const isIOSStandalone = typeof window !== 'undefined' &&
-    window.navigator.standalone === true
+  // Initialize reCAPTCHA verifier once when entering phone mode
+  // Firebase Phone Auth requires a reCAPTCHA to prevent abuse.
+  // We use invisible reCAPTCHA so the user doesn't see a checkbox.
+  useEffect(() => {
+    if (!phoneMode) return
+    if (recaptchaReady) return
 
-  const useRedirect = isAndroidWebView || isIOSStandalone
+    try {
+      // Create the recaptcha verifier if it doesn't exist yet
+      if (!(window as any).recaptchaVerifier) {
+        ;(window as any).recaptchaVerifier = new RecaptchaVerifier(
+          auth,
+          'recaptcha-container',
+          {
+            size: 'invisible',
+            callback: () => {
+              // reCAPTCHA solved — allow sign-in
+              setRecaptchaReady(true)
+            },
+            'expired-callback': () => {
+              setRecaptchaReady(false)
+            },
+          }
+        )
+      }
+      // Render the recaptcha
+      ;(window as any).recaptchaVerifier.render().then(() => {
+        setRecaptchaReady(true)
+      }).catch(() => {
+        // Already rendered — that's fine
+        setRecaptchaReady(true)
+      })
+    } catch {
+      // recaptcha might already be rendered
+      setRecaptchaReady(true)
+    }
+  }, [phoneMode, recaptchaReady])
+
+  // Resend OTP countdown timer
+  useEffect(() => {
+    if (resendTimer <= 0) return
+    const interval = setInterval(() => {
+      setResendTimer((t) => Math.max(0, t - 1))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [resendTimer])
+
+  // Send OTP to the user's phone number
+  const handleSendOtp = async () => {
+    setFirebaseError(null)
+
+    // Validate phone number (basic check)
+    const cleaned = phoneNumber.replace(/[\s\-()]/g, '')
+    if (!cleaned) {
+      setFirebaseError('Please enter your phone number')
+      return
+    }
+
+    // Normalize: if user didn't include country code, assume India (+91)
+    let fullNumber = cleaned
+    if (!fullNumber.startsWith('+')) {
+      // Strip leading 0 if present, then prepend +91
+      fullNumber = '+91' + fullNumber.replace(/^0+/, '')
+    }
+
+    // Indian numbers should be 10 digits (+91 + 10 digits = 13 chars total)
+    if (fullNumber.length < 10) {
+      setFirebaseError('Please enter a valid 10-digit phone number')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const appVerifier = (window as any).recaptchaVerifier
+      if (!appVerifier) {
+        setFirebaseError('reCAPTCHA not ready. Please refresh and try again.')
+        setLoading(false)
+        return
+      }
+
+      const result = await signInWithPhoneNumber(auth, fullNumber, appVerifier)
+      setConfirmationResult(result)
+      setOtpSent(true)
+      setResendTimer(60)  // can resend after 60s
+      toast({
+        title: 'OTP Sent',
+        description: `A 6-digit code was sent to ${fullNumber}`,
+      })
+    } catch (err: unknown) {
+      const message = (err as Error).message || 'Failed to send OTP'
+      if (message.includes('auth/invalid-phone-number')) {
+        setFirebaseError('Invalid phone number. Please enter a valid 10-digit number.')
+      } else if (message.includes('auth/too-many-requests')) {
+        setFirebaseError('Too many OTP requests. Please try again later.')
+      } else if (message.includes('auth/quota-exceeded')) {
+        setFirebaseError('SMS quota exceeded. Please contact support.')
+      } else if (message.includes('auth/network-request-failed')) {
+        setFirebaseError('Network error. Please check your internet connection.')
+      } else {
+        setFirebaseError(message)
+      }
+      // Reset reCAPTCHA on failure
+      try {
+        if ((window as any).recaptchaVerifier) {
+          ;(window as any).recaptchaVerifier.reset()
+        }
+      } catch {}
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Verify the OTP entered by the user
+  const handleVerifyOtp = async () => {
+    setFirebaseError(null)
+    if (!confirmationResult) {
+      setFirebaseError('Please request an OTP first')
+      return
+    }
+    if (!otp || otp.length !== 6) {
+      setFirebaseError('Please enter the 6-digit code')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const credential = await confirmationResult.confirm(otp)
+      const firebaseUser = credential.user
+
+      // Sync phone number to backend — page.tsx's onAuthStateChanged
+      // will fire and handle the actual sync + routing. But we also
+      // pass the phone number so it gets saved to the user's profile.
+      try {
+        await apiFetch('/auth/sync', {
+          method: 'POST',
+          body: JSON.stringify({
+            firebaseUid: firebaseUser.uid,
+            email: firebaseUser.email || `${firebaseUser.phoneNumber}@phone.sintha.app`,
+            name: firebaseUser.displayName || 'User',
+            photoUrl: firebaseUser.photoURL || undefined,
+            phone: firebaseUser.phoneNumber || undefined,
+          }),
+        })
+      } catch {
+        // page.tsx's onAuthStateChanged listener will retry the sync
+      }
+
+      // Don't navigate here — let page.tsx's onAuthStateChanged listener
+      // handle routing based on the user's role
+      toast({
+        title: 'Phone Verified!',
+        description: 'Welcome to SINTHA',
+      })
+    } catch (err: unknown) {
+      const message = (err as Error).message || 'OTP verification failed'
+      if (message.includes('auth/invalid-verification-code')) {
+        setFirebaseError('Wrong code. Please check the 6-digit code and try again.')
+      } else if (message.includes('auth/code-expired')) {
+        setFirebaseError('Code expired. Please request a new OTP.')
+        setOtpSent(false)
+        setOtp('')
+      } else if (message.includes('auth/network-request-failed')) {
+        setFirebaseError('Network error. Please check your internet connection.')
+      } else {
+        setFirebaseError(message)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Reset the phone OTP flow (go back to phone number entry)
+  const handleResetPhoneFlow = () => {
+    setOtpSent(false)
+    setOtp('')
+    setConfirmationResult(null)
+    setFirebaseError(null)
+    try {
+      if ((window as any).recaptchaVerifier) {
+        ;(window as any).recaptchaVerifier.reset()
+      }
+    } catch {}
+  }
 
   // Sync Firebase user to our backend database
   const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string) => {
@@ -230,63 +405,6 @@ export default function AuthScreen() {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // Google Sign-In
-  // ─────────────────────────────────────────────────────────────
-  // Uses signInWithPopup on desktop browsers (better UX — no redirect).
-  // Uses signInWithRedirect on Android WebView APKs and iOS standalone
-  // mode, because popups get blocked or fail silently in WebViews.
-  //
-  // IMPORTANT: We ONLY initiate the Google sign-in here. We do NOT
-  // sync to the backend or route the user from this function.
-  // After successful sign-in (whether via popup or redirect), Firebase
-  // automatically fires onAuthStateChanged, which is listened to by
-  // page.tsx. That listener handles:
-  //   - Syncing the user to /api/auth/sync
-  //   - Routing based on role (admin/provider/client/role-select)
-  //
-  // This avoids race conditions and duplicate sync calls.
-  const handleGoogleSignIn = async () => {
-    setLoading(true)
-    setFirebaseError(null)
-    try {
-      const provider = new GoogleAuthProvider()
-      // Always show account picker, even if user is already signed in to
-      // one Google account in this browser. Important for shared devices.
-      provider.setCustomParameters({ prompt: 'select_account' })
-
-      if (useRedirect) {
-        // Mobile / APK / WebView path — use redirect.
-        // After the redirect, onAuthStateChanged in page.tsx will fire
-        // with the signed-in user, which handles sync + routing.
-        await signInWithRedirect(auth, provider)
-        return  // Page will redirect — no further code runs here
-      }
-
-      // Desktop browser path — use popup.
-      // After the popup closes, onAuthStateChanged in page.tsx will fire
-      // with the signed-in user, which handles sync + routing.
-      await signInWithPopup(auth, provider)
-      // Don't do anything else here — page.tsx's onAuthStateChanged
-      // listener will pick up the new user and route them appropriately.
-    } catch (err: unknown) {
-      const message = (err as Error).message || 'Google sign-in failed'
-      if (message.includes('auth/popup-closed-by-user')) {
-        setFirebaseError('Sign-in cancelled. Tap "Continue with Google" to try again.')
-      } else if (message.includes('auth/popup-blocked')) {
-        setFirebaseError('Pop-up was blocked by your browser. Please allow pop-ups for this site.')
-      } else if (message.includes('auth/cancelled-popup-request')) {
-        // User opened a second popup — ignore silently
-      } else if (message.includes('auth/network-request-failed')) {
-        setFirebaseError('Network error. Please check your internet connection.')
-      } else {
-        setFirebaseError(message)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col">
       {/* Header */}
@@ -316,59 +434,172 @@ export default function AuthScreen() {
               </div>
             )}
 
-            {/* Google Sign-In button
-                - Hidden for admin login (admins use Sintha37 ID)
-                - Hidden in Android WebView APKs (Google Sign-In doesn't work
-                  in WebView because the OAuth redirect opens in the system
-                  browser, leaving the APK stuck on the sign-in screen)
-                - Shown only in regular browsers (desktop + mobile Chrome/Safari)
+            {/* Phone OTP Sign-In
+                - Hidden for admin login (admins use Sintha37 ID + password)
+                - When phoneMode is OFF: show "Continue with Phone" button
+                - When phoneMode is ON: show phone input + OTP verification UI
+                  (hides the email/password Login/Register tabs)
             */}
-            {!isAdmin && !useRedirect && (
+            {!isAdmin && !phoneMode && (
               <>
                 <button
                   type="button"
-                  onClick={handleGoogleSignIn}
+                  onClick={() => { setPhoneMode(true); setFirebaseError(null) }}
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed mb-4"
+                  className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed mb-4"
                 >
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
-                  ) : (
-                    /* Official Google "G" logo (multi-color) — inline SVG so it
-                       works without external image fetch */
-                    <svg className="h-5 w-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                  )}
-                  <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
+                  <Phone className="h-5 w-5" />
+                  <span>Continue with Phone</span>
                 </button>
 
-                {/* Divider between Google and email/password */}
+                {/* Divider between Phone and email/password */}
                 <div className="flex items-center gap-3 mb-6">
                   <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">or</span>
+                  <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">or use email</span>
                   <div className="flex-1 h-px bg-gray-200" />
                 </div>
               </>
             )}
 
-            {/* Helper banner for APK users — explains why Google Sign-In
-                isn't available and encourages email/password signup */}
-            {!isAdmin && useRedirect && (
-              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                <p className="font-semibold mb-1">📝 Sign up with email &amp; password</p>
-                <p className="text-xs text-blue-700">
-                  Google Sign-In isn't available in the app. Please use email and password to create your account — it's quick and works perfectly.
-                </p>
+            {/* Phone OTP form — shown when phoneMode is ON */}
+            {!isAdmin && phoneMode && (
+              <div className="space-y-4 mb-6">
+                {/* reCAPTCHA container — invisible, required by Firebase Phone Auth */}
+                <div id="recaptcha-container" className="recaptcha-container"></div>
+
+                {/* Phone number input — step 1 */}
+                {!otpSent && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-green-700">
+                      <Phone className="h-5 w-5" />
+                      <h3 className="font-semibold">Sign in with Phone</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone-number">Phone Number</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-3 text-gray-500 font-medium text-sm">+91</span>
+                        <Input
+                          id="phone-number"
+                          type="tel"
+                          inputMode="numeric"
+                          placeholder="98765 43210"
+                          className="pl-12"
+                          value={phoneNumber}
+                          onChange={(e) => {
+                            // Only allow digits, spaces, +, -
+                            const v = e.target.value.replace(/[^\d\s+\-]/g, '')
+                            setPhoneNumber(v)
+                          }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
+                          maxLength={15}
+                        />
+                      </div>
+                      <p className="text-[11px] text-gray-400">
+                        We'll send you a 6-digit code via SMS
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={loading || !phoneNumber}
+                      className="w-full sintha-gradient text-white font-semibold py-3"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Sending OTP...
+                        </>
+                      ) : (
+                        'Send OTP'
+                      )}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => { setPhoneMode(false); setFirebaseError(null); setPhoneNumber('') }}
+                      className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      ← Back to email/password
+                    </button>
+                  </div>
+                )}
+
+                {/* OTP verification — step 2 */}
+                {otpSent && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-green-700">
+                      <MessageSquare className="h-5 w-5" />
+                      <h3 className="font-semibold">Enter the code</h3>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      We sent a 6-digit code to{' '}
+                      <span className="font-semibold text-gray-700">
+                        {phoneNumber.startsWith('+') ? phoneNumber : '+91 ' + phoneNumber}
+                      </span>
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="otp-code">6-digit code</Label>
+                      <Input
+                        id="otp-code"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="000000"
+                        className="text-center text-2xl font-bold tracking-[0.5em] py-4"
+                        value={otp}
+                        onChange={(e) => {
+                          // Only digits, max 6
+                          const v = e.target.value.replace(/\D/g, '').slice(0, 6)
+                          setOtp(v)
+                        }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleVerifyOtp()}
+                        maxLength={6}
+                        autoFocus
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={loading || otp.length !== 6}
+                      className="w-full sintha-gradient text-white font-semibold py-3"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Verifying...
+                        </>
+                      ) : (
+                        'Verify & Continue'
+                      )}
+                    </Button>
+                    <div className="flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        onClick={handleResetPhoneFlow}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        ← Change number
+                      </button>
+                      {resendTimer > 0 ? (
+                        <span className="text-gray-400">
+                          Resend in {resendTimer}s
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          className="text-blue-600 hover:underline font-medium"
+                        >
+                          Resend OTP
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
 
-            {/* Tab Toggle */}
-            {!isAdmin && (
+            {/* Tab Toggle — hidden when in phone mode */}
+            {!isAdmin && !phoneMode && (
               <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
                 <button
                   className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${
@@ -389,7 +620,7 @@ export default function AuthScreen() {
               </div>
             )}
 
-            {tab === 'login' || isAdmin ? (
+            {(tab === 'login' || isAdmin) && !phoneMode ? (
               <div className="space-y-4">
                 {isAdmin && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 text-center">
@@ -509,7 +740,7 @@ export default function AuthScreen() {
                   </button>
                 </p>
               </div>
-            ) : (
+            ) : !phoneMode ? (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="reg-name">Full Name</Label>
@@ -617,7 +848,7 @@ export default function AuthScreen() {
                   </button>
                 </p>
               </div>
-            )}
+            ) : null}
 
             {/* WhatsApp Support */}
             {!isAdmin && (
