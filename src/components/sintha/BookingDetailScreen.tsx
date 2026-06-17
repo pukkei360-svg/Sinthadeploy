@@ -9,10 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  ArrowLeft, Calendar, Clock, MapPin, FileText, MessageCircle,
+  ArrowLeft, Calendar, Clock, MapPin, FileText, MessageCircle, Phone,
   CheckCircle, XCircle, Play, Star, Copy
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -223,42 +224,34 @@ export default function BookingDetailScreen() {
             {otherPersonPhone && booking.status !== 'cancelled' && (
               <div className="border-t border-gray-100 pt-3 mt-1 space-y-2">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contact</p>
-                {/* Phone number display with copy */}
+                {/* Phone number display */}
                 <div className="bg-gray-50 rounded-xl p-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-lg font-bold text-gray-800 tracking-wide">{otherPersonPhone}</p>
-                    <button
-                      onClick={async () => {
-                        const cleaned = otherPersonPhone.replace(/\s+/g, '')
-                        try {
-                          if (navigator.clipboard && navigator.clipboard.writeText) {
-                            await navigator.clipboard.writeText(cleaned)
-                          } else {
-                            const textarea = document.createElement('textarea')
-                            textarea.value = cleaned
-                            textarea.style.position = 'fixed'
-                            textarea.style.opacity = '0'
-                            document.body.appendChild(textarea)
-                            textarea.select()
-                            document.execCommand('copy')
-                            document.body.removeChild(textarea)
-                          }
-                          toast({ title: 'Copied!', description: `Number ${cleaned} copied to clipboard` })
-                        } catch {
-                          toast({ title: 'Number', description: cleaned })
-                        }
-                      }}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </button>
-                  </div>
+                  <p className="text-lg font-bold text-gray-800 tracking-wide text-center">{otherPersonPhone}</p>
                 </div>
+                {/* Call button — opens dialer, falls back to copy if dialer not available */}
+                <button
+                  onClick={async () => {
+                    const result = await dialPhone(otherPersonPhone)
+                    if (result.method === 'dialer') {
+                      toast({ title: 'Opening dialer...', description: result.number })
+                    } else if (result.method === 'copied') {
+                      toast({
+                        title: 'Number copied',
+                        description: `Dialer unavailable — paste ${result.number} in your phone app`,
+                      })
+                    } else {
+                      toast({ title: 'Number', description: result.number })
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call
+                </button>
                 {/* WhatsApp web link */}
                 <button
                   onClick={() => {
-                    const cleaned = otherPersonPhone.replace(/\s+/g, '').replace(/^\+?91/, '')
+                    const cleaned = getDigitsOnly(otherPersonPhone)
                     const fullNumber = `91${cleaned}`
                     const msg = encodeURIComponent(`Hi ${otherPerson.name}, regarding my SINTHA booking.`)
                     window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
@@ -268,7 +261,33 @@ export default function BookingDetailScreen() {
                   <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </button>
-                <p className="text-[11px] text-center text-gray-400">Copy the number and paste it in your dialer to call</p>
+                {/* Small "copy number" link as a fallback for users who prefer to copy */}
+                <button
+                  onClick={async () => {
+                    const cleaned = normalizePhoneNumber(otherPersonPhone)
+                    try {
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(cleaned)
+                      } else {
+                        const textarea = document.createElement('textarea')
+                        textarea.value = cleaned
+                        textarea.style.position = 'fixed'
+                        textarea.style.opacity = '0'
+                        document.body.appendChild(textarea)
+                        textarea.select()
+                        document.execCommand('copy')
+                        document.body.removeChild(textarea)
+                      }
+                      toast({ title: 'Copied!', description: `Number ${cleaned} copied to clipboard` })
+                    } catch {
+                      toast({ title: 'Number', description: cleaned })
+                    }
+                  }}
+                  className="flex items-center justify-center gap-1.5 text-gray-500 hover:text-gray-700 text-xs font-medium transition-colors w-full"
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy number instead
+                </button>
               </div>
             )}
           </div>

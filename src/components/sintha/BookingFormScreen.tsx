@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircle, Copy, Share2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircle, Copy, Phone, Share2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 
 export default function BookingFormScreen() {
   const { navigate, viewParams, user, addBooking } = useAppStore()
@@ -90,43 +91,35 @@ export default function BookingFormScreen() {
             </div>
             {providerPhone && (
               <div className="space-y-2">
-                {/* Phone number display with copy */}
+                {/* Phone number display */}
                 <div className="bg-gray-50 rounded-xl p-3">
                   <p className="text-xs text-gray-400 mb-1">Provider Phone Number</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-lg font-bold text-gray-800 tracking-wide">{providerPhone}</p>
-                    <button
-                      onClick={async () => {
-                        const cleaned = providerPhone.replace(/\s+/g, '')
-                        try {
-                          if (navigator.clipboard && navigator.clipboard.writeText) {
-                            await navigator.clipboard.writeText(cleaned)
-                          } else {
-                            const textarea = document.createElement('textarea')
-                            textarea.value = cleaned
-                            textarea.style.position = 'fixed'
-                            textarea.style.opacity = '0'
-                            document.body.appendChild(textarea)
-                            textarea.select()
-                            document.execCommand('copy')
-                            document.body.removeChild(textarea)
-                          }
-                          toast({ title: 'Copied!', description: `Number ${cleaned} copied to clipboard` })
-                        } catch {
-                          toast({ title: 'Number', description: cleaned })
-                        }
-                      }}
-                      className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </button>
-                  </div>
+                  <p className="text-lg font-bold text-gray-800 tracking-wide text-center">{providerPhone}</p>
                 </div>
+                {/* Call button — opens dialer, falls back to copy if dialer not available */}
+                <button
+                  onClick={async () => {
+                    const result = await dialPhone(providerPhone)
+                    if (result.method === 'dialer') {
+                      toast({ title: 'Opening dialer...', description: result.number })
+                    } else if (result.method === 'copied') {
+                      toast({
+                        title: 'Number copied',
+                        description: `Dialer unavailable — paste ${result.number} in your phone app`,
+                      })
+                    } else {
+                      toast({ title: 'Number', description: result.number })
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full"
+                >
+                  <Phone className="h-4 w-4" />
+                  Call
+                </button>
                 {/* WhatsApp web link */}
                 <button
                   onClick={() => {
-                    const cleaned = providerPhone.replace(/\s+/g, '').replace(/^\+?91/, '')
+                    const cleaned = getDigitsOnly(providerPhone)
                     const fullNumber = `91${cleaned}`
                     const msg = encodeURIComponent(`Hi ${providerName}, I booked your service on SINTHA.`)
                     window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
@@ -141,7 +134,33 @@ export default function BookingFormScreen() {
                     <p className="text-xs text-green-500">Open chat in browser</p>
                   </div>
                 </button>
-                <p className="text-[11px] text-center text-gray-400">Copy the number and paste it in your dialer to call</p>
+                {/* Small "copy number" link as a fallback for users who prefer to copy */}
+                <button
+                  onClick={async () => {
+                    const cleaned = normalizePhoneNumber(providerPhone)
+                    try {
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(cleaned)
+                      } else {
+                        const textarea = document.createElement('textarea')
+                        textarea.value = cleaned
+                        textarea.style.position = 'fixed'
+                        textarea.style.opacity = '0'
+                        document.body.appendChild(textarea)
+                        textarea.select()
+                        document.execCommand('copy')
+                        document.body.removeChild(textarea)
+                      }
+                      toast({ title: 'Copied!', description: `Number ${cleaned} copied to clipboard` })
+                    } catch {
+                      toast({ title: 'Number', description: cleaned })
+                    }
+                  }}
+                  className="flex items-center justify-center gap-1.5 text-gray-500 hover:text-gray-700 text-xs font-medium transition-colors w-full"
+                >
+                  <Copy className="h-3 w-3" />
+                  Copy number instead
+                </button>
               </div>
             )}
             {!providerPhone && (
