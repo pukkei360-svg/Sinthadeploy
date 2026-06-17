@@ -63,14 +63,16 @@ export async function POST(request: NextRequest) {
           data: updateData,
         });
       } else {
-        // 3. Create new user
+        // 3. Create new user — leave role EMPTY so the frontend can route
+        // them to the role-select screen to choose client or provider.
+        // (Admin email detection is handled below — admins get 'admin' role.)
         user = await db.user.create({
           data: {
             firebaseUid,
             email,
             name: name || email.split('@')[0],
             photoUrl: photoUrl || null,
-            role: isAdmin ? 'admin' : 'client',
+            role: isAdmin ? 'admin' : '',
           },
         });
       }

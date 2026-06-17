@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,6 @@ import {
   updateProfile,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult,
   GoogleAuthProvider,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
@@ -67,6 +66,13 @@ export default function AuthScreen() {
   // or fails silently). On WebView we use signInWithRedirect instead, which
   // opens the Google sign-in page in a full browser tab, then redirects
   // back to the app with the auth result.
+  //
+  // IMPORTANT: We do NOT call getRedirectResult() here. After a redirect,
+  // Firebase automatically fires onAuthStateChanged in page.tsx, which
+  // handles syncing to the backend and routing based on role. Calling
+  // getRedirectResult() in addition to onAuthStateChanged causes a race
+  // condition where the user might be routed twice or the redirect result
+  // might not fire reliably in WebView.
   const isWebView = typeof window !== 'undefined' && (
     /Android/i.test(navigator.userAgent) && (
       /wv/i.test(navigator.userAgent) ||  // Android System WebView
@@ -81,70 +87,6 @@ export default function AuthScreen() {
     window.navigator.standalone === true
 
   const useRedirect = isWebView || isIOSStandalone
-
-  // ─────────────────────────────────────────────────────────────
-  // Handle redirect result on page load
-  // ─────────────────────────────────────────────────────────────
-  // When signInWithRedirect is used, Google redirects back to the app
-  // URL after sign-in. Firebase stores the result in the URL hash or
-  // sessionStorage, and getRedirectResult() retrieves it.
-  useEffect(() => {
-    let cancelled = false
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth)
-        if (cancelled) return
-        if (!result) return  // No redirect result — normal page load
-
-        // We have a successful Google sign-in from a redirect
-        setLoading(true)
-        const firebaseUser = result.user
-
-        // Sync to backend
-        const data = await apiFetch('/auth/google', {
-          method: 'POST',
-          body: JSON.stringify({
-            firebaseUid: firebaseUser.uid,
-            email: firebaseUser.email || '',
-            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-            photoUrl: firebaseUser.photoURL || undefined,
-          }),
-        })
-
-        if (cancelled) return
-        setUser(data.user, firebaseUser.uid)
-
-        if (data.user.role === 'admin') {
-          navigate('admin-dashboard')
-        } else if (data.user.role === 'provider') {
-          navigate('provider-dashboard')
-        } else if (data.user.role === 'client') {
-          navigate('home')
-        } else {
-          navigate('role-select')
-        }
-
-        toast({
-          title: data.user.role ? `Welcome back, ${data.user.name}!` : 'Account Created!',
-          description: data.user.role ? 'Signed in with Google' : 'Welcome to SINTHA',
-        })
-      } catch (err: unknown) {
-        if (cancelled) return
-        const message = (err as Error).message || 'Google sign-in failed'
-        if (message.includes('auth/popup-closed-by-user')) {
-          setFirebaseError('Sign-in cancelled. Tap "Continue with Google" to try again.')
-        } else if (message.includes('auth/network-request-failed')) {
-          setFirebaseError('Network error. Please check your internet connection.')
-        } else {
-          setFirebaseError(message)
-        }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    handleRedirectResult()
-    return () => { cancelled = true }
-  }, [navigate, setUser, toast])
 
   // Sync Firebase user to our backend database
   const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string) => {
@@ -297,10 +239,15 @@ export default function AuthScreen() {
   // Uses signInWithRedirect on Android WebView APKs and iOS standalone
   // mode, because popups get blocked or fail silently in WebViews.
   //
-  // After Google auth:
-  //   - Popup path: gets credential immediately, syncs to backend, routes
-  //   - Redirect path: page reloads, useEffect above calls getRedirectResult()
-  //     and does the same sync + routing
+  // IMPORTANT: We ONLY initiate the Google sign-in here. We do NOT
+  // sync to the backend or route the user from this function.
+  // After successful sign-in (whether via popup or redirect), Firebase
+  // automatically fires onAuthStateChanged, which is listened to by
+  // page.tsx. That listener handles:
+  //   - Syncing the user to /api/auth/sync
+  //   - Routing based on role (admin/provider/client/role-select)
+  //
+  // This avoids race conditions and duplicate sync calls.
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setFirebaseError(null)
@@ -311,45 +258,19 @@ export default function AuthScreen() {
       provider.setCustomParameters({ prompt: 'select_account' })
 
       if (useRedirect) {
-        // Mobile / APK / WebView path — use redirect
-        // The result will be handled by the useEffect above when the
-        // page reloads after the redirect.
+        // Mobile / APK / WebView path — use redirect.
+        // After the redirect, onAuthStateChanged in page.tsx will fire
+        // with the signed-in user, which handles sync + routing.
         await signInWithRedirect(auth, provider)
         return  // Page will redirect — no further code runs here
       }
 
-      // Desktop browser path — use popup
-      const credential = await signInWithPopup(auth, provider)
-      const firebaseUser = credential.user
-
-      // Sync to our backend
-      const data = await apiFetch('/auth/google', {
-        method: 'POST',
-        body: JSON.stringify({
-          firebaseUid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-          photoUrl: firebaseUser.photoURL || undefined,
-        }),
-      })
-
-      setUser(data.user, firebaseUser.uid)
-
-      // Route based on role
-      if (data.user.role === 'admin') {
-        navigate('admin-dashboard')
-      } else if (data.user.role === 'provider') {
-        navigate('provider-dashboard')
-      } else if (data.user.role === 'client') {
-        navigate('home')
-      } else {
-        navigate('role-select')
-      }
-
-      toast({
-        title: data.user.role ? `Welcome back, ${data.user.name}!` : 'Account Created!',
-        description: data.user.role ? 'Signed in with Google' : 'Welcome to SINTHA',
-      })
+      // Desktop browser path — use popup.
+      // After the popup closes, onAuthStateChanged in page.tsx will fire
+      // with the signed-in user, which handles sync + routing.
+      await signInWithPopup(auth, provider)
+      // Don't do anything else here — page.tsx's onAuthStateChanged
+      // listener will pick up the new user and route them appropriately.
     } catch (err: unknown) {
       const message = (err as Error).message || 'Google sign-in failed'
       if (message.includes('auth/popup-closed-by-user')) {
