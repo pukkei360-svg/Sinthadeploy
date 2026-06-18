@@ -25,7 +25,6 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [firebaseError, setFirebaseError] = useState<string | null>(null)
-
   // Login form
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')

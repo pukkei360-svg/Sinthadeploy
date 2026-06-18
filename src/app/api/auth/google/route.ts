@@ -48,14 +48,16 @@ export async function POST(request: NextRequest) {
           },
         });
       } else {
-        // Create new user from Google data
+        // Create new user from Google data — leave role empty so the
+        // frontend can route them to the role-select screen to choose
+        // whether they're a client or provider.
         user = await db.user.create({
           data: {
             firebaseUid,
             email,
             name: name || email.split('@')[0],
             photoUrl: photoUrl || null,
-            role: 'client',
+            role: '',
           },
         });
       }

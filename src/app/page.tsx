@@ -39,13 +39,20 @@ export default function Home() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          // For phone-auth users, firebaseUser.email is null — generate
+          // a fake email so the /auth/sync route's `email` (unique) field
+          // has something to store. Format: +91XXXXXXXXXX@phone.sintha.app
+          const effectiveEmail = firebaseUser.email ||
+            `${firebaseUser.phoneNumber}@phone.sintha.app`
+
           const data = await apiFetch('/auth/sync', {
             method: 'POST',
             body: JSON.stringify({
               firebaseUid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              email: effectiveEmail,
+              name: firebaseUser.displayName || firebaseUser.phoneNumber || 'User',
               photoUrl: firebaseUser.photoURL || undefined,
+              phone: firebaseUser.phoneNumber || undefined,
             }),
           })
 
