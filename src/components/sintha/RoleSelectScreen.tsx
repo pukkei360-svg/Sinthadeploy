@@ -17,8 +17,13 @@ export default function RoleSelectScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Whether user can proceed to role selection (has uploaded a photo OR already had one)
-  const canProceed = !!(photoUrl || user?.photoUrl)
+  // Whether user has uploaded a photo
+  const hasPhoto = !!(photoUrl || user?.photoUrl)
+  // HYBRID APPROACH:
+  // - Provider: photo is REQUIRED → must have photo to proceed
+  // - Client: photo is OPTIONAL → can always proceed (encouraged but not blocking)
+  const canSelectClient = true
+  const canSelectProvider = hasPhoto
 
   // Handle photo upload — user uploads photo during role selection
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,14 +55,14 @@ export default function RoleSelectScreen() {
   const selectRole = async (role: string) => {
     if (!user || loading) return
 
-    // Require photo before allowing role selection
-    if (!photoUrl && !user.photoUrl) {
+    // Require photo ONLY for Provider role (clients can skip)
+    if (role === 'provider' && !hasPhoto) {
       toast({
-        title: 'Photo Required',
-        description: 'Please upload your profile photo first to continue',
+        title: 'Photo Required for Providers',
+        description: 'Please upload your profile photo first — providers need a photo so clients can recognize you',
         variant: 'destructive',
       })
-      // Scroll to the photo upload section and highlight it
+      // Scroll to the photo upload section
       fileInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
@@ -127,17 +132,24 @@ export default function RoleSelectScreen() {
       </div>
 
       <div className="w-full max-w-md space-y-4">
-        {/* Photo Upload Section — REQUIRED before continuing */}
+        {/* Photo Upload Section
+            - REQUIRED for Provider role
+            - OPTIONAL for Client role (encouraged but can skip)
+        */}
         <div className={`bg-white border-2 rounded-2xl p-6 text-center shadow-sm transition-colors ${
-          photoUrl ? 'border-green-300' : 'border-amber-300'
+          hasPhoto ? 'border-green-300' : 'border-blue-200'
         }`}>
           <p className="text-sm font-semibold text-gray-700 mb-1">
-            Upload your profile photo <span className="text-red-500">*</span>
+            Add your profile photo
           </p>
-          <p className="text-[11px] text-gray-500 mb-3">Required to continue</p>
+          <p className="text-[11px] text-gray-500 mb-3">
+            {hasPhoto
+              ? 'Photo added — looking great!'
+              : 'Required for providers • Optional for clients'}
+          </p>
           {/* Avatar with camera button */}
           <div className="relative inline-block">
-            <Avatar className={`h-24 w-24 border-4 mx-auto ${photoUrl ? 'border-green-200' : 'border-amber-200'}`}>
+            <Avatar className={`h-24 w-24 border-4 mx-auto ${hasPhoto ? 'border-green-200' : 'border-blue-100'}`}>
               <AvatarImage src={photoUrl || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=2563eb&color=fff&size=200`} />
               <AvatarFallback className="text-3xl font-bold text-blue-600">{user?.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
@@ -168,25 +180,21 @@ export default function RoleSelectScreen() {
           {/* Helper text — changes based on state */}
           <p className={`text-xs mt-3 font-medium ${
             uploadingPhoto ? 'text-gray-400'
-            : photoUrl ? 'text-green-600'
-            : 'text-amber-600'
+            : hasPhoto ? 'text-green-600'
+            : 'text-gray-500'
           }`}>
             {uploadingPhoto
               ? 'Uploading...'
-              : photoUrl
-              ? '✓ Photo added! You can continue now'
-              : '⚠ Please upload a photo to continue'}
+              : hasPhoto
+              ? '✓ Photo added! You can continue as Client or Provider'
+              : '📷 Tap the camera to upload — providers need a photo'}
           </p>
         </div>
 
-        {/* Client Card — disabled until photo is uploaded */}
+        {/* Client Card — always enabled (photo optional for clients) */}
         <Card
-          className={`border-2 transition-all ${
-            canProceed
-              ? 'cursor-pointer sintha-card-hover border-transparent hover:border-blue-300'
-              : 'opacity-40 cursor-not-allowed border-gray-200'
-          }`}
-          onClick={canProceed ? () => selectRole('client') : undefined}
+          className="cursor-pointer sintha-card-hover border-2 border-transparent hover:border-blue-300"
+          onClick={() => selectRole('client')}
         >
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl sintha-gradient flex items-center justify-center shrink-0">
@@ -231,14 +239,14 @@ export default function RoleSelectScreen() {
           </CardContent>
         </Card>
 
-        {/* Provider Card — disabled until photo is uploaded */}
+        {/* Provider Card — disabled until photo is uploaded (photo required for providers) */}
         <Card
           className={`border-2 transition-all ${
-            canProceed
+            canSelectProvider
               ? 'cursor-pointer sintha-card-hover border-transparent hover:border-green-300'
-              : 'opacity-40 cursor-not-allowed border-gray-200'
+              : 'opacity-50 cursor-not-allowed border-gray-200'
           }`}
-          onClick={canProceed ? () => selectRole('provider') : undefined}
+          onClick={canSelectProvider ? () => selectRole('provider') : undefined}
         >
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
@@ -269,6 +277,12 @@ export default function RoleSelectScreen() {
                   <Shield className="h-3 w-3 text-green-500" />
                   <span className="text-[10px] text-gray-400">Verified Badge</span>
                 </div>
+                {!canSelectProvider && (
+                  <div className="flex items-center gap-1">
+                    <Camera className="h-3 w-3 text-amber-500" />
+                    <span className="text-[10px] text-amber-600 font-medium">Photo required</span>
+                  </div>
+                )}
               </div>
             </div>
             {loading === 'provider' ? (
@@ -280,10 +294,16 @@ export default function RoleSelectScreen() {
         </Card>
       </div>
 
-      {/* Lock message — shown when photo hasn't been uploaded yet */}
-      {!canProceed && !loading && (
-        <div className="mt-4 text-sm text-amber-600 font-medium text-center animate-pulse">
-          🔒 Upload a photo above to unlock role selection
+      {/* Lock message — shown only when Provider card is locked (no photo) */}
+      {!canSelectProvider && !loading && (
+        <div className="mt-4 text-sm text-amber-600 font-medium text-center">
+          📷 Upload a photo above to unlock the Provider option
+        </div>
+      )}
+      {/* Soft nudge for clients — encourages photo but doesn't block */}
+      {!hasPhoto && !loading && (
+        <div className="mt-2 text-xs text-gray-400 text-center">
+          💡 Clients can skip the photo, but adding one helps providers recognize you
         </div>
       )}
 
