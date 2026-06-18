@@ -19,11 +19,9 @@ export default function RoleSelectScreen() {
 
   // Whether user has uploaded a photo
   const hasPhoto = !!(photoUrl || user?.photoUrl)
-  // HYBRID APPROACH:
-  // - Provider: photo is REQUIRED → must have photo to proceed
-  // - Client: photo is OPTIONAL → can always proceed (encouraged but not blocking)
-  const canSelectClient = true
-  const canSelectProvider = hasPhoto
+  // PHOTO IS OPTIONAL for both Client and Provider — but we strongly
+  // encourage it with trust warnings. Users can always proceed.
+  // This is the "soft compulsory" approach: optional but warned.
 
   // Handle photo upload — user uploads photo during role selection
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,16 +53,16 @@ export default function RoleSelectScreen() {
   const selectRole = async (role: string) => {
     if (!user || loading) return
 
-    // Require photo ONLY for Provider role (clients can skip)
-    if (role === 'provider' && !hasPhoto) {
+    // Photo is OPTIONAL but strongly recommended for trust.
+    // Show a warning toast (not blocking) if user proceeds without photo.
+    if (!hasPhoto) {
       toast({
-        title: 'Photo Required for Providers',
-        description: 'Please upload your profile photo first — providers need a photo so clients can recognize you',
+        title: '⚠ Photo Recommended for Trust',
+        description: role === 'provider'
+          ? 'Providers without photos get fewer bookings. You can add one later from your profile.'
+          : 'Clients without photos may get slower responses. You can add one later from your profile.',
         variant: 'destructive',
       })
-      // Scroll to the photo upload section
-      fileInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return
     }
 
     setLoading(role)
@@ -133,23 +131,25 @@ export default function RoleSelectScreen() {
 
       <div className="w-full max-w-md space-y-4">
         {/* Photo Upload Section
-            - REQUIRED for Provider role
-            - OPTIONAL for Client role (encouraged but can skip)
+            - OPTIONAL for both Client and Provider
+            - STRONG WARNING about trust (recommended, not blocking)
         */}
         <div className={`bg-white border-2 rounded-2xl p-6 text-center shadow-sm transition-colors ${
-          hasPhoto ? 'border-green-300' : 'border-blue-200'
+          hasPhoto ? 'border-green-300' : 'border-amber-300'
         }`}>
           <p className="text-sm font-semibold text-gray-700 mb-1">
-            Add your profile photo
+            📷 Add your profile photo
           </p>
-          <p className="text-[11px] text-gray-500 mb-3">
+          <p className={`text-[11px] mb-3 font-medium ${
+            hasPhoto ? 'text-green-600' : 'text-amber-600'
+          }`}>
             {hasPhoto
-              ? 'Photo added — looking great!'
-              : 'Required for providers • Optional for clients'}
+              ? '✓ Photo added — your profile is now trustworthy!'
+              : '⚠ Strongly recommended for building trust'}
           </p>
           {/* Avatar with camera button */}
           <div className="relative inline-block">
-            <Avatar className={`h-24 w-24 border-4 mx-auto ${hasPhoto ? 'border-green-200' : 'border-blue-100'}`}>
+            <Avatar className={`h-24 w-24 border-4 mx-auto ${hasPhoto ? 'border-green-200' : 'border-amber-200'}`}>
               <AvatarImage src={photoUrl || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=2563eb&color=fff&size=200`} />
               <AvatarFallback className="text-3xl font-bold text-blue-600">{user?.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
@@ -181,14 +181,28 @@ export default function RoleSelectScreen() {
           <p className={`text-xs mt-3 font-medium ${
             uploadingPhoto ? 'text-gray-400'
             : hasPhoto ? 'text-green-600'
-            : 'text-gray-500'
+            : 'text-gray-600'
           }`}>
             {uploadingPhoto
               ? 'Uploading...'
               : hasPhoto
               ? '✓ Photo added! You can continue as Client or Provider'
-              : '📷 Tap the camera to upload — providers need a photo'}
+              : 'Tap the camera to upload your photo'}
           </p>
+          {/* Strong trust warning — only shown when no photo */}
+          {!hasPhoto && (
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-left">
+              <p className="text-[11px] text-amber-800 font-semibold mb-1">
+                ⚠ Why upload a photo?
+              </p>
+              <ul className="text-[10px] text-amber-700 space-y-0.5 list-disc list-inside">
+                <li>Builds trust — people do business with people they can see</li>
+                <li>Providers without photos get <b>fewer bookings</b></li>
+                <li>Clients without photos get <b>slower responses</b></li>
+                <li>You can add it later from your Profile, but we recommend doing it now</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Client Card — always enabled (photo optional for clients) */}
@@ -239,14 +253,10 @@ export default function RoleSelectScreen() {
           </CardContent>
         </Card>
 
-        {/* Provider Card — disabled until photo is uploaded (photo required for providers) */}
+        {/* Provider Card — always enabled (photo optional but recommended) */}
         <Card
-          className={`border-2 transition-all ${
-            canSelectProvider
-              ? 'cursor-pointer sintha-card-hover border-transparent hover:border-green-300'
-              : 'opacity-50 cursor-not-allowed border-gray-200'
-          }`}
-          onClick={canSelectProvider ? () => selectRole('provider') : undefined}
+          className="cursor-pointer sintha-card-hover border-2 border-transparent hover:border-green-300"
+          onClick={() => selectRole('provider')}
         >
           <CardContent className="p-6 flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
@@ -277,12 +287,6 @@ export default function RoleSelectScreen() {
                   <Shield className="h-3 w-3 text-green-500" />
                   <span className="text-[10px] text-gray-400">Verified Badge</span>
                 </div>
-                {!canSelectProvider && (
-                  <div className="flex items-center gap-1">
-                    <Camera className="h-3 w-3 text-amber-500" />
-                    <span className="text-[10px] text-amber-600 font-medium">Photo required</span>
-                  </div>
-                )}
               </div>
             </div>
             {loading === 'provider' ? (
@@ -294,16 +298,10 @@ export default function RoleSelectScreen() {
         </Card>
       </div>
 
-      {/* Lock message — shown only when Provider card is locked (no photo) */}
-      {!canSelectProvider && !loading && (
-        <div className="mt-4 text-sm text-amber-600 font-medium text-center">
-          📷 Upload a photo above to unlock the Provider option
-        </div>
-      )}
-      {/* Soft nudge for clients — encourages photo but doesn't block */}
+      {/* Soft nudge — encourages photo upload but doesn't block either role */}
       {!hasPhoto && !loading && (
-        <div className="mt-2 text-xs text-gray-400 text-center">
-          💡 Clients can skip the photo, but adding one helps providers recognize you
+        <div className="mt-4 text-sm text-amber-600 font-medium text-center">
+          💡 You can skip the photo, but we strongly recommend adding one for trust
         </div>
       )}
 
