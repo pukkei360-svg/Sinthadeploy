@@ -152,6 +152,61 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send email notifications (async — don't block the response)
+    // We fetch emails and send in parallel with the response going back immediately.
+    setImmediate(async () => {
+      try {
+        const { sendEmail } = await import('@/lib/email')
+        const {
+          bookingConfirmedForProviderHtml,
+          bookingConfirmedForClientHtml,
+        } = await import('@/lib/email-templates')
+
+        const bookingEmailData = {
+          bookingId: booking.id,
+          service,
+          date,
+          time,
+          address,
+          // Populated below
+          otherPersonName: '',
+          otherPersonRole: 'client' as const,
+        }
+
+        // Email the PROVIDER that they have a new booking
+        if (booking.provider?.email && booking.provider.email !== 'undefined') {
+          const providerEmail = booking.provider.email
+          const providerHtml = bookingConfirmedForProviderHtml({
+            ...bookingEmailData,
+            otherPersonName: booking.client?.name || 'A client',
+            otherPersonRole: 'client',
+          })
+          sendEmail({
+            to: providerEmail,
+            subject: `📦 New booking from ${booking.client?.name || 'a client'} — ${service}`,
+            html: providerHtml,
+          }).catch((err) => console.error('[Email] Provider booking email failed:', err))
+        }
+
+        // Email the CLIENT that their booking is confirmed
+        if (booking.client?.email && booking.client.email !== 'undefined') {
+          const clientEmail = booking.client.email
+          const clientHtml = bookingConfirmedForClientHtml({
+            ...bookingEmailData,
+            otherPersonName: booking.provider?.name || 'Your provider',
+            otherPersonRole: 'provider',
+          })
+          sendEmail({
+            to: clientEmail,
+            subject: `✅ Booking confirmed — ${service} with ${booking.provider?.name || 'provider'}`,
+            html: clientHtml,
+          }).catch((err) => console.error('[Email] Client booking email failed:', err))
+        }
+      } catch (emailErr) {
+        console.error('[Email] Booking notification emails failed:', emailErr)
+      }
+    })
+
     return NextResponse.json({ booking }, { status: 201 });
   } catch (error) {
     console.error('Create booking error:', error);

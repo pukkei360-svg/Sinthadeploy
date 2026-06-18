@@ -133,6 +133,46 @@ export async function POST(
       },
     });
 
+    // Send email notification to the other participant (async, non-blocking)
+    setImmediate(async () => {
+      try {
+        const { sendEmail } = await import('@/lib/email')
+        const { newChatMessageHtml } = await import('@/lib/email-templates')
+
+        // Fetch the other user's email and the sender's name
+        const [otherUser, senderUser] = await Promise.all([
+          db.user.findUnique({
+            where: { id: otherUserId },
+            select: { email: true, name: true },
+          }),
+          db.user.findUnique({
+            where: { id: senderId },
+            select: { name: true },
+          }),
+        ])
+
+        if (!otherUser?.email || !senderUser?.name) return
+        // Skip phone-auth users with fake emails
+        if (otherUser.email.endsWith('@phone.sintha.app')) return
+        if (otherUser.email === 'undefined') return
+
+        const messagePreview = content.length > 100 ? content.substring(0, 100) : content
+        const html = newChatMessageHtml({
+          senderName: senderUser.name,
+          messagePreview,
+          conversationId: id,
+        })
+
+        await sendEmail({
+          to: otherUser.email,
+          subject: `💬 ${senderUser.name} sent you a message on SINTHA`,
+          html,
+        })
+      } catch (emailErr) {
+        console.error('[Email] Chat message email failed:', emailErr)
+      }
+    })
+
     return NextResponse.json({ message }, { status: 201 });
   } catch (error) {
     console.error('Send message error:', error);
