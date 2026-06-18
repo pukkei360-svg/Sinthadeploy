@@ -27,10 +27,13 @@ const categoryIcons: Record<string, typeof Home> = {
 export default function HomeScreen() {
   const {
     navigate, user, categories, setCategories, providers, setProviders, setIsLoading,
+    notifications,
   } = useAppStore()
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoaded, setDataLoaded] = useState(false)
+
+  const unreadNotifs = notifications.filter((n) => !n.isRead).length
 
   useEffect(() => {
     if (dataLoaded) return
@@ -81,8 +84,14 @@ export default function HomeScreen() {
         <button
           onClick={() => navigate('notifications')}
           className="relative p-2 text-gray-500 hover:text-gray-700"
+          aria-label={`Notifications${unreadNotifs > 0 ? ` (${unreadNotifs} unread)` : ''}`}
         >
           <Bell className="h-5 w-5" />
+          {unreadNotifs > 0 && (
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+              {unreadNotifs > 9 ? '9+' : unreadNotifs}
+            </span>
+          )}
         </button>
         <button
           onClick={() => navigate('profile')}
