@@ -171,10 +171,32 @@ export default function LandingScreen() {
 
       {/* Footer */}
       <div className="mt-auto py-6 px-4 text-center border-t bg-gray-50">
-        <p className="text-sm text-gray-500">&copy; SINTHA 2026 &bull; Made in Manipur</p>
+        <p className="text-sm font-semibold text-gray-700 mb-2">SINTHA</p>
+        <p className="text-xs text-gray-500 mb-3">Trusted Hands. Trusted Services. Made in Manipur.</p>
+
+        {/* Legal links — required for Razorpay compliance */}
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs mb-3">
+          <a href="/privacy" className="text-gray-600 hover:text-blue-600 hover:underline">Privacy Policy</a>
+          <span className="text-gray-300">•</span>
+          <a href="/terms" className="text-gray-600 hover:text-blue-600 hover:underline">Terms of Service</a>
+          <span className="text-gray-300">•</span>
+          <a href="/refund-policy" className="text-gray-600 hover:text-blue-600 hover:underline">Refund Policy</a>
+          <span className="text-gray-300">•</span>
+          <a href="/contact" className="text-gray-600 hover:text-blue-600 hover:underline">Contact Us</a>
+        </div>
+
+        {/* Contact info */}
+        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-3">
+          <a href="mailto:pukkei365@gmail.com" className="hover:text-blue-600 hover:underline">pukkei365@gmail.com</a>
+          <span className="text-gray-300">•</span>
+          <a href="https://wa.me/917005151875" className="hover:text-green-600 hover:underline">WhatsApp Support</a>
+        </div>
+
+        <p className="text-xs text-gray-400 mb-2">&copy; 2026 SINTHA &bull; All rights reserved</p>
+
         <button
           onClick={() => navigate('login', { role: 'admin' })}
-          className="text-xs text-gray-400 hover:text-gray-600 mt-1 underline"
+          className="text-[10px] text-gray-300 hover:text-gray-500 underline"
         >
           Admin Login
         </button>
