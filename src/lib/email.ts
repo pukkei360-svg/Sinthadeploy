@@ -1,14 +1,21 @@
 import nodemailer from 'nodemailer'
-import { readFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
 
-// SMTP configuration from environment variables
-// Set these in your .env file:
-// SMTP_HOST=smtp.gmail.com
-// SMTP_PORT=587
-// SMTP_USER=your-email@gmail.com
-// SMTP_PASS=your-app-password
-// SMTP_FROM="SINTHA <your-email@gmail.com>"
+/**
+ * SINTHA Email Service
+ *
+ * Sends transactional emails via Gmail SMTP using nodemailer.
+ *
+ * Required env vars (set on Vercel):
+ *   SMTP_HOST=smtp.gmail.com
+ *   SMTP_PORT=587
+ *   SMTP_USER=your-email@gmail.com
+ *   SMTP_PASS=your-16-char-app-password
+ *   SMTP_FROM="SINTHA <your-email@gmail.com>"
+ *
+ * On Vercel, env vars are injected automatically at runtime.
+ * No need to load .env files manually (which broke Vercel's
+ * file tracing and prevented deployment).
+ */
 
 interface SmtpConfig {
   host: string
@@ -18,79 +25,23 @@ interface SmtpConfig {
   from: string
 }
 
-// Load .env file manually (needed for standalone mode where Next.js doesn't auto-load .env)
-function loadEnvFile(): Record<string, string> {
-  const envVars: Record<string, string> = {}
-
-  // Try multiple possible locations for .env
-  const possiblePaths = [
-    resolve(process.cwd(), '.env'),
-    resolve(process.cwd(), '../../.env'),  // standalone server is in .next/standalone/
-    resolve(__dirname, '../../.env'),       // from compiled route
-    resolve(__dirname, '../../../.env'),
-  ]
-
-  for (const envPath of possiblePaths) {
-    try {
-      if (existsSync(envPath)) {
-        const content = readFileSync(envPath, 'utf-8')
-        for (const line of content.split('\n')) {
-          const trimmed = line.trim()
-          // Skip comments and empty lines
-          if (!trimmed || trimmed.startsWith('#')) continue
-          const match = trimmed.match(/^([^=]+)=(.*)$/)
-          if (match) {
-            const key = match[1].trim()
-            let value = match[2].trim()
-            // Remove surrounding quotes
-            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-              value = value.slice(1, -1)
-            }
-            envVars[key] = value
-          }
-        }
-        console.log(`[SMTP] Loaded .env from: ${envPath}`)
-        break
-      }
-    } catch {
-      // Try next path
-    }
-  }
-
-  return envVars
-}
-
-// Cache loaded env vars
-let loadedEnv: Record<string, string> | null = null
-
-function getEnvVar(key: string): string | undefined {
-  // First try process.env (works in dev mode)
-  if (process.env[key]) return process.env[key]
-
-  // Then try loaded .env file (works in standalone mode)
-  if (!loadedEnv) {
-    loadedEnv = loadEnvFile()
-  }
-  return loadedEnv[key]
-}
-
 function getSmtpConfig(): SmtpConfig | null {
-  const host = getEnvVar('SMTP_HOST')
-  const user = getEnvVar('SMTP_USER')
-  const pass = getEnvVar('SMTP_PASS')
+  // Read directly from process.env — works on Vercel, local dev,
+  // and any environment that injects env vars (which is all of them).
+  const host = process.env.SMTP_HOST
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASS
 
   if (!host || !user || !pass) {
-    console.warn('[SMTP] Not configured. SMTP_HOST:', !!host, 'SMTP_USER:', !!user, 'SMTP_PASS:', !!pass)
     return null
   }
 
-  console.log('[SMTP] Config found for:', user)
   return {
     host,
-    port: parseInt(getEnvVar('SMTP_PORT') || '587'),
+    port: parseInt(process.env.SMTP_PORT || '587'),
     user,
     pass,
-    from: getEnvVar('SMTP_FROM') || `SINTHA <${user}>`,
+    from: process.env.SMTP_FROM || `SINTHA <${user}>`,
   }
 }
 
@@ -100,17 +51,29 @@ export interface SendEmailOptions {
   html: string
 }
 
+/**
+ * Send an email via Gmail SMTP.
+ *
+ * Returns true on success, false on failure.
+ * Never throws — all errors are caught and logged.
+ */
 export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<boolean> {
   const config = getSmtpConfig()
 
   if (!config) {
-    console.warn('[SMTP] Cannot send email - SMTP not configured')
+    console.warn('[SMTP] Not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS env vars.')
     return false
   }
 
-  // Create a fresh transporter for each send and close it after
+  // Validate recipient email
+  if (!to || !to.includes('@') || to.endsWith('@phone.sintha.app') || to === 'undefined') {
+    console.warn(`[SMTP] Skipping send — invalid recipient: ${to}`)
+    return false
+  }
+
+  // Create a fresh transporter for each send and close it after.
   // This prevents the SMTP connection pool from keeping the Node.js
-  // event loop alive, which was causing the Next.js server to crash
+  // event loop alive, which was crashing the Next.js server on Vercel.
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -122,13 +85,13 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   })
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: config.from,
       to,
       subject,
       html,
     })
-    console.log(`[SMTP] Email sent successfully to ${to}`)
+    console.log(`[SMTP] Email sent to ${to} ( messageId: ${info.messageId} )`)
     return true
   } catch (error) {
     console.error('[SMTP] Email send error:', error)
@@ -137,13 +100,15 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
     // Always close the transporter to free the SMTP connection
     try {
       transporter.close()
-      console.log('[SMTP] Transporter closed')
     } catch {
       // Ignore close errors
     }
   }
 }
 
+/**
+ * Check if SMTP is configured (env vars are set).
+ */
 export function isSmtpConfigured(): boolean {
   return getSmtpConfig() !== null
 }
