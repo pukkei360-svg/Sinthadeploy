@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ArrowLeft, Mail, Loader2, AlertCircle, CheckCircle2, MessageCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { apiFetch } from '@/lib/api'
+import WhatsAppIcon from './WhatsAppIcon'
 
 
 export default function ForgotPasswordScreen() {
@@ -187,10 +188,9 @@ export default function ForgotPasswordScreen() {
                 }}
                 className="w-full flex items-center justify-center gap-2 text-green-600 hover:text-green-700 transition-colors"
               >
-                <MessageCircle className="h-5 w-5" />
+                <WhatsAppIcon className="h-5 w-5" />
                 <span className="text-sm font-semibold">Need help? Chat with us on WhatsApp</span>
               </button>
-              <p className="text-[11px] text-center text-gray-400 mt-1">7005151875</p>
             </div>
           </CardContent>
         </Card>

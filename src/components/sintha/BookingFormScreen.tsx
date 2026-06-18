@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircle, Copy, Phone, Share2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
+import WhatsAppIcon from './WhatsAppIcon'
 
 export default function BookingFormScreen() {
   const { navigate, viewParams, user, addBooking } = useAppStore()
@@ -116,7 +117,7 @@ export default function BookingFormScreen() {
                   <Phone className="h-4 w-4" />
                   Call
                 </button>
-                {/* WhatsApp web link */}
+                {/* WhatsApp button — proper WhatsApp logo on green background */}
                 <button
                   onClick={() => {
                     const cleaned = getDigitsOnly(providerPhone)
@@ -124,15 +125,10 @@ export default function BookingFormScreen() {
                     const msg = encodeURIComponent(`Hi ${providerName}, I booked your service on SINTHA.`)
                     window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
                   }}
-                  className="flex items-center gap-3 w-full bg-green-50 hover:bg-green-100 rounded-xl p-3 transition-colors text-left"
+                  className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >
-                  <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                    <MessageCircle className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-green-700">WhatsApp</p>
-                    <p className="text-xs text-green-500">Open chat in browser</p>
-                  </div>
+                  <WhatsAppIcon className="h-5 w-5" />
+                  WhatsApp
                 </button>
                 {/* Small "copy number" link as a fallback for users who prefer to copy */}
                 <button
