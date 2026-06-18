@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -10,17 +10,20 @@ import { Separator } from '@/components/ui/separator'
 import BottomNav from './BottomNav'
 import {
   Calendar, Star, Crown, Bell, HelpCircle, LogOut, Briefcase,
-  ChevronRight, PenLine, MapPin, Phone
+  ChevronRight, PenLine, MapPin, Phone, Camera, Loader2
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { signOut as firebaseSignOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { uploadPhoto } from '@/lib/cloudinary'
 
 
 export default function ProfileScreen() {
   const { navigate, user, setUser, logout, myProviderProfile, setMyProviderProfile, token } = useAppStore()
   const { toast } = useToast()
   const [switching, setSwitching] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const menuItems = [
     { icon: Calendar, label: 'My Bookings', action: () => navigate('my-bookings') },
@@ -36,6 +39,56 @@ export default function ProfileScreen() {
       label: 'Edit Provider Profile',
       action: () => navigate('provider-onboarding'),
     })
+  }
+
+  // Handle photo upload — called when user selects a file
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Reset the input so the same file can be selected again later
+    if (fileInputRef.current) fileInputRef.current.value = ''
+
+    if (!user) {
+      toast({ title: 'Error', description: 'Please login first', variant: 'destructive' })
+      return
+    }
+
+    setUploadingPhoto(true)
+    try {
+      // 1. Upload to Cloudinary (auto-compresses to ~200 KB)
+      const result = await uploadPhoto(file, 'profiles')
+      if (!result.success || !result.url) {
+        throw new Error(result.error || 'Upload failed')
+      }
+
+      // 2. Save the URL to the user's profile via our backend
+      const profileRes = await apiFetch('/user/profile', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          userId: user.id,
+          photoUrl: result.url,
+        }),
+      })
+
+      // 3. Update the local user state so the avatar updates instantly
+      if (profileRes.user) {
+        setUser(profileRes.user, token)
+      } else {
+        // Fallback: update user state manually
+        setUser({ ...user, photoUrl: result.url }, token)
+      }
+
+      toast({
+        title: 'Photo Updated!',
+        description: 'Your profile photo has been updated successfully',
+      })
+    } catch (err: unknown) {
+      const message = (err as Error).message || 'Failed to upload photo'
+      toast({ title: 'Upload Failed', description: message, variant: 'destructive' })
+    } finally {
+      setUploadingPhoto(false)
+    }
   }
 
   const handleRoleSwitch = async () => {
@@ -117,10 +170,36 @@ export default function ProfileScreen() {
       {/* Header */}
       <div className="sintha-gradient px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 border-2 border-white/30">
-            <AvatarImage src={user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=fff&color=2563eb`} />
-            <AvatarFallback className="text-xl">{user?.name?.[0] || 'U'}</AvatarFallback>
-          </Avatar>
+          {/* Avatar with Change Photo button — click to upload */}
+          <div className="relative">
+            <Avatar className="h-16 w-16 border-2 border-white/30">
+              <AvatarImage src={user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=fff&color=2563eb`} />
+              <AvatarFallback className="text-xl">{user?.name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            {/* Camera button overlay (bottom-right of avatar) */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              aria-label="Change profile photo"
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-md hover:bg-blue-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed border-2 border-blue-600"
+            >
+              {uploadingPhoto ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Camera className="h-3.5 w-3.5" />
+              )}
+            </button>
+            {/* Hidden file input — triggered by camera button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="hidden"
+              capture="user"  // Hint mobile browsers to offer camera (user-facing)
+            />
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold">{user?.name || 'User'}</h2>
