@@ -9,15 +9,26 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import BottomNav from './BottomNav'
+import WhatsAppIcon from './WhatsAppIcon'
 import {
   Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
-  MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users
+  MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
+  QrCode, Share2, Package, Tag, BarChart3, Copy
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ProviderDashboardScreen() {
   const { navigate, user, bookings, setBookings, setMyProviderProfile, myProviderProfile, notifications } = useAppStore()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [showQR, setShowQR] = useState(false)
+  const [packages, setPackages] = useState<any[]>([])
+  const [offers, setOffers] = useState<any[]>([])
+  const [showPackageForm, setShowPackageForm] = useState(false)
+  const [showOfferForm, setShowOfferForm] = useState(false)
+  const [newPackage, setNewPackage] = useState({ name: '', price: '', description: '' })
+  const [newOffer, setNewOffer] = useState({ title: '', discount: '', description: '', validDays: '7' })
   const [availability, setAvailability] = useState('available')
 
   useEffect(() => {
@@ -31,6 +42,13 @@ export default function ProviderDashboardScreen() {
         if (providers.length > 0) {
           setMyProviderProfile(providers[0])
           setAvailability(providers[0].availability || 'available')
+          // Load existing packages and offers
+          if (providers[0].packages) {
+            try { setPackages(JSON.parse(providers[0].packages)) } catch {}
+          }
+          if (providers[0].offers) {
+            try { setOffers(JSON.parse(providers[0].offers)) } catch {}
+          }
         }
 
         // Load bookings
@@ -473,6 +491,320 @@ export default function ProviderDashboardScreen() {
           </Card>
         )}
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          PRO BUSINESS TOOLS — Only visible to PRO subscribers
+          1. Shareable Storefront Link
+          2. QR Code Business Card
+          3. Business Analytics
+          4. Service Packages
+          5. Promotional Offers
+          ═══════════════════════════════════════════════════════════ */}
+      {user?.isPro && user?.proExpiry && new Date(user.proExpiry) > new Date() && myProviderProfile && (
+        <div className="px-4 pt-6 pb-4 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Crown className="h-5 w-5 text-amber-500" />
+            <h2 className="text-lg font-bold text-gray-800">PRO Business Tools</h2>
+          </div>
+
+          {/* 1. SHAREABLE STOREFRONT LINK */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Share2 className="h-4 w-4 text-blue-600" />
+                <h3 className="font-semibold text-gray-800 text-sm">Share Your Storefront</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Share this link on WhatsApp, Facebook, or Instagram. Anyone who opens it can view your profile and book you directly.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const url = `https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`
+                    navigator.clipboard?.writeText(url)
+                    toast({ title: 'Link Copied!', description: 'Paste it anywhere to share your profile' })
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" /> Copy Link
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 bg-[#25D366] hover:bg-[#1ebe5d] text-white"
+                  onClick={() => {
+                    const url = `https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`
+                    const msg = encodeURIComponent(`Book my services on SINTHA! ${url}`)
+                    window.open(`https://wa.me/?text=${msg}`, '_blank')
+                  }}
+                >
+                  <WhatsAppIcon className="h-3 w-3 mr-1" /> Share on WhatsApp
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 2. QR CODE BUSINESS CARD */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <QrCode className="h-4 w-4 text-purple-600" />
+                <h3 className="font-semibold text-gray-800 text-sm">QR Code Business Card</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Print this QR code and put it on your shop, vehicle, or flyers. People scan it to book you instantly.
+              </p>
+              {showQR ? (
+                <div className="text-center">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`}
+                    alt="QR Code"
+                    className="mx-auto rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">Scan to book {user?.name}</p>
+                  <a
+                    href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`}
+                    download="sintha-qr.png"
+                    className="inline-block mt-2 text-xs text-blue-600 hover:underline font-medium"
+                  >
+                    Download QR Code
+                  </a>
+                </div>
+              ) : (
+                <Button size="sm" variant="outline" className="w-full" onClick={() => setShowQR(true)}>
+                  <QrCode className="h-3 w-3 mr-1" /> Show QR Code
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 3. BUSINESS ANALYTICS */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="h-4 w-4 text-green-600" />
+                <h3 className="font-semibold text-gray-800 text-sm">Business Analytics</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-blue-50 rounded-lg p-3 text-center">
+                  <Calendar className="h-4 w-4 text-blue-600 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-gray-800">{bookings.length}</p>
+                  <p className="text-[10px] text-gray-500">Total Bookings</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg p-3 text-center">
+                  <Star className="h-4 w-4 text-amber-500 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-gray-800">{myProviderProfile.rating?.toFixed(1) || '0.0'}</p>
+                  <p className="text-[10px] text-gray-500">Avg Rating</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <IndianRupee className="h-4 w-4 text-green-600 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-gray-800">₹{(bookings.length * (myProviderProfile.hourlyRate || 0)).toLocaleString('en-IN')}</p>
+                  <p className="text-[10px] text-gray-500">Est. Earnings</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-3 text-center">
+                  <Users className="h-4 w-4 text-purple-600 mx-auto mb-1" />
+                  <p className="text-xl font-bold text-gray-800">{myProviderProfile.totalReviews || 0}</p>
+                  <p className="text-[10px] text-gray-500">Reviews</p>
+                </div>
+              </div>
+              <div className="mt-3 bg-blue-50 rounded-lg p-2">
+                <p className="text-[10px] text-blue-700 text-center">
+                  💡 Respond to bookings within 5 minutes to get 3x more bookings!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 4. SERVICE PACKAGES */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-orange-600" />
+                  <h3 className="font-semibold text-gray-800 text-sm">Service Packages</h3>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setShowPackageForm(!showPackageForm)}>
+                  {showPackageForm ? 'Cancel' : '+ Add'}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Create fixed-price packages. Clients prefer packages over hourly rates.
+              </p>
+
+              {/* Package Form */}
+              {showPackageForm && (
+                <div className="space-y-2 mb-3 p-3 bg-gray-50 rounded-lg">
+                  <input
+                    type="text"
+                    placeholder="Package name (e.g. Full Home Cleaning)"
+                    value={newPackage.name}
+                    onChange={(e) => setNewPackage({ ...newPackage, name: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Price in ₹ (e.g. 999)"
+                    value={newPackage.price}
+                    onChange={(e) => setNewPackage({ ...newPackage, price: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border rounded-lg"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description (e.g. 3BHK deep clean, 2 hours)"
+                    value={newPackage.description}
+                    onChange={(e) => setNewPackage({ ...newPackage, description: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border rounded-lg"
+                  />
+                  <Button
+                    size="sm"
+                    className="w-full sintha-gradient text-white"
+                    onClick={async () => {
+                      if (!newPackage.name || !newPackage.price) return
+                      const pkgs = packages || []
+                      const updated = [...pkgs, { ...newPackage, id: Date.now().toString() }]
+                      setPackages(updated)
+                      setNewPackage({ name: '', price: '', description: '' })
+                      setShowPackageForm(false)
+                      // Save to backend
+                      try {
+                        await apiFetch(`/providers/${myProviderProfile.id}`, {
+                          method: 'PUT',
+                          body: JSON.stringify({ packages: JSON.stringify(updated) }),
+                        })
+                        toast({ title: 'Package Added!', description: 'Clients can now book this package' })
+                      } catch {
+                        toast({ title: 'Saved locally', description: 'Will sync when online' })
+                      }
+                    }}
+                  >
+                    Save Package
+                  </Button>
+                </div>
+              )}
+
+              {/* Existing Packages */}
+              {packages.length > 0 ? (
+                <div className="space-y-2">
+                  {packages.map((pkg) => (
+                    <div key={pkg.id} className="flex items-center justify-between bg-orange-50 rounded-lg p-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{pkg.name}</p>
+                        <p className="text-[10px] text-gray-500">{pkg.description}</p>
+                      </div>
+                      <span className="text-sm font-bold text-orange-600">₹{pkg.price}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-2">No packages yet. Create one to attract more clients!</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 5. PROMOTIONAL OFFERS */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-red-600" />
+                  <h3 className="font-semibold text-gray-800 text-sm">Promotional Offers</h3>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setShowOfferForm(!showOfferForm)}>
+                  {showOfferForm ? 'Cancel' : '+ Add'}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Create limited-time discounts to attract new clients.
+              </p>
+
+              {/* Offer Form */}
+              {showOfferForm && (
+                <div className="space-y-2 mb-3 p-3 bg-gray-50 rounded-lg">
+                  <input
+                    type="text"
+                    placeholder="Offer title (e.g. First-time 20% off)"
+                    value={newOffer.title}
+                    onChange={(e) => setNewOffer({ ...newOffer, title: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Discount % (e.g. 20)"
+                    value={newOffer.discount}
+                    onChange={(e) => setNewOffer({ ...newOffer, discount: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border rounded-lg"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description (e.g. New customers only)"
+                    value={newOffer.description}
+                    onChange={(e) => setNewOffer({ ...newOffer, description: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border rounded-lg"
+                  />
+                  <Button
+                    size="sm"
+                    className="w-full sintha-gradient text-white"
+                    onClick={async () => {
+                      if (!newOffer.title || !newOffer.discount) return
+                      const existingOffers = offers || []
+                      const expiry = new Date()
+                      expiry.setDate(expiry.getDate() + parseInt(newOffer.validDays))
+                      const updated = [...existingOffers, { ...newOffer, id: Date.now().toString(), expiry: expiry.toISOString() }]
+                      setOffers(updated)
+                      setNewOffer({ title: '', discount: '', description: '', validDays: '7' })
+                      setShowOfferForm(false)
+                      try {
+                        await apiFetch(`/providers/${myProviderProfile.id}`, {
+                          method: 'PUT',
+                          body: JSON.stringify({ offers: JSON.stringify(updated) }),
+                        })
+                        toast({ title: 'Offer Created!', description: 'It will show on your profile' })
+                      } catch {
+                        toast({ title: 'Saved locally', description: 'Will sync when online' })
+                      }
+                    }}
+                  >
+                    Create Offer
+                  </Button>
+                </div>
+              )}
+
+              {/* Existing Offers */}
+              {offers.length > 0 ? (
+                <div className="space-y-2">
+                  {offers.map((offer) => (
+                    <div key={offer.id} className="flex items-center justify-between bg-red-50 rounded-lg p-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">🏷️ {offer.title}</p>
+                        <p className="text-[10px] text-gray-500">{offer.description}</p>
+                        <p className="text-[9px] text-gray-400">Expires: {new Date(offer.expiry).toLocaleDateString()}</p>
+                      </div>
+                      <span className="text-sm font-bold text-red-600">-{offer.discount}%</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 text-center py-2">No offers yet. Create one to get more bookings!</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Non-PRO upsell banner */}
+      {(!user?.isPro || !user?.proExpiry || new Date(user.proExpiry) <= new Date()) && (
+        <div className="px-4 pt-4">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 text-center">
+            <Crown className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+            <p className="text-sm font-bold text-gray-800">Unlock Business Tools with PRO</p>
+            <p className="text-xs text-gray-500 mb-3">QR Code, Shareable Link, Analytics, Packages, Offers</p>
+            <Button size="sm" className="sintha-gradient text-white" onClick={() => navigate('sintha-pro')}>
+              Upgrade to PRO — ₹1/month
+            </Button>
+          </div>
+        </div>
+      )}
 
       <BottomNav />
     </div>

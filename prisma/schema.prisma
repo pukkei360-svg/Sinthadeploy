@@ -64,6 +64,8 @@ model ProviderProfile {
   totalReviews  Int      @default(0)
   totalBookings Int      @default(0)
   portfolioUrls String?  // JSON array of image URLs
+  packages      String?  // JSON array of service packages (PRO)
+  offers        String?  // JSON array of promotional offers (PRO)
   isFeatured    Boolean  @default(false)
   isVerified    Boolean  @default(false)
   createdAt     DateTime @default(now())
