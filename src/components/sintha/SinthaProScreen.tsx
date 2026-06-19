@@ -133,38 +133,6 @@ export default function SinthaProScreen() {
             name: user.name || '',
             email: user.email || '',
           },
-          // Explicitly enable all payment methods including UPI
-          // (these are enabled by default, but we set them explicitly
-          // to ensure UPI, cards, netbanking, and wallets all show up)
-          config: {
-            display: {
-              blocks: {
-                upi: {
-                  name: 'Pay using UPI',
-                  instruments: [
-                    { method: 'upi' },
-                  ],
-                },
-                cards: {
-                  name: 'Pay using Card',
-                  instruments: [
-                    { method: 'card' },
-                  ],
-                },
-                others: {
-                  name: 'Other Methods',
-                  instruments: [
-                    { method: 'netbanking' },
-                    { method: 'wallet' },
-                  ],
-                },
-              },
-              sequence: ['upi', 'cards', 'others'],
-              preferences: {
-                show_default_blocks: false,
-              },
-            },
-          },
           theme: {
             color: '#2563eb',
           },
