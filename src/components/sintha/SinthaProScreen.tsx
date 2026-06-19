@@ -92,6 +92,50 @@ export default function SinthaProScreen() {
     }
   }, [])
 
+  // ─────────────────────────────────────────────────────────────
+  // Payment polling — checks backend every 5 seconds for payment status.
+  // This is a CRITICAL fallback for GPay/UPI redirect payments where
+  // the Razorpay handler never fires (user leaves the page/app).
+  // ─────────────────────────────────────────────────────────────
+  const startPaymentPolling = (userId: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    pollingCountRef.current = 0
+    setAutoVerifying(true)
+
+    pollingRef.current = setInterval(async () => {
+      pollingCountRef.current += 1
+      // Stop after 5 minutes (60 attempts × 5s)
+      if (pollingCountRef.current > 60) {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+        setAutoVerifying(false)
+        return
+      }
+
+      try {
+        // Check if user's PRO status has been activated
+        // (either by webhook, manual verify, or handler)
+        const data = await apiFetch(`/razorpay/check-payment`, {
+          method: 'POST',
+          body: JSON.stringify({ userId }),
+        })
+
+        if (data.paid && data.user) {
+          // Payment confirmed! Activate PRO.
+          if (pollingRef.current) clearInterval(pollingRef.current)
+          setAutoVerifying(false)
+          setUser(data.user, null)
+          toast({
+            title: 'PRO Activated!',
+            description: 'Payment verified! Your SINTHA PRO is now active.',
+          })
+          navigate('profile')
+        }
+      } catch {
+        // Silently retry
+      }
+    }, 5000) // Check every 5 seconds
+  }
+
   const handlePaymentLink = async () => {
     if (!user) {
       toast({ title: 'Error', description: 'Please login first', variant: 'destructive' })
@@ -170,18 +214,24 @@ export default function SinthaProScreen() {
               }
             } catch (verifyErr: unknown) {
               toast({
-                title: 'Verification Failed',
-                description: (verifyErr as Error).message || 'Payment could not be verified. Contact support.',
-                variant: 'destructive',
+                title: 'Verification Pending',
+                description: 'Payment received! Verifying... Please wait a moment and refresh your profile.',
               })
+              // Start polling as fallback in case signature verification fails
+              startPaymentPolling(user.id)
             }
           },
           modal: {
             ondismiss: () => {
+              // User closed the Razorpay modal.
+              // DON'T say "cancelled" — they might have paid via GPay
+              // (which redirects away and the modal dismisses).
+              // Start polling to check if payment was actually completed.
               toast({
-                title: 'Payment Cancelled',
-                description: 'You closed the payment window. Try again when ready.',
+                title: 'Checking Payment...',
+                description: 'If you completed payment, your PRO will activate automatically in a few seconds.',
               })
+              startPaymentPolling(user.id)
             },
           },
         })
@@ -193,6 +243,10 @@ export default function SinthaProScreen() {
             variant: 'destructive',
           })
         })
+
+        // Start polling immediately when modal opens (in case user pays
+        // via GPay redirect and the handler never fires)
+        startPaymentPolling(user.id)
 
         rzp.open()
       }
