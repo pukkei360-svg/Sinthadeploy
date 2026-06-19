@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -10,17 +10,40 @@ import { Separator } from '@/components/ui/separator'
 import BottomNav from './BottomNav'
 import {
   Calendar, Star, Crown, Bell, HelpCircle, LogOut, Briefcase,
-  ChevronRight, PenLine, MapPin, Phone
+  ChevronRight, PenLine, MapPin, Phone, Camera, Loader2, ImagePlus
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { signOut as firebaseSignOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { uploadPhoto } from '@/lib/cloudinary'
 
 
 export default function ProfileScreen() {
   const { navigate, user, setUser, logout, myProviderProfile, setMyProviderProfile, token } = useAppStore()
   const { toast } = useToast()
   const [switching, setSwitching] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (event.target === cameraInputRef.current) cameraInputRef.current.value = ''
+    if (event.target === galleryInputRef.current) galleryInputRef.current.value = ''
+
+    if (!user) { toast({ title: 'Error', description: 'Please login first', variant: 'destructive' }); return }
+    setUploadingPhoto(true)
+    try {
+      const result = await uploadPhoto(file, 'profiles')
+      if (!result.success || !result.url) throw new Error(result.error || 'Upload failed')
+      const profileRes = await apiFetch('/user/profile', { method: 'PATCH', body: JSON.stringify({ userId: user.id, photoUrl: result.url }) })
+      if (profileRes.user) { setUser(profileRes.user, token) } else { setUser({ ...user, photoUrl: result.url }, token) }
+      toast({ title: 'Photo Updated!', description: 'Your profile photo has been updated' })
+    } catch (err: unknown) {
+      toast({ title: 'Upload Failed', description: (err as Error).message, variant: 'destructive' })
+    } finally { setUploadingPhoto(false) }
+  }
 
   const menuItems = [
     { icon: Calendar, label: 'My Bookings', action: () => navigate('my-bookings') },
@@ -117,10 +140,42 @@ export default function ProfileScreen() {
       {/* Header */}
       <div className="sintha-gradient px-4 pt-6 pb-12 text-white">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 border-2 border-white/30">
-            <AvatarImage src={user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=fff&color=2563eb`} />
-            <AvatarFallback className="text-xl">{user?.name?.[0] || 'U'}</AvatarFallback>
-          </Avatar>
+          {/* Avatar with two upload options */}
+          <div className="relative">
+            <Avatar className="h-16 w-16 border-2 border-white/30">
+              <AvatarImage src={user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=fff&color=2563eb`} />
+              <AvatarFallback className="text-xl">{user?.name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+            {uploadingPhoto ? (
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center border-2 border-blue-600">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <div className="absolute -bottom-2 -right-1 flex gap-1">
+                {/* Take Selfie button */}
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  aria-label="Take a selfie"
+                  className="w-7 h-7 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-md hover:bg-blue-50 border-2 border-blue-600"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                </button>
+                {/* Upload from Gallery button */}
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  aria-label="Upload from gallery"
+                  className="w-7 h-7 bg-white text-green-600 rounded-full flex items-center justify-center shadow-md hover:bg-green-50 border-2 border-green-600"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            {/* Hidden file inputs */}
+            <input ref={cameraInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" capture="user" />
+            <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+          </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold">{user?.name || 'User'}</h2>

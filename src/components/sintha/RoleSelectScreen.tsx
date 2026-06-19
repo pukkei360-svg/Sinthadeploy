@@ -1,16 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
-import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users, Camera, ImagePlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { uploadPhoto } from '@/lib/cloudinary'
 
 export default function RoleSelectScreen() {
   const { user, setUser, navigate, token } = useAppStore()
   const { toast } = useToast()
   const [loading, setLoading] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (event.target === cameraInputRef.current) cameraInputRef.current.value = ''
+    if (event.target === galleryInputRef.current) galleryInputRef.current.value = ''
+    setUploadingPhoto(true)
+    try {
+      const result = await uploadPhoto(file, 'profiles')
+      if (!result.success || !result.url) throw new Error(result.error || 'Upload failed')
+      setPhotoUrl(result.url)
+      toast({ title: 'Photo Added!', description: 'Looking great! Now choose your role' })
+    } catch (err: unknown) {
+      toast({ title: 'Upload Failed', description: (err as Error).message, variant: 'destructive' })
+    } finally { setUploadingPhoto(false) }
+  }
 
   const selectRole = async (role: string) => {
     if (!user || loading) return
@@ -61,6 +83,44 @@ export default function RoleSelectScreen() {
       </div>
 
       <div className="w-full max-w-md space-y-4">
+        {/* Photo Upload Section — two options: Take Selfie or Upload from Gallery */}
+        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 text-center shadow-sm">
+          <p className="text-sm font-semibold text-gray-700 mb-1">Add your profile photo</p>
+          <p className="text-[11px] text-gray-500 mb-4">Strongly recommended for building trust</p>
+          <div className="relative inline-block mb-4">
+            <Avatar className="h-24 w-24 border-4 border-blue-100 mx-auto">
+              <AvatarImage src={photoUrl || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=2563eb&color=fff&size=200`} />
+              <AvatarFallback className="text-3xl font-bold text-blue-600">{user?.name?.[0] || 'U'}</AvatarFallback>
+            </Avatar>
+          </div>
+          {/* Two buttons: Camera (selfie) + Gallery */}
+          <div className="flex gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="flex flex-col items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
+            >
+              {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+              <span className="text-xs font-medium">Take Selfie</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="flex flex-col items-center gap-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
+            >
+              {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin" /> : <ImagePlus className="h-6 w-6" />}
+              <span className="text-xs font-medium">Gallery</span>
+            </button>
+          </div>
+          {/* Hidden file inputs */}
+          <input ref={cameraInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" capture="user" />
+          <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+          {photoUrl && (
+            <p className="text-xs text-green-600 mt-3 font-medium">✓ Photo added! You can continue now</p>
+          )}
+        </div>
         {/* Client Card */}
         <Card
           className="cursor-pointer sintha-card-hover border-2 border-transparent hover:border-blue-300"
