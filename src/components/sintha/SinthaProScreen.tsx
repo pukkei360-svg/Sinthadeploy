@@ -130,7 +130,6 @@ export default function SinthaProScreen() {
           description: 'PRO Subscription — ₹1/month',
           order_id: orderId,
           // Explicitly request all payment methods including UPI
-          // This ensures UPI shows up in live mode (it's activated in dashboard)
           method: {
             upi: true,
             card: true,
@@ -144,6 +143,10 @@ export default function SinthaProScreen() {
           theme: {
             color: '#2563eb',
           },
+          // GPay fallback: when checkout.js tries to open GPay via Android
+          // intent, most WebViews block it. We intercept the navigation
+          // and show a helpful message instead of a blank screen.
+          redirect: true,
           handler: async (response: any) => {
             // Step 4: Payment successful — verify signature on backend
             try {
@@ -300,8 +303,13 @@ export default function SinthaProScreen() {
               {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹1 & Activate PRO'}
             </Button>
             <p className="text-[11px] text-center text-gray-500">
-              Pay with Google Pay, PhonePe, Paytm, UPI, Cards, or Net Banking
+              Pay with PhonePe, Paytm, BHIM, UPI, Cards, or Net Banking
             </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+              <p className="text-[10px] text-amber-700 text-center">
+                💡 <b>GPay users:</b> If GPay doesn't open in the app, please use PhonePe or Paytm instead. Or open sinthadeploy.vercel.app in Chrome browser to pay with GPay.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
