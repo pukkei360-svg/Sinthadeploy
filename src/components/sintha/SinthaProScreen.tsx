@@ -106,10 +106,10 @@ export default function SinthaProScreen() {
         body: JSON.stringify({ userId: user.id }),
       })
 
-      const orderId = orderData.order.id
-      const amount = orderData.order.amount
-      const currency = orderData.order.currency
-      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+      const orderId = orderData.orderId || orderData.order?.id
+      const amount = orderData.amount || orderData.order?.amount
+      const currency = orderData.currency || orderData.order?.currency || 'INR'
+      const keyId = orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
       if (!keyId) {
         throw new Error('Razorpay key not configured')
