@@ -23,6 +23,9 @@ export default function WebViewInterceptor() {
       const target = (e.target as HTMLElement).closest('a')
       if (!target) return
 
+      // Skip anchors marked with data-skip-interceptor (used by dialPhone())
+      if (target.hasAttribute('data-skip-interceptor')) return
+
       const href = target.getAttribute('href')
       if (!href) return
 
