@@ -129,6 +129,14 @@ export default function SinthaProScreen() {
           name: 'SINTHA PRO',
           description: 'PRO Subscription — ₹199/month',
           order_id: orderId,
+          // Explicitly request all payment methods including UPI
+          // This ensures UPI shows up in live mode (it's activated in dashboard)
+          method: {
+            upi: true,
+            card: true,
+            netbanking: true,
+            wallet: true,
+          },
           prefill: {
             name: user.name || '',
             email: user.email || '',
