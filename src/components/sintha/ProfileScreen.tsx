@@ -37,8 +37,20 @@ export default function ProfileScreen() {
     try {
       const result = await uploadPhoto(file, 'profiles')
       if (!result.success || !result.url) throw new Error(result.error || 'Upload failed')
-      const profileRes = await apiFetch('/user/profile', { method: 'PATCH', body: JSON.stringify({ userId: user.id, photoUrl: result.url }) })
-      if (profileRes.user) { setUser(profileRes.user, token) } else { setUser({ ...user, photoUrl: result.url }, token) }
+      
+      // Save to backend
+      const profileRes = await apiFetch('/user/profile', { 
+        method: 'PATCH', 
+        body: JSON.stringify({ userId: user.id, photoUrl: result.url }) 
+      })
+      
+      // Update user state — DON'T pass token (let setUser preserve existing token)
+      if (profileRes.user) {
+        setUser(profileRes.user)
+      } else {
+        setUser({ ...user, photoUrl: result.url })
+      }
+      
       toast({ title: 'Photo Updated!', description: 'Your profile photo has been updated' })
     } catch (err: unknown) {
       toast({ title: 'Upload Failed', description: (err as Error).message, variant: 'destructive' })
@@ -143,7 +155,7 @@ export default function ProfileScreen() {
           {/* Avatar with two upload options */}
           <div className="relative">
             <Avatar className="h-16 w-16 border-2 border-white/30">
-              <AvatarImage src={user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=fff&color=2563eb`} />
+              <AvatarImage src={`${user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=fff&color=2563eb`}?t=${Date.now()}`} />
               <AvatarFallback className="text-xl">{user?.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
             {uploadingPhoto ? (
