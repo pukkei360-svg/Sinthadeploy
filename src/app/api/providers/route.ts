@@ -32,19 +32,6 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const orderBy: Prisma.ProviderProfileOrderByWithRelationInput = {};
-    if (sort === 'rating') {
-      orderBy.rating = 'desc';
-    } else if (sort === 'reviews') {
-      orderBy.totalReviews = 'desc';
-    } else if (sort === 'bookings') {
-      orderBy.totalBookings = 'desc';
-    } else if (sort === 'featured') {
-      orderBy.isFeatured = 'desc';
-    } else {
-      orderBy.createdAt = 'desc';
-    }
-
     const [providers, total] = await Promise.all([
       db.providerProfile.findMany({
         where,
@@ -60,11 +47,25 @@ export async function GET(request: NextRequest) {
               longitude: true,
               isVerified: true,
               isPro: true,
+              proExpiry: true,
             },
           },
           category: true,
         },
-        orderBy,
+        // PRO providers always appear first (regardless of sort option),
+        // then sorted by the requested criteria.
+        // This implements the "Higher search ranking" PRO benefit.
+        orderBy: [
+          { user: { isPro: 'desc' } },
+          ...(sort === 'rating' ? [{ rating: 'desc' as const }] : []),
+          ...(sort === 'reviews' ? [{ totalReviews: 'desc' as const }] : []),
+          ...(sort === 'bookings' ? [{ totalBookings: 'desc' as const }] : []),
+          ...(sort === 'featured' ? [{ isFeatured: 'desc' as const }] : []),
+          ...(sort === 'featured' ? [{ user: { isPro: 'desc' as const } }] : []),
+          ...(!sort || (sort !== 'rating' && sort !== 'reviews' && sort !== 'bookings' && sort !== 'featured')
+            ? [{ createdAt: 'desc' as const }]
+            : []),
+        ],
         skip,
         take: limit,
       }),

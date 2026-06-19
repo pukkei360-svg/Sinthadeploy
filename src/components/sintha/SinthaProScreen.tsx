@@ -13,17 +13,11 @@ const benefits = [
   'Higher search ranking',
   'Featured Provider Badge',
   'Homepage visibility',
-  'AI Quotation Generator',
-  'AI Auto Replies',
-  'Advanced Analytics',
-  'Priority Notifications',
-  'More Portfolio Uploads',
   'Priority Support',
-  'Early Access Features',
 ]
 
 const faqs = [
-  { q: 'What is SINTHA PRO?', a: 'SINTHA PRO is our premium subscription plan for service providers. It gives you enhanced visibility, AI-powered tools, and priority support to grow your business.' },
+  { q: 'What is SINTHA PRO?', a: 'SINTHA PRO is our premium subscription plan for service providers. It gives you enhanced visibility and priority support to grow your business.' },
   { q: 'How much does it cost?', a: 'SINTHA PRO is just ₹199/month. No hidden fees, no long-term commitment. Cancel anytime.' },
   { q: 'Can I cancel anytime?', a: 'Yes! You can cancel your PRO subscription at any time. You\'ll continue to have PRO features until the end of your billing period.' },
   { q: 'Will I get more bookings?', a: 'PRO providers get higher search rankings and homepage visibility, which typically leads to 3-5x more booking requests.' },
@@ -312,15 +306,11 @@ export default function SinthaProScreen() {
               <div className="p-2.5 border-b"><X className="h-4 w-4 text-gray-300 mx-auto" /></div>
               <div className="p-2.5 border-b"><Check className="h-4 w-4 text-green-500 mx-auto" /></div>
 
-              <div className="p-2.5 text-xs text-gray-600 border-b">AI Tools</div>
+              <div className="p-2.5 text-xs text-gray-600 border-b">Homepage Visibility</div>
               <div className="p-2.5 border-b"><X className="h-4 w-4 text-gray-300 mx-auto" /></div>
               <div className="p-2.5 border-b"><Check className="h-4 w-4 text-green-500 mx-auto" /></div>
 
-              <div className="p-2.5 text-xs text-gray-600 border-b">Portfolio Limit</div>
-              <div className="p-2.5 text-xs border-b text-gray-500">5</div>
-              <div className="p-2.5 text-xs border-b text-green-600 font-semibold">Unlimited</div>
-
-              <div className="p-2.5 text-xs text-gray-600">Analytics</div>
+              <div className="p-2.5 text-xs text-gray-600">Priority Support</div>
               <div className="p-2.5"><X className="h-4 w-4 text-gray-300 mx-auto" /></div>
               <div className="p-2.5"><Check className="h-4 w-4 text-green-500 mx-auto" /></div>
             </div>
