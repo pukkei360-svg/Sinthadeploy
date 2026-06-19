@@ -27,10 +27,11 @@ const categoryIcons: Record<string, typeof Home> = {
 const STEPS = ['Category', 'Details', 'Contact', 'Review']
 
 export default function ProviderOnboardingScreen() {
-  const { navigate, user, setUser, categories, setCategories, setMyProviderProfile, token, goBack } = useAppStore()
+  const { navigate, user, setUser, categories, setCategories, setMyProviderProfile, token, goBack, myProviderProfile } = useAppStore()
   const { toast } = useToast()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [checkingExistingProfile, setCheckingExistingProfile] = useState(true)
 
   // Form state
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -44,8 +45,62 @@ export default function ProviderOnboardingScreen() {
   // Pre-fill existing provider data if editing
   const isEditing = user?.role === 'provider'
 
-  // Load categories
+  // ─────────────────────────────────────────────────────────────
+  // CRITICAL: Check if provider already has a profile.
+  // If they do, redirect to dashboard immediately.
+  // This prevents the 'ask to recreate profile on refresh' bug.
+  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
+    const checkExistingProfile = async () => {
+      if (!user) {
+        setCheckingExistingProfile(false)
+        return
+      }
+
+      // First, check if we already have the profile in the Zustand store
+      if (myProviderProfile) {
+        navigate('provider-dashboard')
+        return
+      }
+
+      // Second, check localStorage (survives page refresh in APK)
+      try {
+        const savedProfile = localStorage.getItem('sintha_provider_profile')
+        if (savedProfile) {
+          const profile = JSON.parse(savedProfile)
+          setMyProviderProfile(profile)
+          navigate('provider-dashboard')
+          return
+        }
+      } catch {
+        // localStorage parse failed — continue to API check
+      }
+
+      // Third, check the API (most reliable but might be slow/fail in APK)
+      try {
+        const data = await apiFetch(`/providers?userId=${user.id}`)
+        const providers = data.providers || []
+        if (providers.length > 0) {
+          setMyProviderProfile(providers[0])
+          // Save to localStorage for future refreshes
+          localStorage.setItem('sintha_provider_profile', JSON.stringify(providers[0]))
+          navigate('provider-dashboard')
+          return
+        }
+      } catch {
+        // API failed — if we get here, the user genuinely has no profile
+      }
+
+      // No existing profile found — show the onboarding form
+      setCheckingExistingProfile(false)
+    }
+
+    checkExistingProfile()
+  }, [user, myProviderProfile, navigate, setMyProviderProfile])
+
+  // Load categories (only if we're actually showing the onboarding form)
+  useEffect(() => {
+    if (checkingExistingProfile) return // Don't load categories while checking
     if (categories.length > 0) return
     const loadCategories = async () => {
       try {
@@ -57,7 +112,7 @@ export default function ProviderOnboardingScreen() {
       }
     }
     loadCategories()
-  }, [])
+  }, [checkingExistingProfile])
 
   const selectedCat = categories.find((c) => c.id === selectedCategory)
 
@@ -390,6 +445,16 @@ export default function ProviderOnboardingScreen() {
       default:
         return null
     }
+  }
+
+  // Show loading screen while checking for existing profile
+  if (checkingExistingProfile) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-4" />
+        <p className="text-sm text-gray-500">Loading your profile...</p>
+      </div>
+    )
   }
 
   return (
