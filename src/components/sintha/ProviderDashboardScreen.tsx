@@ -493,93 +493,35 @@ export default function ProviderDashboardScreen() {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════
-          PRO BUSINESS TOOLS — Only visible to PRO subscribers
-          1. Shareable Storefront Link
-          2. QR Code Business Card
-          3. Business Analytics
-          4. Service Packages
-          5. Promotional Offers
+          PRO ADVANCED TOOLS — Only visible to PRO subscribers
+          Includes:
+          - Business Analytics
+          - Service Packages
+          - Promotional Offers
+          
+          (Higher search ranking, Featured Badge, Homepage visibility,
+           and Priority Support are active automatically — no dashboard
+           section needed for those)
           ═══════════════════════════════════════════════════════════ */}
       {user?.isPro && user?.proExpiry && new Date(user.proExpiry) > new Date() && myProviderProfile && (
         <div className="px-4 pt-6 pb-4 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Crown className="h-5 w-5 text-amber-500" />
-            <h2 className="text-lg font-bold text-gray-800">PRO Business Tools</h2>
+            <h2 className="text-lg font-bold text-gray-800">PRO Advanced Tools</h2>
           </div>
 
-          {/* 1. SHAREABLE STOREFRONT LINK */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Share2 className="h-4 w-4 text-blue-600" />
-                <h3 className="font-semibold text-gray-800 text-sm">Share Your Storefront</h3>
-              </div>
-              <p className="text-xs text-gray-500 mb-3">
-                Share this link on WhatsApp, Facebook, or Instagram. Anyone who opens it can view your profile and book you directly.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    const url = `https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`
-                    navigator.clipboard?.writeText(url)
-                    toast({ title: 'Link Copied!', description: 'Paste it anywhere to share your profile' })
-                  }}
-                >
-                  <Copy className="h-3 w-3 mr-1" /> Copy Link
-                </Button>
-                <Button
-                  size="sm"
-                  className="flex-1 bg-[#25D366] hover:bg-[#1ebe5d] text-white"
-                  onClick={() => {
-                    const url = `https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`
-                    const msg = encodeURIComponent(`Book my services on SINTHA! ${url}`)
-                    window.open(`https://wa.me/?text=${msg}`, '_blank')
-                  }}
-                >
-                  <WhatsAppIcon className="h-3 w-3 mr-1" /> Share on WhatsApp
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* PRO Benefits Summary */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="text-xs text-amber-800 font-semibold mb-1">Your PRO benefits are active:</p>
+            <div className="grid grid-cols-2 gap-1 text-[10px] text-amber-700">
+              <p>✅ Higher search ranking</p>
+              <p>✅ Featured Provider Badge</p>
+              <p>✅ Homepage visibility</p>
+              <p>✅ Priority Support</p>
+            </div>
+          </div>
 
-          {/* 2. QR CODE BUSINESS CARD */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <QrCode className="h-4 w-4 text-purple-600" />
-                <h3 className="font-semibold text-gray-800 text-sm">QR Code Business Card</h3>
-              </div>
-              <p className="text-xs text-gray-500 mb-3">
-                Print this QR code and put it on your shop, vehicle, or flyers. People scan it to book you instantly.
-              </p>
-              {showQR ? (
-                <div className="text-center">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`}
-                    alt="QR Code"
-                    className="mx-auto rounded-lg"
-                  />
-                  <p className="text-xs text-gray-500 mt-2">Scan to book {user?.name}</p>
-                  <a
-                    href={`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=https://sinthadeploy.vercel.app/?book=${myProviderProfile.id}`}
-                    download="sintha-qr.png"
-                    className="inline-block mt-2 text-xs text-blue-600 hover:underline font-medium"
-                  >
-                    Download QR Code
-                  </a>
-                </div>
-              ) : (
-                <Button size="sm" variant="outline" className="w-full" onClick={() => setShowQR(true)}>
-                  <QrCode className="h-3 w-3 mr-1" /> Show QR Code
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 3. BUSINESS ANALYTICS */}
+          {/* BUSINESS ANALYTICS */}
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
