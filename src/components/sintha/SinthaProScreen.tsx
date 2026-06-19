@@ -361,7 +361,7 @@ export default function SinthaProScreen() {
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
               <p className="text-[10px] text-amber-700 text-center">
-                💡 <b>GPay users:</b> If GPay doesn't open in the app, please use PhonePe or Paytm instead. Or open sinthadeploy.vercel.app in Chrome browser to pay with GPay.
+                💡 <b>Recommended:</b> Use <b>PhonePe</b> or <b>Paytm</b> for the fastest payment experience.
               </p>
             </div>
           </div>
@@ -422,7 +422,7 @@ export default function SinthaProScreen() {
               <p className="text-[11px] text-green-700 font-semibold mb-2">How to pay:</p>
               <div className="text-[11px] text-green-600 space-y-1">
                 <p>1. Tap "Open Payment Link" above</p>
-                <p>2. Choose <span className="font-bold">Google Pay / PhonePe / UPI / Card</span></p>
+                <p>2. Choose <span className="font-bold">PhonePe / Paytm / UPI / Card</span></p>
                 <p>3. Complete ₹1 payment</p>
                 <p>4. Come back here — <span className="font-bold">PRO auto-activates!</span></p>
               </div>
