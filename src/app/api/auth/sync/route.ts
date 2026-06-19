@@ -92,6 +92,47 @@ export async function POST(request: NextRequest) {
 
     const { password: _password, ...userWithoutPassword } = user;
 
+    // ─────────────────────────────────────────────────────────────
+    // Monthly PRO reminder for non-PRO providers
+    // ─────────────────────────────────────────────────────────────
+    // When a provider logs in, check if they've received a PRO
+    // reminder notification in the last 30 days. If not, create one.
+    // This replaces a cron job (Vercel free tier doesn't support cron).
+    // The notification appears as a red number on the Bell icon.
+    if (
+      user.role === 'provider' &&
+      !user.isPro
+    ) {
+      try {
+        // Check if we already sent a PRO reminder in the last 30 days
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const existingReminder = await db.notification.findFirst({
+          where: {
+            userId: user.id,
+            type: 'pro',
+            createdAt: { gt: thirtyDaysAgo },
+          },
+        });
+
+        if (!existingReminder) {
+          // Create a PRO reminder notification
+          await db.notification.create({
+            data: {
+              userId: user.id,
+              title: '👑 Upgrade to SINTHA PRO',
+              message: 'Get higher search ranking, a PRO badge, and homepage visibility for just ₹199/month. Boost your bookings today!',
+              type: 'pro',
+              isRead: false,
+            },
+          });
+          console.log(`[PRO Reminder] Created monthly reminder for provider: ${user.email}`);
+        }
+      } catch (reminderErr) {
+        // Don't fail the login if notification creation fails
+        console.error('[PRO Reminder] Failed to create reminder:', reminderErr);
+      }
+    }
+
     return NextResponse.json({ user: userWithoutPassword, token: firebaseUid });
   } catch (error) {
     console.error('Auth sync error:', error);
