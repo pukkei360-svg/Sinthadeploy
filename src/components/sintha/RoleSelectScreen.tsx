@@ -38,21 +38,36 @@ export default function RoleSelectScreen() {
     if (!user || loading) return
     setLoading(role)
     try {
+      // If user uploaded a photo, save it to their profile first
+      if (photoUrl) {
+        try {
+          await apiFetch('/user/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({ userId: user.id, photoUrl: photoUrl }),
+          })
+        } catch {
+          // Photo save failed — continue with role selection anyway
+        }
+      }
+
       if (role === 'client') {
         // Update role to client
         await apiFetch('/auth/register', {
           method: 'POST',
           body: JSON.stringify({ userId: user.id, role: 'client' }),
         })
-        const updatedUser = { ...user, role: 'client' }
-        setUser(updatedUser, token)
+        // Include photoUrl in the updated user state
+        const updatedUser = { ...user, role: 'client', photoUrl: photoUrl || user.photoUrl }
+        setUser(updatedUser)
         toast({
           title: 'Welcome to SINTHA!',
           description: 'Find trusted service providers in Manipur',
         })
         navigate('home')
       } else if (role === 'provider') {
-        // Navigate to provider onboarding - role will be set after profile creation
+        // Include photoUrl in the user state before navigating to onboarding
+        const updatedUser = { ...user, photoUrl: photoUrl || user.photoUrl }
+        setUser(updatedUser)
         toast({
           title: "Let's set up your provider profile",
           description: 'Fill in your details to start offering services',
@@ -64,10 +79,12 @@ export default function RoleSelectScreen() {
       toast({ title: 'Error', description: message, variant: 'destructive' })
       // Still navigate on client side even if API fails
       if (role === 'client') {
-        const updatedUser = { ...user, role: 'client' }
-        setUser(updatedUser, token)
+        const updatedUser = { ...user, role: 'client', photoUrl: photoUrl || user.photoUrl }
+        setUser(updatedUser)
         navigate('home')
       } else {
+        const updatedUser = { ...user, photoUrl: photoUrl || user.photoUrl }
+        setUser(updatedUser)
         navigate('provider-onboarding')
       }
     } finally {
