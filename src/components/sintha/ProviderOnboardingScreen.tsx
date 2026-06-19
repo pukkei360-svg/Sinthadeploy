@@ -122,6 +122,11 @@ export default function ProviderOnboardingScreen() {
 
       setMyProviderProfile(profileData.provider || null)
 
+      // Also save to localStorage so page refreshes don't lose the profile
+      if (profileData.provider) {
+        localStorage.setItem('sintha_provider_profile', JSON.stringify(profileData.provider))
+      }
+
       toast({
         title: isEditing ? 'Profile Updated!' : 'Provider Profile Created!',
         description: isEditing

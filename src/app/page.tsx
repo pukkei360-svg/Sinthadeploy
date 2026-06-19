@@ -59,11 +59,6 @@ export default function Home() {
           setUser(data.user, firebaseUser.uid)
 
           // Route based on role
-          // IMPORTANT: Users with empty role go to role-select ONLY if they
-          // just signed up. If they're resuming a session (page reload),
-          // they should go to landing page so they can log in fresh.
-          // The role-select screen is reached via the register flow, not
-          // via session resume.
           if (data.user.role === 'provider') {
             // Check if provider has a profile
             try {
@@ -76,27 +71,33 @@ export default function Home() {
                 // Provider has no profile yet - needs onboarding
                 navigate('provider-onboarding')
               }
-            } catch {
-              navigate('provider-onboarding')
+            } catch (provErr) {
+              // API call failed — DON'T immediately send to onboarding.
+              // Check if we already have a provider profile in localStorage
+              // (the user might have just created it and the API is slow/cached).
+              console.error('Provider profile check failed:', provErr)
+              try {
+                const savedProfile = localStorage.getItem('sintha_provider_profile')
+                if (savedProfile) {
+                  const profile = JSON.parse(savedProfile)
+                  setMyProviderProfile(profile)
+                  navigate('provider-dashboard')
+                } else {
+                  // No saved profile — genuinely needs onboarding
+                  navigate('provider-onboarding')
+                }
+              } catch {
+                navigate('provider-onboarding')
+              }
             }
           } else if (data.user.role === 'admin') {
             navigate('admin-dashboard')
           } else if (data.user.role === 'client') {
             navigate('home')
           } else {
-            // No role set — this is a resumed session (page reload).
-            // DON'T auto-route to role-select (which shows photo upload).
-            // Instead, clear the session and send to landing page so the
-            // user starts fresh. The role-select screen should only be
-            // reached via the register flow, not session resume.
-            try {
-              await auth.signOut()
-            } catch {}
-            setUser(null, null)
-            // Clear localStorage too
-            localStorage.removeItem('sintha_user')
-            localStorage.removeItem('sintha_token')
-            navigate('landing')
+            // No role set yet — send to role-select screen
+            // (shows photo upload + Client/Provider choice)
+            navigate('role-select')
           }
         } catch (err) {
           console.error('Failed to sync Firebase user to backend:', err)
@@ -106,20 +107,23 @@ export default function Home() {
             const savedToken = localStorage.getItem('sintha_token')
             if (savedUser && savedToken) {
               const user = JSON.parse(savedUser)
+              setUser(user, savedToken)
               if (user.role === 'admin') {
-                setUser(user, savedToken)
                 navigate('admin-dashboard')
               } else if (user.role === 'provider') {
-                setUser(user, savedToken)
-                navigate('provider-dashboard')
+                // Check localStorage for provider profile
+                const savedProfile = localStorage.getItem('sintha_provider_profile')
+                if (savedProfile) {
+                  setMyProviderProfile(JSON.parse(savedProfile))
+                  navigate('provider-dashboard')
+                } else {
+                  navigate('provider-onboarding')
+                }
               } else if (user.role === 'client') {
-                setUser(user, savedToken)
                 navigate('home')
               } else {
-                // No role set — clear stale session, go to landing
-                localStorage.removeItem('sintha_user')
-                localStorage.removeItem('sintha_token')
-                navigate('landing')
+                // No role set — go to role-select (not landing page)
+                navigate('role-select')
               }
             }
           } catch {
@@ -133,20 +137,23 @@ export default function Home() {
           const savedToken = localStorage.getItem('sintha_token')
           if (savedUser && savedToken) {
             const user = JSON.parse(savedUser)
+            setUser(user, savedToken)
             if (user.role === 'admin') {
-              setUser(user, savedToken)
               navigate('admin-dashboard')
             } else if (user.role === 'provider') {
-              setUser(user, savedToken)
-              navigate('provider-dashboard')
+              // Check localStorage for provider profile
+              const savedProfile = localStorage.getItem('sintha_provider_profile')
+              if (savedProfile) {
+                setMyProviderProfile(JSON.parse(savedProfile))
+                navigate('provider-dashboard')
+              } else {
+                navigate('provider-onboarding')
+              }
             } else if (user.role === 'client') {
-              setUser(user, savedToken)
               navigate('home')
             } else {
-              // No role set — clear stale session, go to landing
-              localStorage.removeItem('sintha_user')
-              localStorage.removeItem('sintha_token')
-              navigate('landing')
+              // No role set — go to role-select (not landing page)
+              navigate('role-select')
             }
           }
         } catch {
