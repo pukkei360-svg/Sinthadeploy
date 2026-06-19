@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle, CheckCircle2, XCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { validateEmail } from '@/lib/email-validation'
+import WhatsAppIcon from './WhatsAppIcon'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -25,7 +26,6 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [firebaseError, setFirebaseError] = useState<string | null>(null)
-
   // Login form
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
@@ -492,10 +492,9 @@ export default function AuthScreen() {
                   }}
                   className="w-full flex items-center justify-center gap-2 text-green-600 hover:text-green-700 transition-colors"
                 >
-                  <MessageCircle className="h-5 w-5" />
+                  <WhatsAppIcon className="h-5 w-5" />
                   <span className="text-sm font-semibold">Need help? Chat with us on WhatsApp</span>
                 </button>
-                <p className="text-[11px] text-center text-gray-400 mt-1">7005151875</p>
               </div>
             )}
           </CardContent>

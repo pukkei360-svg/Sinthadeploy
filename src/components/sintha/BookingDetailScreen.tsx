@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
+import WhatsAppIcon from './WhatsAppIcon'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -248,7 +249,7 @@ export default function BookingDetailScreen() {
                   <Phone className="h-4 w-4" />
                   Call
                 </button>
-                {/* WhatsApp web link */}
+                {/* WhatsApp button — green with proper WhatsApp logo */}
                 <button
                   onClick={() => {
                     const cleaned = getDigitsOnly(otherPersonPhone)
@@ -256,9 +257,9 @@ export default function BookingDetailScreen() {
                     const msg = encodeURIComponent(`Hi ${otherPerson.name}, regarding my SINTHA booking.`)
                     window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
                   }}
-                  className="flex items-center justify-center gap-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg py-2.5 text-sm font-medium transition-colors w-full"
+                  className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >
-                  <MessageCircle className="h-4 w-4" />
+                  <WhatsAppIcon className="h-5 w-5" />
                   WhatsApp
                 </button>
                 {/* Small "copy number" link as a fallback for users who prefer to copy */}
