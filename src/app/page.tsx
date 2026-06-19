@@ -39,13 +39,20 @@ export default function Home() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+          // For phone-auth users, firebaseUser.email is null — generate
+          // a fake email so the /auth/sync route's `email` (unique) field
+          // has something to store. Format: +91XXXXXXXXXX@phone.sintha.app
+          const effectiveEmail = firebaseUser.email ||
+            `${firebaseUser.phoneNumber}@phone.sintha.app`
+
           const data = await apiFetch('/auth/sync', {
             method: 'POST',
             body: JSON.stringify({
               firebaseUid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+              email: effectiveEmail,
+              name: firebaseUser.displayName || firebaseUser.phoneNumber || 'User',
               photoUrl: firebaseUser.photoURL || undefined,
+              phone: firebaseUser.phoneNumber || undefined,
             }),
           })
 
@@ -64,15 +71,32 @@ export default function Home() {
                 // Provider has no profile yet - needs onboarding
                 navigate('provider-onboarding')
               }
-            } catch {
-              navigate('provider-onboarding')
+            } catch (provErr) {
+              // API call failed — DON'T immediately send to onboarding.
+              // Check if we already have a provider profile in localStorage
+              // (the user might have just created it and the API is slow/cached).
+              console.error('Provider profile check failed:', provErr)
+              try {
+                const savedProfile = localStorage.getItem('sintha_provider_profile')
+                if (savedProfile) {
+                  const profile = JSON.parse(savedProfile)
+                  setMyProviderProfile(profile)
+                  navigate('provider-dashboard')
+                } else {
+                  // No saved profile — genuinely needs onboarding
+                  navigate('provider-onboarding')
+                }
+              } catch {
+                navigate('provider-onboarding')
+              }
             }
           } else if (data.user.role === 'admin') {
             navigate('admin-dashboard')
           } else if (data.user.role === 'client') {
             navigate('home')
           } else {
-            // No role set yet - go to role selection
+            // No role set yet — send to role-select screen
+            // (shows photo upload + Client/Provider choice)
             navigate('role-select')
           }
         } catch (err) {
@@ -84,10 +108,23 @@ export default function Home() {
             if (savedUser && savedToken) {
               const user = JSON.parse(savedUser)
               setUser(user, savedToken)
-              if (user.role === 'admin') navigate('admin-dashboard')
-              else if (user.role === 'provider') navigate('provider-dashboard')
-              else if (user.role === 'client') navigate('home')
-              else navigate('role-select')
+              if (user.role === 'admin') {
+                navigate('admin-dashboard')
+              } else if (user.role === 'provider') {
+                // Check localStorage for provider profile
+                const savedProfile = localStorage.getItem('sintha_provider_profile')
+                if (savedProfile) {
+                  setMyProviderProfile(JSON.parse(savedProfile))
+                  navigate('provider-dashboard')
+                } else {
+                  navigate('provider-onboarding')
+                }
+              } else if (user.role === 'client') {
+                navigate('home')
+              } else {
+                // No role set — go to role-select (not landing page)
+                navigate('role-select')
+              }
             }
           } catch {
             // Ignore
@@ -101,10 +138,23 @@ export default function Home() {
           if (savedUser && savedToken) {
             const user = JSON.parse(savedUser)
             setUser(user, savedToken)
-            if (user.role === 'admin') navigate('admin-dashboard')
-            else if (user.role === 'provider') navigate('provider-dashboard')
-            else if (user.role === 'client') navigate('home')
-            else navigate('role-select')
+            if (user.role === 'admin') {
+              navigate('admin-dashboard')
+            } else if (user.role === 'provider') {
+              // Check localStorage for provider profile
+              const savedProfile = localStorage.getItem('sintha_provider_profile')
+              if (savedProfile) {
+                setMyProviderProfile(JSON.parse(savedProfile))
+                navigate('provider-dashboard')
+              } else {
+                navigate('provider-onboarding')
+              }
+            } else if (user.role === 'client') {
+              navigate('home')
+            } else {
+              // No role set — go to role-select (not landing page)
+              navigate('role-select')
+            }
           }
         } catch {
           // Ignore

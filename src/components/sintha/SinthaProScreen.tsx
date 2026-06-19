@@ -13,21 +13,15 @@ const benefits = [
   'Higher search ranking',
   'Featured Provider Badge',
   'Homepage visibility',
-  'AI Quotation Generator',
-  'AI Auto Replies',
-  'Advanced Analytics',
-  'Priority Notifications',
-  'More Portfolio Uploads',
   'Priority Support',
-  'Early Access Features',
 ]
 
 const faqs = [
-  { q: 'What is SINTHA PRO?', a: 'SINTHA PRO is our premium subscription plan for service providers. It gives you enhanced visibility, AI-powered tools, and priority support to grow your business.' },
-  { q: 'How much does it cost?', a: 'SINTHA PRO is just ₹199/month. No hidden fees, no long-term commitment. Cancel anytime.' },
+  { q: 'What is SINTHA PRO?', a: 'SINTHA PRO is our premium subscription plan for service providers. It gives you enhanced visibility and priority support to grow your business.' },
+  { q: 'How much does it cost?', a: 'SINTHA PRO is just ₹1/month. No hidden fees, no long-term commitment. Cancel anytime.' },
   { q: 'Can I cancel anytime?', a: 'Yes! You can cancel your PRO subscription at any time. You\'ll continue to have PRO features until the end of your billing period.' },
   { q: 'Will I get more bookings?', a: 'PRO providers get higher search rankings and homepage visibility, which typically leads to 3-5x more booking requests.' },
-  { q: 'Is there a free trial?', a: 'Currently we don\'t offer a free trial, but at just ₹199/month, it\'s very affordable. Most PRO providers earn back the subscription in their first booking!' },
+  { q: 'Is there a free trial?', a: 'Currently we don\'t offer a free trial, but at just ₹1/month, it\'s very affordable. Most PRO providers earn back the subscription in their first booking!' },
 ]
 
 export default function SinthaProScreen() {
@@ -98,6 +92,50 @@ export default function SinthaProScreen() {
     }
   }, [])
 
+  // ─────────────────────────────────────────────────────────────
+  // Payment polling — checks backend every 5 seconds for payment status.
+  // This is a CRITICAL fallback for GPay/UPI redirect payments where
+  // the Razorpay handler never fires (user leaves the page/app).
+  // ─────────────────────────────────────────────────────────────
+  const startPaymentPolling = (userId: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    pollingCountRef.current = 0
+    setAutoVerifying(true)
+
+    pollingRef.current = setInterval(async () => {
+      pollingCountRef.current += 1
+      // Stop after 5 minutes (60 attempts × 5s)
+      if (pollingCountRef.current > 60) {
+        if (pollingRef.current) clearInterval(pollingRef.current)
+        setAutoVerifying(false)
+        return
+      }
+
+      try {
+        // Check if user's PRO status has been activated
+        // (either by webhook, manual verify, or handler)
+        const data = await apiFetch(`/razorpay/check-payment`, {
+          method: 'POST',
+          body: JSON.stringify({ userId }),
+        })
+
+        if (data.paid && data.user) {
+          // Payment confirmed! Activate PRO.
+          if (pollingRef.current) clearInterval(pollingRef.current)
+          setAutoVerifying(false)
+          setUser(data.user, null)
+          toast({
+            title: 'PRO Activated!',
+            description: 'Payment verified! Your SINTHA PRO is now active.',
+          })
+          navigate('profile')
+        }
+      } catch {
+        // Silently retry
+      }
+    }, 5000) // Check every 5 seconds
+  }
+
   const handlePaymentLink = async () => {
     if (!user) {
       toast({ title: 'Error', description: 'Please login first', variant: 'destructive' })
@@ -106,23 +144,128 @@ export default function SinthaProScreen() {
 
     setPaymentLinkLoading(true)
     try {
-      const data = await apiFetch('/razorpay/payment-link', {
+      // Step 1: Create a Razorpay order via our backend
+      const orderData = await apiFetch('/razorpay/create-order', {
         method: 'POST',
         body: JSON.stringify({ userId: user.id }),
       })
 
-      setPaymentLinkId(data.paymentLinkId)
-      setPaymentLinkUrl(data.paymentLinkUrl)
+      const orderId = orderData.orderId || orderData.order?.id
+      const amount = orderData.amount || orderData.order?.amount
+      const currency = orderData.currency || orderData.order?.currency || 'INR'
+      const keyId = orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
-      // Open in external browser — this works in WebView because it's https://
-      window.open(data.paymentLinkUrl, '_blank')
+      if (!keyId) {
+        throw new Error('Razorpay key not configured')
+      }
 
-      // Start auto-polling — will auto-detect when payment is completed
-      startPolling(data.paymentLinkId)
+      // Step 2: Load Razorpay checkout.js script
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
 
-      toast({ title: 'Payment Link Opened', description: 'Complete payment in your browser. PRO will auto-activate when payment is done!' })
+      script.onload = () => {
+        // Step 3: Open Razorpay Standard Checkout modal
+        const rzp = new (window as any).Razorpay({
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: 'SINTHA PRO',
+          description: 'PRO Subscription — ₹1/month',
+          order_id: orderId,
+          // Explicitly request all payment methods including UPI
+          method: {
+            upi: true,
+            card: true,
+            netbanking: true,
+            wallet: true,
+          },
+          prefill: {
+            name: user.name || '',
+            email: user.email || '',
+          },
+          theme: {
+            color: '#2563eb',
+          },
+          // GPay fallback: when checkout.js tries to open GPay via Android
+          // intent, most WebViews block it. We intercept the navigation
+          // and show a helpful message instead of a blank screen.
+          redirect: true,
+          handler: async (response: any) => {
+            // Step 4: Payment successful — verify signature on backend
+            try {
+              const verifyData = await apiFetch('/razorpay/verify', {
+                method: 'POST',
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  userId: user.id,
+                }),
+              })
+
+              if (verifyData.user) {
+                setUser(verifyData.user, null)
+                toast({
+                  title: 'PRO Activated!',
+                  description: 'Payment verified! Your SINTHA PRO is now active.',
+                })
+                navigate('profile')
+              }
+            } catch (verifyErr: unknown) {
+              toast({
+                title: 'Verification Pending',
+                description: 'Payment received! Verifying... Please wait a moment and refresh your profile.',
+              })
+              // Start polling as fallback in case signature verification fails
+              startPaymentPolling(user.id)
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              // User closed the Razorpay modal.
+              // DON'T say "cancelled" — they might have paid via GPay
+              // (which redirects away and the modal dismisses).
+              // Start polling to check if payment was actually completed.
+              toast({
+                title: 'Checking Payment...',
+                description: 'If you completed payment, your PRO will activate automatically in a few seconds.',
+              })
+              startPaymentPolling(user.id)
+            },
+          },
+        })
+
+        rzp.on('payment.failed', (response: any) => {
+          toast({
+            title: 'Payment Failed',
+            description: response.error?.description || 'Payment was not completed. Please try again.',
+            variant: 'destructive',
+          })
+        })
+
+        // Start polling immediately when modal opens (in case user pays
+        // via GPay redirect and the handler never fires)
+        startPaymentPolling(user.id)
+
+        rzp.open()
+      }
+
+      script.onerror = () => {
+        toast({
+          title: 'Error',
+          description: 'Could not load Razorpay checkout. Please check your internet connection.',
+          variant: 'destructive',
+        })
+      }
+
+      document.body.appendChild(script)
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message || 'Failed to create payment link', variant: 'destructive' })
+      toast({
+        title: 'Error',
+        description: (err as Error).message || 'Failed to start payment',
+        variant: 'destructive',
+      })
     } finally {
       setPaymentLinkLoading(false)
     }
@@ -173,7 +316,7 @@ export default function SinthaProScreen() {
           <h2 className="text-2xl font-bold mb-1">Unlock Premium</h2>
           <p className="text-sm opacity-80">Grow your business with SINTHA PRO</p>
           <div className="mt-4">
-            <span className="text-3xl font-extrabold">₹199</span>
+            <span className="text-3xl font-extrabold">₹1</span>
             <span className="text-sm opacity-70">/month</span>
           </div>
         </div>
@@ -211,11 +354,16 @@ export default function SinthaProScreen() {
               disabled={paymentLinkLoading}
             >
               {paymentLinkLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Crown className="h-5 w-5 mr-2" />}
-              {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹199 & Activate PRO'}
+              {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹1 & Activate PRO'}
             </Button>
             <p className="text-[11px] text-center text-gray-500">
-              Pay with Google Pay, PhonePe, Paytm, UPI, Cards, or Net Banking
+              Pay with PhonePe, Paytm, BHIM, UPI, Cards, or Net Banking
             </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+              <p className="text-[10px] text-amber-700 text-center">
+                💡 <b>GPay users:</b> If GPay doesn't open in the app, please use PhonePe or Paytm instead. Or open sinthadeploy.vercel.app in Chrome browser to pay with GPay.
+              </p>
+            </div>
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
@@ -275,7 +423,7 @@ export default function SinthaProScreen() {
               <div className="text-[11px] text-green-600 space-y-1">
                 <p>1. Tap "Open Payment Link" above</p>
                 <p>2. Choose <span className="font-bold">Google Pay / PhonePe / UPI / Card</span></p>
-                <p>3. Complete ₹199 payment</p>
+                <p>3. Complete ₹1 payment</p>
                 <p>4. Come back here — <span className="font-bold">PRO auto-activates!</span></p>
               </div>
             </div>
@@ -312,15 +460,11 @@ export default function SinthaProScreen() {
               <div className="p-2.5 border-b"><X className="h-4 w-4 text-gray-300 mx-auto" /></div>
               <div className="p-2.5 border-b"><Check className="h-4 w-4 text-green-500 mx-auto" /></div>
 
-              <div className="p-2.5 text-xs text-gray-600 border-b">AI Tools</div>
+              <div className="p-2.5 text-xs text-gray-600 border-b">Homepage Visibility</div>
               <div className="p-2.5 border-b"><X className="h-4 w-4 text-gray-300 mx-auto" /></div>
               <div className="p-2.5 border-b"><Check className="h-4 w-4 text-green-500 mx-auto" /></div>
 
-              <div className="p-2.5 text-xs text-gray-600 border-b">Portfolio Limit</div>
-              <div className="p-2.5 text-xs border-b text-gray-500">5</div>
-              <div className="p-2.5 text-xs border-b text-green-600 font-semibold">Unlimited</div>
-
-              <div className="p-2.5 text-xs text-gray-600">Analytics</div>
+              <div className="p-2.5 text-xs text-gray-600">Priority Support</div>
               <div className="p-2.5"><X className="h-4 w-4 text-gray-300 mx-auto" /></div>
               <div className="p-2.5"><Check className="h-4 w-4 text-green-500 mx-auto" /></div>
             </div>

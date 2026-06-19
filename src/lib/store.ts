@@ -269,9 +269,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       conversations: [],
       messages: [],
       notifications: [],
+      myProviderProfile: null,
     })
     localStorage.removeItem('sintha_user')
     localStorage.removeItem('sintha_token')
+    localStorage.removeItem('sintha_provider_profile')
     // Clear the API cache so the next user (after re-login) doesn't see
     // the previous user's cached data.
     clearApiCache()

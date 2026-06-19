@@ -26,6 +26,33 @@ export default function NotificationsScreen() {
   const { navigate, user, notifications, setNotifications } = useAppStore()
   const [loading, setLoading] = useState(false)
 
+  // Mark a notification as read when tapped, and navigate if applicable
+  const handleNotificationTap = async (notif: Notification) => {
+    // Mark as read locally
+    setNotifications(notifications.map((n) => n.id === notif.id ? { ...n, isRead: true } : n))
+
+    // Mark as read on the server (fire and forget)
+    try {
+      await apiFetch(`/notifications`, {
+        method: 'PATCH',
+        body: JSON.stringify({ notificationId: notif.id, isRead: true }),
+      })
+    } catch {
+      // Ignore — local update is enough
+    }
+
+    // Navigate based on notification type
+    if (notif.type === 'pro') {
+      navigate('sintha-pro')
+    } else if (notif.type === 'booking' && notif.relatedId) {
+      navigate('booking-detail', { bookingId: notif.relatedId })
+    } else if (notif.type === 'chat' && notif.relatedId) {
+      navigate('chat-list')
+    } else if (notif.type === 'review') {
+      navigate('reviews', { targetId: user?.id || '' })
+    }
+  }
+
   useEffect(() => {
     const loadNotifications = async () => {
       if (!user) return
@@ -85,9 +112,10 @@ export default function NotificationsScreen() {
             const IconComp = typeIcons[notif.type] || Bell
             const colorClass = typeColors[notif.type] || 'bg-gray-100 text-gray-600'
             return (
-              <div
+              <button
                 key={notif.id}
-                className={`p-4 flex items-start gap-3 ${!notif.isRead ? 'bg-blue-50/50' : 'bg-white'}`}
+                onClick={() => handleNotificationTap(notif)}
+                className={`w-full text-left p-4 flex items-start gap-3 transition-colors hover:bg-gray-50 ${!notif.isRead ? 'bg-blue-50/50' : 'bg-white'}`}
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${colorClass}`}>
                   <IconComp className="h-5 w-5" />
@@ -100,7 +128,7 @@ export default function NotificationsScreen() {
                 {!notif.isRead && (
                   <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-2" />
                 )}
-              </div>
+              </button>
             )
           })
         )}

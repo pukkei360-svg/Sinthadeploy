@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 
 export default function ProviderDashboardScreen() {
-  const { navigate, user, bookings, setBookings, setMyProviderProfile, myProviderProfile } = useAppStore()
+  const { navigate, user, bookings, setBookings, setMyProviderProfile, myProviderProfile, notifications } = useAppStore()
   const [loading, setLoading] = useState(true)
   const [availability, setAvailability] = useState('available')
 
@@ -46,6 +46,7 @@ export default function ProviderDashboardScreen() {
   }, [user, setBookings, setMyProviderProfile])
 
   const pendingBookings = bookings.filter((b) => b.status === 'pending')
+  const unreadNotifs = notifications.filter((n) => !n.isRead).length
   const completedBookings = bookings.filter((b) => b.status === 'completed')
   const activeBookings = bookings.filter((b) => b.status === 'accepted' || b.status === 'in_progress')
 
@@ -108,11 +109,12 @@ export default function ProviderDashboardScreen() {
         <button
           onClick={() => navigate('notifications')}
           className="relative p-2 text-gray-500 hover:text-gray-700"
+          aria-label={`Notifications${(pendingBookings.length + unreadNotifs) > 0 ? ` (${pendingBookings.length + unreadNotifs} unread)` : ''}`}
         >
           <Bell className="h-5 w-5" />
-          {pendingBookings.length > 0 && (
-            <span className="absolute top-1 right-1 bg-red-500 text-white text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">
-              {pendingBookings.length}
+          {(pendingBookings.length > 0 || unreadNotifs > 0) && (
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+              {(pendingBookings.length + unreadNotifs) > 9 ? '9+' : (pendingBookings.length + unreadNotifs)}
             </span>
           )}
         </button>

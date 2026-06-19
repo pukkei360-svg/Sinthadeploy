@@ -92,3 +92,43 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// PATCH — mark a notification as read (or all as read)
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { notificationId, userId, markAllAsRead } = body;
+
+    if (markAllAsRead && userId) {
+      // Mark all notifications for a user as read
+      const result = await db.notification.updateMany({
+        where: { userId, isRead: false },
+        data: { isRead: true },
+      });
+      return NextResponse.json({
+        message: `${result.count} notifications marked as read`,
+        count: result.count,
+      });
+    }
+
+    if (!notificationId) {
+      return NextResponse.json(
+        { error: 'Notification ID is required (or set markAllAsRead=true with userId)' },
+        { status: 400 }
+      );
+    }
+
+    const notification = await db.notification.update({
+      where: { id: notificationId },
+      data: { isRead: true },
+    });
+
+    return NextResponse.json({ notification });
+  } catch (error) {
+    console.error('Update notification error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update notification' },
+      { status: 500 }
+    );
+  }
+}

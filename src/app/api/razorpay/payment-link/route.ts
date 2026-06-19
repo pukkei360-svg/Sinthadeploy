@@ -3,8 +3,8 @@ import { db } from '@/lib/db';
 import Razorpay from 'razorpay';
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_T2JofJcoa6lHKm',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'm2qt1WsbwFe7jc53qtXNQFap',
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
 
 /**

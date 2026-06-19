@@ -3,18 +3,24 @@ import { db } from '@/lib/db';
 import Razorpay from 'razorpay';
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_T2JofJcoa6lHKm',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'm2qt1WsbwFe7jc53qtXNQFap',
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
 
 /**
- * Check payment link status and activate PRO if paid.
- * Called after the user returns from the payment link page.
+ * Check payment status and activate PRO if paid.
+ * Works with BOTH:
+ * - Standard Checkout (orders) — checks order payments
+ * - Payment Links — checks payment link status
+ *
+ * Called by:
+ * - Frontend polling (every 5 seconds after checkout modal opens)
+ * - Manual "Verify Payment" button
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, paymentLinkId } = body;
+    const { userId, paymentLinkId, orderId } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -23,92 +29,165 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the subscription record
+    // Find the most recent subscription for this user
     const subscription = await db.subscription.findFirst({
       where: {
         userId,
-        razorpayOrderId: paymentLinkId,
+        ...(paymentLinkId || orderId
+          ? { razorpayOrderId: paymentLinkId || orderId }
+          : {}),
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    if (!subscription) {
-      return NextResponse.json(
-        { error: 'Subscription not found' },
-        { status: 404 }
-      );
+    // If no subscription found with the filter, try finding any recent one
+    const subToCheck = subscription || await db.subscription.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!subToCheck) {
+      return NextResponse.json({
+        paid: false,
+        message: 'No subscription found. Please initiate payment first.',
+      });
     }
 
-    // If already activated, return user
-    if (subscription.status === 'active' && subscription.razorpayPaymentId) {
+    // If already activated, return user immediately
+    if (subToCheck.status === 'active' && subToCheck.razorpayPaymentId) {
       const user = await db.user.findUnique({ where: { id: userId } });
-      const { password: _pw, ...userWithoutPassword } = user!;
+      if (user) {
+        const { password: _pw, ...userWithoutPassword } = user;
+        return NextResponse.json({
+          paid: true,
+          message: 'Payment already verified',
+          user: userWithoutPassword,
+        });
+      }
+    }
+
+    // Check if user is already PRO (might have been activated by webhook)
+    const currentUser = await db.user.findUnique({ where: { id: userId } });
+    if (currentUser?.isPro && currentUser.proExpiry && new Date() < currentUser.proExpiry) {
+      const { password: _pw, ...userWithoutPassword } = currentUser;
       return NextResponse.json({
         paid: true,
-        message: 'Payment already verified',
+        message: 'PRO is already active',
         user: userWithoutPassword,
       });
     }
 
-    // Check payment link status with Razorpay
-    try {
-      const paymentLink = await razorpay.paymentLink.fetch(paymentLinkId);
+    // Try to verify via Razorpay Order API (for Standard Checkout)
+    const razorpayOrderId = subToCheck.razorpayOrderId;
+    if (razorpayOrderId && razorpayOrderId.startsWith('order_')) {
+      try {
+        // Fetch payments for this order
+        const payments = await razorpay.orders.fetchPayments(razorpayOrderId);
 
-      if (paymentLink.status === 'paid') {
-        // Payment is confirmed — activate PRO
-        const paymentId = paymentLink.payments?.[0]?.payment_id || null;
+        // Check if any payment is captured
+        const capturedPayment = payments.items?.find(
+          (p: any) => p.status === 'captured'
+        );
 
-        // Update subscription
-        await db.subscription.update({
-          where: { id: subscription.id },
-          data: {
-            status: 'active',
-            razorpayPaymentId: paymentId,
-          },
-        });
+        if (capturedPayment) {
+          // Payment confirmed — activate PRO!
+          const paymentId = capturedPayment.id;
 
-        // Activate PRO for user
-        const proExpiry = new Date();
-        proExpiry.setMonth(proExpiry.getMonth() + 1);
+          // Update subscription
+          await db.subscription.update({
+            where: { id: subToCheck.id },
+            data: {
+              status: 'active',
+              razorpayPaymentId: paymentId,
+            },
+          });
 
-        const user = await db.user.update({
-          where: { id: userId },
-          data: { isPro: true, proExpiry },
-        });
+          // Activate PRO for user
+          const proExpiry = new Date();
+          proExpiry.setMonth(proExpiry.getMonth() + 1);
 
-        // Create notification
-        await db.notification.create({
-          data: {
-            userId,
-            title: 'SINTHA PRO Activated!',
-            message: 'Your SINTHA PRO subscription is now active. Enjoy premium features!',
-            type: 'pro',
-            relatedId: subscription.id,
-          },
-        });
+          const updatedUser = await db.user.update({
+            where: { id: userId },
+            data: { isPro: true, proExpiry },
+          });
 
-        const { password: _pw, ...userWithoutPassword } = user;
+          // Create notification
+          await db.notification.create({
+            data: {
+              userId,
+              title: 'SINTHA PRO Activated!',
+              message: 'Your SINTHA PRO subscription is now active. Enjoy premium features!',
+              type: 'pro',
+              relatedId: subToCheck.id,
+            },
+          });
 
-        return NextResponse.json({
-          paid: true,
-          message: 'Payment verified and PRO activated!',
-          user: userWithoutPassword,
-        });
+          const { password: _pw, ...userWithoutPassword } = updatedUser;
+
+          return NextResponse.json({
+            paid: true,
+            message: 'Payment verified and PRO activated!',
+            user: userWithoutPassword,
+          });
+        }
+      } catch (orderErr) {
+        console.error('Order payment check failed:', orderErr);
+        // Continue to payment link check below
       }
-
-      // Not paid yet
-      return NextResponse.json({
-        paid: false,
-        message: 'Payment not completed yet. Please complete the payment first.',
-        status: paymentLink.status,
-      });
-    } catch (razorpayErr) {
-      console.error('Razorpay fetch error:', razorpayErr);
-      return NextResponse.json({
-        paid: false,
-        message: 'Could not verify payment. If you have paid, please contact support.',
-      });
     }
+
+    // Try payment link fetch (for Payment Link flow)
+    if (paymentLinkId && paymentLinkId.startsWith('plink_')) {
+      try {
+        const paymentLink = await razorpay.paymentLink.fetch(paymentLinkId);
+
+        if (paymentLink.status === 'paid') {
+          const paymentId = paymentLink.payments?.[0]?.payment_id || null;
+
+          await db.subscription.update({
+            where: { id: subToCheck.id },
+            data: {
+              status: 'active',
+              razorpayPaymentId: paymentId,
+            },
+          });
+
+          const proExpiry = new Date();
+          proExpiry.setMonth(proExpiry.getMonth() + 1);
+
+          const updatedUser = await db.user.update({
+            where: { id: userId },
+            data: { isPro: true, proExpiry },
+          });
+
+          await db.notification.create({
+            data: {
+              userId,
+              title: 'SINTHA PRO Activated!',
+              message: 'Your SINTHA PRO subscription is now active. Enjoy premium features!',
+              type: 'pro',
+              relatedId: subToCheck.id,
+            },
+          });
+
+          const { password: _pw, ...userWithoutPassword } = updatedUser;
+
+          return NextResponse.json({
+            paid: true,
+            message: 'Payment verified and PRO activated!',
+            user: userWithoutPassword,
+          });
+        }
+      } catch (linkErr) {
+        console.error('Payment link check failed:', linkErr);
+      }
+    }
+
+    // Not paid yet
+    return NextResponse.json({
+      paid: false,
+      message: 'Payment not completed yet. Please complete the payment first.',
+    });
   } catch (error) {
     console.error('Check payment error:', error);
     return NextResponse.json(

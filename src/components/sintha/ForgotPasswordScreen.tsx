@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ArrowLeft, Mail, Loader2, AlertCircle, CheckCircle2, MessageCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { sendPasswordResetEmail } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { apiFetch } from '@/lib/api'
+import WhatsAppIcon from './WhatsAppIcon'
 
 
 export default function ForgotPasswordScreen() {
@@ -34,27 +34,38 @@ export default function ForgotPasswordScreen() {
     setError(null)
 
     try {
-      await sendPasswordResetEmail(auth, email, {
-        url: window.location.origin,
-        handleCodeInApp: false,
+      // Call OUR backend /api/auth/forgot-password — this sends a
+      // SINTHA-branded email from pukkei365@gmail.com via Gmail SMTP,
+      // NOT Firebase's default email (which comes from noreply@firebaseapp.com).
+      //
+      // The email contains a link to our own /reset-password page with
+      // a secure token. When the user clicks it, they go to our reset
+      // page, enter a new password, and we update it via Firebase Admin
+      // SDK (or Firebase client SDK as a fallback).
+      const data = await apiFetch('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
       })
+
       setSent(true)
       toast({
         title: 'Reset Email Sent',
-        description: 'Check your inbox for the password reset link',
+        description: data.message || 'Check your inbox for the password reset link',
       })
     } catch (err: unknown) {
       const message = (err as Error).message || 'Failed to send reset email'
-      if (message.includes('auth/user-not-found')) {
+      if (message.includes('No account found') || message.includes('user-not-found')) {
         setError('No account found with this email address.')
-      } else if (message.includes('auth/invalid-email')) {
+      } else if (message.includes('invalid-email')) {
         setError('Please enter a valid email address.')
-      } else if (message.includes('auth/too-many-requests')) {
+      } else if (message.includes('too-many-requests')) {
         setError('Too many requests. Please try again later.')
-      } else if (message.includes('auth/network-request-failed')) {
+      } else if (message.includes('network') || message.includes('Network')) {
         setError('Network error. Please check your internet connection.')
+      } else if (message.includes('Email service is not configured')) {
+        setError('Email service is temporarily unavailable. Please contact support.')
       } else {
-        setError('Failed to send reset email. Please try again.')
+        setError(message)
       }
     } finally {
       setLoading(false)
@@ -177,10 +188,9 @@ export default function ForgotPasswordScreen() {
                 }}
                 className="w-full flex items-center justify-center gap-2 text-green-600 hover:text-green-700 transition-colors"
               >
-                <MessageCircle className="h-5 w-5" />
+                <WhatsAppIcon className="h-5 w-5" />
                 <span className="text-sm font-semibold">Need help? Chat with us on WhatsApp</span>
               </button>
-              <p className="text-[11px] text-center text-gray-400 mt-1">7005151875</p>
             </div>
           </CardContent>
         </Card>
