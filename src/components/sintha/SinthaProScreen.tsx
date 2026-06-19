@@ -100,23 +100,107 @@ export default function SinthaProScreen() {
 
     setPaymentLinkLoading(true)
     try {
-      const data = await apiFetch('/razorpay/payment-link', {
+      // Step 1: Create a Razorpay order via our backend
+      const orderData = await apiFetch('/razorpay/create-order', {
         method: 'POST',
         body: JSON.stringify({ userId: user.id }),
       })
 
-      setPaymentLinkId(data.paymentLinkId)
-      setPaymentLinkUrl(data.paymentLinkUrl)
+      const orderId = orderData.order.id
+      const amount = orderData.order.amount
+      const currency = orderData.order.currency
+      const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
 
-      // Open in external browser — this works in WebView because it's https://
-      window.open(data.paymentLinkUrl, '_blank')
+      if (!keyId) {
+        throw new Error('Razorpay key not configured')
+      }
 
-      // Start auto-polling — will auto-detect when payment is completed
-      startPolling(data.paymentLinkId)
+      // Step 2: Load Razorpay checkout.js script
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
 
-      toast({ title: 'Payment Link Opened', description: 'Complete payment in your browser. PRO will auto-activate when payment is done!' })
+      script.onload = () => {
+        // Step 3: Open Razorpay Standard Checkout modal
+        const rzp = new (window as any).Razorpay({
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: 'SINTHA PRO',
+          description: 'PRO Subscription — ₹199/month',
+          order_id: orderId,
+          prefill: {
+            name: user.name || '',
+            email: user.email || '',
+          },
+          theme: {
+            color: '#2563eb',
+          },
+          handler: async (response: any) => {
+            // Step 4: Payment successful — verify signature on backend
+            try {
+              const verifyData = await apiFetch('/razorpay/verify', {
+                method: 'POST',
+                body: JSON.stringify({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  userId: user.id,
+                }),
+              })
+
+              if (verifyData.user) {
+                setUser(verifyData.user, null)
+                toast({
+                  title: 'PRO Activated!',
+                  description: 'Payment verified! Your SINTHA PRO is now active.',
+                })
+                navigate('profile')
+              }
+            } catch (verifyErr: unknown) {
+              toast({
+                title: 'Verification Failed',
+                description: (verifyErr as Error).message || 'Payment could not be verified. Contact support.',
+                variant: 'destructive',
+              })
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              toast({
+                title: 'Payment Cancelled',
+                description: 'You closed the payment window. Try again when ready.',
+              })
+            },
+          },
+        })
+
+        rzp.on('payment.failed', (response: any) => {
+          toast({
+            title: 'Payment Failed',
+            description: response.error?.description || 'Payment was not completed. Please try again.',
+            variant: 'destructive',
+          })
+        })
+
+        rzp.open()
+      }
+
+      script.onerror = () => {
+        toast({
+          title: 'Error',
+          description: 'Could not load Razorpay checkout. Please check your internet connection.',
+          variant: 'destructive',
+        })
+      }
+
+      document.body.appendChild(script)
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message || 'Failed to create payment link', variant: 'destructive' })
+      toast({
+        title: 'Error',
+        description: (err as Error).message || 'Failed to start payment',
+        variant: 'destructive',
+      })
     } finally {
       setPaymentLinkLoading(false)
     }
