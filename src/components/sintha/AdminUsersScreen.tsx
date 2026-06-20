@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Search, Ban, Trash2, CheckCircle, Crown } from 'lucide-react'
+import {
+  ArrowLeft, Search, Ban, Trash2, CheckCircle, Crown, Pause, Play,
+  ShieldX, ShieldCheck, Flag, MoreVertical, X
+} from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface AdminUser {
@@ -19,20 +22,29 @@ interface AdminUser {
   isVerified: boolean
   isPro: boolean
   isBlocked: boolean
+  isBanned: boolean
+  banReason?: string | null
+  bannedAt?: string | null
   photoUrl?: string
   createdAt: string
   _count: {
     bookingsAsClient: number
     bookingsAsProvider: number
+    claimsFiled: number
+    claimsAgainst: number
   }
 }
 
 export default function AdminUsersScreen() {
-  const { navigate } = useAppStore()
+  const { navigate, user: adminUser } = useAppStore()
   const { toast } = useToast()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [actionMenuFor, setActionMenuFor] = useState<string | null>(null)
+  const [banReasonFor, setBanReasonFor] = useState<string | null>(null)
+  const [banReasonText, setBanReasonText] = useState('')
+  const [acting, setActing] = useState<string | null>(null)
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -54,43 +66,105 @@ export default function AdminUsersScreen() {
       u.email.toLowerCase().includes(search.toLowerCase())
   )
 
-  const toggleBlock = async (userId: string, isBlocked: boolean) => {
+  // ── Generic action handler — calls PATCH /admin/users/[id] ──
+  const performAction = async (
+    userId: string,
+    action: 'suspend' | 'unsuspend' | 'ban' | 'unban' | 'reject',
+    reason?: string
+  ) => {
+    setActing(userId)
+    setActionMenuFor(null)
     try {
       await apiFetch(`/admin/users/${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ isBlocked: !isBlocked }),
+        method: 'PATCH',
+        body: JSON.stringify({
+          action,
+          reason: reason || `Action: ${action}`,
+          adminId: adminUser?.id,
+        }),
       })
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, isBlocked: !isBlocked } : u))
-      )
-      toast({ title: isBlocked ? 'Unblocked' : 'Blocked', description: `User ${isBlocked ? 'unblocked' : 'blocked'} successfully` })
+
+      // For 'reject', the user is deleted — remove from list
+      if (action === 'reject') {
+        setUsers((prev) => prev.filter((u) => u.id !== userId))
+      } else {
+        // Update local state
+        setUsers((prev) =>
+          prev.map((u) => {
+            if (u.id !== userId) return u
+            switch (action) {
+              case 'suspend':
+                return { ...u, isBlocked: true }
+              case 'unsuspend':
+                return { ...u, isBlocked: false }
+              case 'ban':
+                return {
+                  ...u,
+                  isBanned: true,
+                  isBlocked: true,
+                  banReason: reason,
+                  bannedAt: new Date().toISOString(),
+                }
+              case 'unban':
+                return {
+                  ...u,
+                  isBanned: false,
+                  isBlocked: false,
+                  banReason: null,
+                  bannedAt: null,
+                }
+              default:
+                return u
+            }
+          })
+        )
+      }
+
+      const messages: Record<string, string> = {
+        suspend: 'User suspended — they cannot log in until restored',
+        unsuspend: 'User restored — they can log in again',
+        ban: 'User PERMANENTLY banned — they can never log in again',
+        unban: 'User unbanned — they can log in again',
+        reject: 'User rejected and email banned — cannot re-register',
+      }
+      toast({
+        title: 'Action complete',
+        description: messages[action] || 'Done',
+        variant: action === 'unban' || action === 'unsuspend' ? 'default' : 'destructive',
+      })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({
+        title: 'Action failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    } finally {
+      setActing(null)
+      setBanReasonFor(null)
+      setBanReasonText('')
     }
   }
 
   const togglePro = async (userId: string, isPro: boolean) => {
     try {
-      const proExpiry = isPro ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+      const proExpiry = isPro ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
       await apiFetch(`/admin/users/${userId}`, {
         method: 'PUT',
         body: JSON.stringify({ isPro: !isPro, proExpiry }),
       })
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, isPro: !isPro } : u))
-      )
-      toast({ title: isPro ? 'PRO Deactivated' : 'PRO Activated', description: `PRO ${isPro ? 'removed' : 'activated for 30 days'} successfully` })
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isPro: !isPro } : u)))
+      toast({ title: isPro ? 'PRO Deactivated' : 'PRO Activated' })
     } catch (err: unknown) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
     }
   }
 
   const deleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return
+    if (!confirm('Delete this user permanently? Their data will be removed but they CAN re-register. Use "Reject" to also ban their email.')) return
     try {
       await apiFetch(`/admin/users/${userId}`, { method: 'DELETE' })
       setUsers((prev) => prev.filter((u) => u.id !== userId))
-      toast({ title: 'Deleted', description: 'User deleted successfully' })
+      toast({ title: 'Deleted' })
     } catch (err: unknown) {
       toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
     }
@@ -104,11 +178,12 @@ export default function AdminUsersScreen() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h1 className="text-lg font-bold text-gray-800">Users</h1>
+          <Badge variant="secondary" className="text-[10px]">{users.length}</Badge>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search users..."
+            placeholder="Search by name or email..."
             className="pl-10 bg-gray-50 border-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -131,50 +206,182 @@ export default function AdminUsersScreen() {
           <div className="p-8 text-center text-gray-400">No users found</div>
         ) : (
           filtered.map((u) => (
-            <div key={u.id} className="p-4 bg-white flex items-center gap-3">
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarImage src={u.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2563eb&color=fff`} />
-                <AvatarFallback>{u.name[0]}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
-                  {u.isVerified && <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />}
-                  {u.isBlocked && <Badge className="bg-red-100 text-red-600 text-[9px] border-0">Blocked</Badge>}
+            <div key={u.id} className="p-4 bg-white relative">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={u.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=2563eb&color=fff`} />
+                  <AvatarFallback>{u.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
+                    {u.isVerified && <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />}
+                    {u.isBanned && (
+                      <Badge className="bg-red-100 text-red-700 text-[9px] border-0">BANNED</Badge>
+                    )}
+                    {!u.isBanned && u.isBlocked && (
+                      <Badge className="bg-amber-100 text-amber-700 text-[9px] border-0">SUSPENDED</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    <Badge variant="secondary" className="text-[9px] capitalize">{u.role || 'none'}</Badge>
+                    {u.isPro && <Badge className="sintha-pro-badge text-white text-[9px] border-0">PRO</Badge>}
+                    {u._count?.claimsAgainst > 0 && (
+                      <Badge variant="outline" className="text-[9px] text-red-600 border-red-200">
+                        <Flag className="h-2 w-2 mr-0.5" /> {u._count.claimsAgainst}
+                      </Badge>
+                    )}
+                  </div>
+                  {u.banReason && (
+                    <p className="text-[10px] text-red-500 mt-0.5 truncate" title={u.banReason}>
+                      Reason: {u.banReason}
+                    </p>
+                  )}
                 </div>
-                <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <Badge variant="secondary" className="text-[9px] capitalize">{u.role}</Badge>
-                  {u.isPro && <Badge className="sintha-pro-badge text-white text-[9px] border-0">PRO</Badge>}
+
+                {/* Quick actions */}
+                <div className="flex gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => togglePro(u.id, u.isPro)}
+                    title={u.isPro ? 'Remove PRO' : 'Activate PRO'}
+                    disabled={!!acting}
+                  >
+                    <Crown className={`h-4 w-4 ${u.isPro ? 'text-amber-500' : 'text-gray-300'}`} />
+                  </Button>
+
+                  {/* More actions menu */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setActionMenuFor(actionMenuFor === u.id ? null : u.id)}
+                    disabled={!!acting || u.role === 'admin'}
+                  >
+                    {acting === u.id ? (
+                      <span className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <MoreVertical className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => togglePro(u.id, u.isPro)}
-                  title={u.isPro ? 'Remove PRO' : 'Activate PRO'}
-                >
-                  <Crown className={`h-4 w-4 ${u.isPro ? 'text-amber-500' : 'text-gray-300'}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => toggleBlock(u.id, u.isBlocked)}
-                >
-                  <Ban className={`h-4 w-4 ${u.isBlocked ? 'text-green-500' : 'text-gray-400'}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => deleteUser(u.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-red-400" />
-                </Button>
-              </div>
+
+              {/* Action menu dropdown */}
+              {actionMenuFor === u.id && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => { setActionMenuFor(null); setBanReasonFor(null) }}
+                  />
+                  <div className="absolute right-4 top-16 z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[200px]">
+                    {/* Suspended state */}
+                    {u.isBlocked && !u.isBanned && (
+                      <button
+                        onClick={() => performAction(u.id, 'unsuspend')}
+                        className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 text-green-700"
+                      >
+                        <Play className="h-3.5 w-3.5" /> Restore (Unsuspend)
+                      </button>
+                    )}
+                    {/* Not suspended */}
+                    {!u.isBlocked && (
+                      <button
+                        onClick={() => performAction(u.id, 'suspend')}
+                        className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 text-amber-700"
+                      >
+                        <Pause className="h-3.5 w-3.5" /> Suspend (Temporary)
+                      </button>
+                    )}
+
+                    {/* Banned state */}
+                    {u.isBanned ? (
+                      <button
+                        onClick={() => {
+                          if (!confirm(`Unban ${u.name}? They will be able to log in again.`)) return
+                          performAction(u.id, 'unban')
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 text-green-700"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" /> Unban (Forgive)
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setBanReasonFor(u.id)
+                          setBanReasonText('')
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 text-red-700"
+                      >
+                        <Ban className="h-3.5 w-3.5" /> Ban Permanently
+                      </button>
+                    )}
+
+                    {/* Reject (ban + delete) */}
+                    <button
+                      onClick={() => {
+                        if (!confirm(`REJECT ${u.name}?\n\nThis will:\n• Permanently ban their email\n• Delete their account\n• They can NEVER register again with this email\n\nThis cannot be undone.`)) return
+                        performAction(u.id, 'reject', 'Account rejected by admin')
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 flex items-center gap-2 text-red-700 font-semibold border-t border-gray-100"
+                    >
+                      <ShieldX className="h-3.5 w-3.5" /> Reject + Ban Email
+                    </button>
+
+                    {/* Plain delete (no email ban) */}
+                    <button
+                      onClick={() => deleteUser(u.id)}
+                      className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2 text-gray-600 border-t border-gray-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Delete Only
+                    </button>
+                  </div>
+
+                  {/* Ban reason input */}
+                  {banReasonFor === u.id && (
+                    <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-3 space-y-2">
+                      <p className="text-xs font-semibold text-red-700">
+                        Ban reason (visible to user as "why they're banned"):
+                      </p>
+                      <Input
+                        placeholder="e.g. Fraudulent behavior, multiple complaints..."
+                        value={banReasonText}
+                        onChange={(e) => setBanReasonText(e.target.value)}
+                        className="bg-white text-xs h-8"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs flex-1"
+                          onClick={() => { setBanReasonFor(null); setBanReasonText('') }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 text-xs flex-1"
+                          onClick={() => {
+                            if (!banReasonText.trim()) {
+                              toast({ title: 'Reason required', variant: 'destructive' })
+                              return
+                            }
+                            if (!confirm(`Permanently BAN ${u.name}?\n\nThey will NEVER be able to log in again with this email.`)) return
+                            performAction(u.id, 'ban', banReasonText.trim())
+                          }}
+                        >
+                          <Ban className="h-3 w-3 mr-1" /> Confirm Ban
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))
         )}

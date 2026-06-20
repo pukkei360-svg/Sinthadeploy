@@ -22,7 +22,16 @@ model User {
   isVerified    Boolean  @default(false)
   isPro         Boolean  @default(false)
   proExpiry     DateTime?
+  // isBlocked: legacy boolean — kept for backward compat. Now interpreted
+  // as "temporarily suspended". Suspended users can't log in until admin
+  // un-suspends them. Their data is preserved.
   isBlocked     Boolean  @default(false)
+  // isBanned: permanent ban. Banned users can NEVER log in again. Their
+  // email is also added to BannedEmail so they can't just create a new
+  // account with the same email.
+  isBanned      Boolean  @default(false)
+  banReason     String?
+  bannedAt      DateTime?
   fcmToken      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -36,6 +45,57 @@ model User {
   verifications VerificationDoc[]
   subscriptions Subscription[]
   passwordResetTokens PasswordResetToken[]
+  claimsFiled Claim[] @relation("ClaimReporter")
+  claimsAgainst Claim[] @relation("ClaimSubject")
+}
+
+// BannedEmail — a blacklist of email addresses that can never be used
+// to register or log in. Populated when an admin permanently bans a
+// user. This is separate from User so that even after a User row is
+// deleted, the email stays banned.
+model BannedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  bannedAt  DateTime @default(now())
+  bannedBy  String?  // admin user id
+  createdAt DateTime @default(now())
+}
+
+// Claim — a complaint/report filed by a user against a provider
+// (or another user). Visible in the admin panel under "Claims & Reports".
+// Resolved claims stay in the DB for audit history.
+model Claim {
+  id          String   @id @default(cuid())
+  // Who filed the claim
+  reporterId  String
+  // Who the claim is against
+  subjectId   String
+  // Optional: related booking (if the claim is about a specific job)
+  bookingId   String?
+  // Type of claim: fraud, misconduct, no_show, quality, payment, abuse, other
+  type        String
+  // Severity: low, medium, high, critical
+  severity    String   @default("medium")
+  // Short title / summary
+  title       String
+  // Detailed description from the reporter
+  description String
+  // Status: open, investigating, resolved, dismissed
+  status      String   @default("open")
+  // Admin resolution notes (filled when resolved/dismissed)
+  resolution  String?
+  // Admin who handled the claim
+  handledBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reporter User  @relation("ClaimReporter", fields: [reporterId], references: [id])
+  subject  User  @relation("ClaimSubject", fields: [subjectId], references: [id])
+
+  @@index([subjectId])
+  @@index([reporterId])
+  @@index([status])
 }
 
 model ServiceCategory {

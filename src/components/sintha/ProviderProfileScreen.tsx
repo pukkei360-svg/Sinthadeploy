@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import {
   ArrowLeft, Star, CheckCircle, Crown, Clock, MapPin, MessageCircle,
-  Calendar, DollarSign, Briefcase, Shield, ChevronRight, Image as ImageIcon
+  Calendar, DollarSign, Briefcase, Shield, ChevronRight, Image as ImageIcon, Flag
 } from 'lucide-react'
 
 export default function ProviderProfileScreen() {
@@ -282,6 +282,20 @@ export default function ProviderProfileScreen() {
           <p className="text-[11px] text-center text-green-600 mt-2">
             ✅ Chat unlocked — you have a booking with this provider
           </p>
+        )}
+
+        {/* Report Provider — small, low-emphasis link. Visible to any
+            logged-in user; the report form itself requires a reason. */}
+        {user && provider?.userId && user.id !== provider.userId && (
+          <button
+            onClick={() => navigate('report-provider', {
+              subjectId: provider.userId,
+              subjectName: provider.user?.name || 'this provider',
+            })}
+            className="w-full text-center text-[11px] text-gray-400 hover:text-red-500 mt-3 py-1 flex items-center justify-center gap-1"
+          >
+            <Flag className="h-3 w-3" /> Report this provider
+          </button>
         )}
       </div>
     </div>

@@ -16,6 +16,9 @@ export async function GET() {
         isPro: true,
         proExpiry: true,
         isBlocked: true,
+        isBanned: true,
+        banReason: true,
+        bannedAt: true,
         createdAt: true,
         _count: {
           select: {
@@ -23,6 +26,8 @@ export async function GET() {
             bookingsAsProvider: true,
             reviewsGiven: true,
             reviewsReceived: true,
+            claimsFiled: true,
+            claimsAgainst: true,
           },
         },
       },

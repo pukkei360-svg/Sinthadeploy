@@ -30,6 +30,8 @@ import ProviderDashboardScreen from '@/components/sintha/ProviderDashboardScreen
 import ProviderOnboardingScreen from '@/components/sintha/ProviderOnboardingScreen'
 import ReviewsScreen from '@/components/sintha/ReviewsScreen'
 import ForgotPasswordScreen from '@/components/sintha/ForgotPasswordScreen'
+import ReportProviderScreen from '@/components/sintha/ReportProviderScreen'
+import AdminClaimsScreen from '@/components/sintha/AdminClaimsScreen'
 
 export default function Home() {
   const {
@@ -104,6 +106,34 @@ export default function Home() {
           }
         } catch (err) {
           console.error('Failed to sync Firebase user to backend:', err)
+
+          // ── Banned / Suspended user handling ──────────────────────
+          // If the backend returns 403, the user is either banned or
+          // suspended. Show a clear error, sign them out of Firebase,
+          // and clear localStorage so they can't bypass the ban by
+          // using a cached session.
+          if (err instanceof Error && (err.message.includes('banned') || err.message.includes('suspended'))) {
+            try {
+              // Sign out of Firebase so the auth state listener doesn't
+              // immediately re-sync and re-trigger this error.
+              const { signOut } = await import('firebase/auth')
+              await signOut(auth)
+            } catch {}
+            localStorage.removeItem('sintha_user')
+            localStorage.removeItem('sintha_token')
+            localStorage.removeItem('sintha_provider_profile')
+
+            // Show the error message to the user via an alert
+            // (toast requires the Toaster component to be mounted,
+            // and at this point the app is still on the landing screen)
+            alert(err.message)
+
+            setUser(null, null)
+            navigate('landing')
+            setAuthReady(true)
+            return
+          }
+
           // Fallback to localStorage
           try {
             const savedUser = localStorage.getItem('sintha_user')
@@ -348,6 +378,10 @@ export default function Home() {
         return <ReviewsScreen />
       case 'forgot-password':
         return <ForgotPasswordScreen />
+      case 'report-provider':
+        return <ReportProviderScreen />
+      case 'admin-claims':
+        return <AdminClaimsScreen />
       default:
         return <LandingScreen />
     }

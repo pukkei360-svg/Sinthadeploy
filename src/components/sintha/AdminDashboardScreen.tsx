@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import {
   ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell,
-  Trash2, AlertTriangle, Loader2, Search
+  Trash2, AlertTriangle, Loader2, Search, Flag
 } from 'lucide-react'
 
 interface AdminStats {
@@ -20,6 +20,9 @@ interface AdminStats {
   totalCategories: number
   totalReviews: number
   pendingVerifications: number
+  pendingClaims?: number
+  suspendedUsers?: number
+  bannedUsers?: number
   proUsers: number
   revenue: number
   bookingsByStatus: Record<string, number>
@@ -65,6 +68,7 @@ export default function AdminDashboardScreen() {
     { icon: Calendar, label: 'Bookings', view: 'admin-bookings' as const, color: 'bg-amber-100 text-amber-600' },
     { icon: BarChart3, label: 'Categories', view: 'admin-categories' as const, color: 'bg-purple-100 text-purple-600' },
     { icon: FileCheck, label: 'Verifications', view: 'admin-verifications' as const, color: 'bg-red-100 text-red-600' },
+    { icon: Flag, label: 'Claims', view: 'admin-claims' as const, color: 'bg-rose-100 text-rose-600' },
   ]
 
   // ── PRO ₹1 → ₹199 cleanup tool ────────────────────────────────
@@ -184,6 +188,17 @@ export default function AdminDashboardScreen() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-amber-800">{stats.pendingVerifications} Pending Verifications</p>
               <p className="text-xs text-amber-600">Click to review</p>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Claims Alert */}
+        {stats && (stats.pendingClaims ?? 0) > 0 && (
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center gap-3" onClick={() => navigate('admin-claims')}>
+            <Flag className="h-5 w-5 text-rose-600" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-rose-800">{stats.pendingClaims} Pending Claims</p>
+              <p className="text-xs text-rose-600">User reports need your attention</p>
             </div>
           </div>
         )}

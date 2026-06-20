@@ -27,6 +27,24 @@ export async function POST(request: NextRequest) {
     // Determine if this is an admin login
     const isAdmin = email.toLowerCase() === ADMIN_EMAIL;
 
+    // ── Pre-flight: is this email banned? ─────────────────────────
+    // Even before looking up the user, check the BannedEmail table.
+    // This catches the case where an admin banned+deleted a user, but
+    // the user tries to re-register with the same email.
+    const bannedRecord = await db.bannedEmail.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    if (bannedRecord) {
+      return NextResponse.json(
+        {
+          error: 'This account has been permanently banned. Please contact support.',
+          banned: true,
+          reason: bannedRecord.reason,
+        },
+        { status: 403 }
+      );
+    }
+
     // 1. Check if user exists by firebaseUid
     let user = await db.user.findUnique({ where: { firebaseUid } });
 
@@ -82,10 +100,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if blocked
+    // ── Post-flight: is this user suspended or banned? ─────────────
+    // Banned = permanent. Suspended = temporary (admin can un-suspend).
+    // We check BOTH because an admin might ban a user after they were
+    // already logged in (the Firebase session may still be valid).
+    if (user.isBanned) {
+      // Add to BannedEmail table if not already there (defensive — the
+      // ban endpoint should already do this, but we double-check here).
+      try {
+        await db.bannedEmail.upsert({
+          where: { email: user.email.toLowerCase() },
+          update: {},
+          create: {
+            email: user.email.toLowerCase(),
+            reason: user.banReason || 'Permanently banned by admin',
+          },
+        });
+      } catch {
+        // Ignore — BannedEmail table may not exist yet on first deploy
+      }
+      return NextResponse.json(
+        {
+          error: 'This account has been permanently banned. Please contact support.',
+          banned: true,
+          reason: user.banReason,
+        },
+        { status: 403 }
+      );
+    }
+
     if (user.isBlocked) {
       return NextResponse.json(
-        { error: 'Account is blocked. Please contact support.' },
+        {
+          error: 'Your account has been temporarily suspended. Please contact support.',
+          suspended: true,
+        },
         { status: 403 }
       );
     }

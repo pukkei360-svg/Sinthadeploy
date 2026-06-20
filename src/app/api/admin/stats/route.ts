@@ -12,6 +12,9 @@ export async function GET() {
       pendingVerifications,
       proUsers,
       recentBookings,
+      pendingClaims,
+      suspendedUsers,
+      bannedUsers,
     ] = await Promise.all([
       db.user.count(),
       db.providerProfile.count(),
@@ -28,6 +31,12 @@ export async function GET() {
           provider: { select: { name: true } },
         },
       }),
+      // New: pending claims (open status)
+      db.claim.count({ where: { status: 'open' } }).catch(() => 0),
+      // New: suspended users
+      db.user.count({ where: { isBlocked: true, isBanned: false } }),
+      // New: banned users
+      db.user.count({ where: { isBanned: true } }),
     ]);
 
     // Bookings by status
@@ -55,6 +64,9 @@ export async function GET() {
         totalCategories,
         totalReviews,
         pendingVerifications,
+        pendingClaims,
+        suspendedUsers,
+        bannedUsers,
         proUsers,
         revenue: subscriptionRevenue._sum.amount || 0,
         bookingsByStatus: statusCounts,
