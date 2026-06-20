@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const amount = 100; // TEMPORARILY ₹1 for testing (was 19900 = ₹199)
+    const amount = 19900; // ₹199 in paise
 
     // Create Razorpay order
     const order = await razorpay.orders.create({

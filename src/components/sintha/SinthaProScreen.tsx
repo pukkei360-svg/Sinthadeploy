@@ -18,10 +18,10 @@ const benefits = [
 
 const faqs = [
   { q: 'What is SINTHA PRO?', a: 'SINTHA PRO is our premium subscription plan for service providers. It gives you enhanced visibility and priority support to grow your business.' },
-  { q: 'How much does it cost?', a: 'SINTHA PRO is just ₹1/month. No hidden fees, no long-term commitment. Cancel anytime.' },
+  { q: 'How much does it cost?', a: 'SINTHA PRO is just ₹199/month. No hidden fees, no long-term commitment. Cancel anytime.' },
   { q: 'Can I cancel anytime?', a: 'Yes! You can cancel your PRO subscription at any time. You\'ll continue to have PRO features until the end of your billing period.' },
   { q: 'Will I get more bookings?', a: 'PRO providers get higher search rankings and homepage visibility, which typically leads to 3-5x more booking requests.' },
-  { q: 'Is there a free trial?', a: 'Currently we don\'t offer a free trial, but at just ₹1/month, it\'s very affordable. Most PRO providers earn back the subscription in their first booking!' },
+  { q: 'Is there a free trial?', a: 'Currently we don\'t offer a free trial, but at just ₹199/month, it\'s very affordable. Most PRO providers earn back the subscription in their first booking!' },
 ]
 
 export default function SinthaProScreen() {
@@ -171,7 +171,7 @@ export default function SinthaProScreen() {
           amount: amount,
           currency: currency,
           name: 'SINTHA PRO',
-          description: 'PRO Subscription — ₹1/month',
+          description: 'PRO Subscription — ₹199/month',
           order_id: orderId,
           // Explicitly request all payment methods including UPI
           method: {
@@ -316,7 +316,7 @@ export default function SinthaProScreen() {
           <h2 className="text-2xl font-bold mb-1">Unlock Premium</h2>
           <p className="text-sm opacity-80">Grow your business with SINTHA PRO</p>
           <div className="mt-4">
-            <span className="text-3xl font-extrabold">₹1</span>
+            <span className="text-3xl font-extrabold">₹199</span>
             <span className="text-sm opacity-70">/month</span>
           </div>
         </div>
@@ -354,7 +354,7 @@ export default function SinthaProScreen() {
               disabled={paymentLinkLoading}
             >
               {paymentLinkLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Crown className="h-5 w-5 mr-2" />}
-              {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹1 & Activate PRO'}
+              {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹199 & Activate PRO'}
             </Button>
             <p className="text-[11px] text-center text-gray-500">
               Pay with PhonePe, Paytm, BHIM, UPI, Cards, or Net Banking
@@ -423,7 +423,7 @@ export default function SinthaProScreen() {
               <div className="text-[11px] text-green-600 space-y-1">
                 <p>1. Tap "Open Payment Link" above</p>
                 <p>2. Choose <span className="font-bold">PhonePe / Paytm / UPI / Card</span></p>
-                <p>3. Complete ₹1 payment</p>
+                <p>3. Complete ₹199 payment</p>
                 <p>4. Come back here — <span className="font-bold">PRO auto-activates!</span></p>
               </div>
             </div>
