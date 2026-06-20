@@ -31,12 +31,15 @@ export async function GET() {
           provider: { select: { name: true } },
         },
       }),
-      // New: pending claims (open status)
+      // Pending claims — wrapped in catch because Claim table may not exist
       db.claim.count({ where: { status: 'open' } }).catch(() => 0),
-      // New: suspended users
-      db.user.count({ where: { isBlocked: true, isBanned: false } }),
-      // New: banned users
-      db.user.count({ where: { isBanned: true } }),
+      // Suspended users (isBlocked=true). isBanned column may not exist
+      // on the production DB — use a safe query.
+      db.user.count({ where: { isBlocked: true } }).catch(() => 0),
+      // Banned users — if isBanned column doesn't exist, return 0
+      (db as unknown as { user: { count: (args?: unknown) => Promise<number> } })
+        .user.count({ where: { isBanned: true } })
+        .catch(() => 0),
     ]);
 
     // Bookings by status
