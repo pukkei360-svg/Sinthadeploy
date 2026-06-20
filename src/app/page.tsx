@@ -32,7 +32,10 @@ import ReviewsScreen from '@/components/sintha/ReviewsScreen'
 import ForgotPasswordScreen from '@/components/sintha/ForgotPasswordScreen'
 
 export default function Home() {
-  const { currentView, setUser, navigate, isAuthReady, setAuthReady, setMyProviderProfile } = useAppStore()
+  const {
+    currentView, setUser, navigate, isAuthReady, setAuthReady,
+    setMyProviderProfile, user, setNotifications,
+  } = useAppStore()
 
   // Listen to Firebase auth state changes
   useEffect(() => {
@@ -165,6 +168,29 @@ export default function Home() {
 
     return () => unsubscribe()
   }, [])
+
+  // ─────────────────────────────────────────────────────────────
+  // Global notification preload
+  // ─────────────────────────────────────────────────────────────
+  // The HomeScreen & BottomNav bell badge reads `notifications` from
+  // the store, but only NotificationsScreen was fetching them — so
+  // the red unread-count badge never showed until the user actually
+  // opened the notifications screen. Fetch once per signed-in user
+  // so the badge shows up immediately on app launch / login.
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const loadNotifications = async () => {
+      try {
+        const data = await apiFetch(`/notifications?userId=${user.id}`)
+        if (!cancelled) setNotifications(data.notifications || [])
+      } catch {
+        // Silent — store keeps whatever it had (likely empty)
+      }
+    }
+    loadNotifications()
+    return () => { cancelled = true }
+  }, [user, setNotifications])
 
   // ─────────────────────────────────────────────────────────────
   // Android Back Button / End Key Handler
