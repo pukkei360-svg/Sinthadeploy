@@ -4,24 +4,22 @@ import { db } from '@/lib/db';
 /**
  * SINTHA AI Chat API
  * 
- * Uses the z-ai-web-dev-sdk to provide real AI-powered responses.
- * The AI has context about:
+ * Calls the Z.ai API directly via fetch (bypassing the SDK which
+ * requires a local .z-ai-config file that doesn't exist on Vercel).
+ * 
+ * The AI has real-time context about:
  * - Available service providers (fetched from database)
  * - Service categories
  * - How SINTHA works (booking, chat, PRO, verification)
- * - Zero commission policy
- * 
- * The AI can:
- * - Recommend specific providers based on user needs
- * - Guide users through booking
- * - Answer questions about SINTHA
- * - Understand natural language (not just keywords)
  */
 
-// System prompt that gives the AI context about SINTHA
+// Z.ai API configuration
+const ZAI_BASE_URL = 'https://internal-api.z.ai/v1';
+const ZAI_API_KEY = 'Z.ai';
+
 function buildSystemPrompt(providers: any[], categories: any[]): string {
   const providerList = providers
-    .map(p => `- ${p.user?.name || 'Unknown'} | Category: ${p.category?.name || 'N/A'} | Skills: ${p.skills || 'N/A'} | Rating: ${p.rating || '0.0'} | Experience: ${p.experience || 'N/A'} | Hourly Rate: ₹${p.hourlyRate || 'N/A'}`)
+    .map(p => `- ${p.user?.name || 'Unknown'} | Category: ${p.category?.name || 'N/A'} | Skills: ${p.skills || 'N/A'} | Rating: ${p.rating || '0.0'} | Experience: ${p.experience || 'N/A'} | Rate: ₹${p.hourlyRate || 'N/A'}/hr`)
     .join('\n');
 
   const categoryList = categories
@@ -31,36 +29,29 @@ function buildSystemPrompt(providers: any[], categories: any[]): string {
   return `You are SINTHA AI, the official assistant for SINTHA — Manipur's trusted service marketplace.
 
 About SINTHA:
-- SINTHA is a service marketplace connecting clients with local service providers in Manipur, India
-- Zero commission — providers keep 100% of their earnings
+- Service marketplace connecting clients with local providers in Manipur, India
+- Zero commission — providers keep 100% of earnings
 - Categories: Home Services, Education, Transport, Events, Beauty, Repairs
 - Available in Meitei Mayek (Manipuri script)
-- Features: Booking system, chat (unlocked after booking), call/WhatsApp, email notifications
-- PRO subscription (₹199/month): Higher search ranking, Featured badge, Homepage visibility, Priority support
-- Verification: Providers can submit Aadhaar + selfie for a "Verified" badge
-- Payments: Razorpay for PRO subscriptions; service payments are direct between client and provider
+- Features: Booking, chat (unlocked after booking), call/WhatsApp, email notifications
+- PRO subscription (₹199/month): Higher search ranking, Featured badge, Homepage visibility
+- Verification: Providers submit Aadhaar + selfie for "Verified" badge
+- Payments: Razorpay for PRO; service payments direct between client and provider
 
 Your role:
 - Help users find the right service provider
-- Guide them through booking (Browse → Select provider → Tap "Book Now" → Fill date/time/address → Submit)
+- Guide them through booking (Browse → Select provider → Tap "Book Now" → Fill details → Submit)
 - Answer questions about SINTHA, PRO, verification, payments
-- Be friendly, helpful, and concise
-- If a user asks for a specific service, recommend relevant providers from the list below
-- If no providers match, suggest browsing the relevant category
-- Keep responses short (2-4 sentences) — this is a mobile chat, not an essay
+- Be friendly, helpful, and concise (2-4 sentences for mobile chat)
+- Recommend relevant providers from the list when appropriate
+- Don't make up provider names not in the list
+- Encourage booking through the app for safety
 
-Available Service Categories:
+Available Categories:
 ${categoryList}
 
-Available Providers (recommend these when relevant):
-${providerList}
-
-Important:
-- Always be honest about what SINTHA can and cannot do
-- If you don't know something, say so
-- Don't make up provider names that aren't in the list above
-- Encourage users to book through the app for safety
-- Mention that chat is unlocked only after booking (for security)`;
+Available Providers:
+${providerList}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -75,37 +66,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch real providers and categories from database for AI context
+    // Fetch real providers and categories from database
     const [providers, categories] = await Promise.all([
       db.providerProfile.findMany({
         take: 20,
         include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              photoUrl: true,
-              location: true,
-              isVerified: true,
-              isPro: true,
-            },
-          },
+          user: { select: { id: true, name: true, photoUrl: true, location: true, isVerified: true, isPro: true } },
           category: true,
         },
         orderBy: { rating: 'desc' },
       }),
       db.serviceCategory.findMany({
         where: { isActive: true },
-        include: {
-          _count: { select: { providers: true } },
-        },
+        include: { _count: { select: { providers: true } } },
         orderBy: { order: 'asc' },
       }),
     ]);
 
     const systemPrompt = buildSystemPrompt(providers, categories);
 
-    // Build the conversation messages for the AI
+    // Build messages for the AI
     const messages = [
       { role: 'system', content: systemPrompt },
       ...conversationHistory.map((msg: { role: string; content: string }) => ({
@@ -115,24 +95,33 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: message },
     ];
 
-    // Use z-ai-web-dev-sdk for real AI
-    // Dynamic import to avoid issues if SDK isn't available
+    // Call Z.ai API directly via fetch
     let aiResponse: string;
     try {
-      const ZAI = (await import('z-ai-web-dev-sdk')).default;
-      const zai = await ZAI.create();
-
-      const completion = await zai.chat.completions.create({
-        messages: messages as any,
-        temperature: 0.7,
-        max_tokens: 300,
+      const apiResponse = await fetch(`${ZAI_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${ZAI_API_KEY}`,
+          'X-Z-AI-From': 'Z',
+        },
+        body: JSON.stringify({
+          messages,
+          temperature: 0.7,
+          max_tokens: 300,
+          thinking: { type: 'disabled' },
+        }),
       });
 
-      aiResponse = completion.choices[0]?.message?.content || 
+      if (!apiResponse.ok) {
+        throw new Error(`API returned ${apiResponse.status}`);
+      }
+
+      const data = await apiResponse.json();
+      aiResponse = data.choices?.[0]?.message?.content ||
         "I'm sorry, I couldn't generate a response. Please try again.";
     } catch (aiErr) {
-      console.error('[AI Chat] SDK error:', aiErr);
-      // Fallback to a helpful message if AI fails
+      console.error('[AI Chat] API error:', aiErr);
       aiResponse = "I'm having trouble connecting to my AI brain right now. Please try again in a moment, or browse providers directly from the Home screen!";
     }
 
