@@ -1,6 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+// ─────────────────────────────────────────────────────────────
+// One-time price migration
+// ─────────────────────────────────────────────────────────────
+// PRO subscription price was bumped from ₹1 → ₹199. Old
+// notifications sitting in the DB still mention ₹1, and they
+// surface in the bell-icon dropdown and the notifications list.
+// Rather than run a manual DB migration, we transparently rewrite
+// any stale ₹1 reference to ₹199 on read, AND persist the fix back
+// to the DB so subsequent reads skip the rewrite. Idempotent —
+// after the first read, the row is clean and this becomes a no-op.
+const STALE_PRICE_PATTERN = /₹1(?![0-9])|Rs\.?\s*1\b|Re\.?\s*1\b/;
+const STALE_TITLE_PATTERN = /₹1(?![0-9])/;
+
+function rewritePrice(text: string): string {
+  return text
+    .replace(/₹1(?![0-9])/g, '₹199')
+    .replace(/Rs\.?\s*1\b/g, '₹199')
+    .replace(/Re\.?\s*1\b/g, '₹199');
+}
+
+async function migrateStalePrices(notifications: Array<{
+  id: string;
+  title: string;
+  message: string;
+  [k: string]: unknown;
+}>) {
+  const stale = notifications.filter(
+    (n) =>
+      STALE_PRICE_PATTERN.test(n.message || '') ||
+      STALE_TITLE_PATTERN.test(n.title || '')
+  );
+  if (stale.length === 0) return notifications;
+
+  // Rewrite in DB (fire-and-forget, errors swallowed — display still works)
+  await Promise.all(
+    stale.map((n) =>
+      db.notification
+        .update({
+          where: { id: n.id },
+          data: {
+            message: rewritePrice(n.message || ''),
+            title: rewritePrice(n.title || ''),
+          },
+        })
+        .catch(() => {
+          // Ignore — read still returns the rewritten version below.
+        })
+    )
+  );
+
+  // Return the rewritten versions to the client immediately
+  return notifications.map((n) =>
+    STALE_PRICE_PATTERN.test(n.message || '') || STALE_TITLE_PATTERN.test(n.title || '')
+      ? { ...n, message: rewritePrice(n.message || ''), title: rewritePrice(n.title || '') }
+      : n
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -20,7 +78,7 @@ export async function GET(request: NextRequest) {
     const where: Record<string, string | boolean> = { userId };
     if (unreadOnly) where.isRead = false;
 
-    const [notifications, total] = await Promise.all([
+    const [rawNotifications, total] = await Promise.all([
       db.notification.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -29,6 +87,9 @@ export async function GET(request: NextRequest) {
       }),
       db.notification.count({ where }),
     ]);
+
+    // Rewrite any stale ₹1 → ₹199 (and persist the fix in the background)
+    const notifications = await migrateStalePrices(rawNotifications as any);
 
     const unreadCount = await db.notification.count({
       where: { userId, isRead: false },
