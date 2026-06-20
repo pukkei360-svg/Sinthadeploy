@@ -108,7 +108,7 @@ export default function AIAssistantScreen() {
           <h1 className="text-sm font-bold text-[#1E293B]">SINTHA AI</h1>
           <p className="text-[10px] text-[#10B981] flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-            Online · Real AI
+            Online
           </p>
         </div>
       </div>
