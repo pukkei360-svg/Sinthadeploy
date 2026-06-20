@@ -31,22 +31,73 @@ export async function POST(request: NextRequest) {
     // Even before looking up the user, check the BannedEmail table.
     // This catches the case where an admin banned+deleted a user, but
     // the user tries to re-register with the same email.
-    const bannedRecord = await db.bannedEmail.findUnique({
-      where: { email: email.toLowerCase() },
-    });
-    if (bannedRecord) {
-      return NextResponse.json(
-        {
-          error: 'This account has been permanently banned. Please contact support.',
-          banned: true,
-          reason: bannedRecord.reason,
-        },
-        { status: 403 }
-      );
+    //
+    // DEFENSIVE: wrap in try/catch because the BannedEmail table may
+    // not exist yet if prisma db push hasn't run on the production DB.
+    // Login must NOT break just because the ban-check feature is new.
+    try {
+      const bannedRecord = await db.bannedEmail.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+      if (bannedRecord) {
+        return NextResponse.json(
+          {
+            error: 'This account has been permanently banned. Please contact support.',
+            banned: true,
+            reason: bannedRecord.reason,
+          },
+          { status: 403 }
+        );
+      }
+    } catch (banCheckErr) {
+      // Table doesn't exist yet or query failed — log and continue.
+      // Login still works; ban enforcement kicks in once the schema
+      // is fully migrated.
+      console.warn('[auth/sync] BannedEmail check skipped:', banCheckErr instanceof Error ? banCheckErr.message : 'unknown');
     }
 
     // 1. Check if user exists by firebaseUid
-    let user = await db.user.findUnique({ where: { firebaseUid } });
+    // DEFENSIVE: use a minimal select that only references fields that
+    // existed BEFORE the ban-feature schema change. This way login works
+    // even if the new columns (isBanned, banReason, bannedAt) haven't
+    // been added to the production DB yet.
+    let user = await db.user.findUnique({
+      where: { firebaseUid },
+      select: {
+        id: true,
+        firebaseUid: true,
+        email: true,
+        name: true,
+        password: true,
+        photoUrl: true,
+        role: true,
+        phone: true,
+        location: true,
+        latitude: true,
+        longitude: true,
+        isVerified: true,
+        isPro: true,
+        proExpiry: true,
+        isBlocked: true,
+        fcmToken: true,
+        createdAt: true,
+        updatedAt: true,
+        // New fields — included ONLY if they exist. Prisma will include
+        // them if the client knows about them, and the DB has them. If
+        // the DB doesn't have them yet, this select will fail and we
+        // fall back to the safe select below.
+        isBanned: true,
+        banReason: true,
+        bannedAt: true,
+      },
+    }).catch(async (err) => {
+      // If the select failed because of missing columns, retry without
+      // the new fields. This is the migration-safety fallback.
+      console.warn('[auth/sync] User query with new fields failed, retrying with safe fields:', err instanceof Error ? err.message : 'unknown');
+      return db.user.findUnique({
+        where: { firebaseUid },
+      });
+    });
 
     if (user) {
       // Update profile info if changed
@@ -65,7 +116,35 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // 2. Check if user exists by email (may have been created via another method)
-      user = await db.user.findUnique({ where: { email } });
+      // DEFENSIVE: same fallback pattern as above.
+      user = await db.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          firebaseUid: true,
+          email: true,
+          name: true,
+          password: true,
+          photoUrl: true,
+          role: true,
+          phone: true,
+          location: true,
+          latitude: true,
+          longitude: true,
+          isVerified: true,
+          isPro: true,
+          proExpiry: true,
+          isBlocked: true,
+          fcmToken: true,
+          createdAt: true,
+          updatedAt: true,
+          isBanned: true,
+          banReason: true,
+          bannedAt: true,
+        },
+      }).catch(async () => {
+        return db.user.findUnique({ where: { email } });
+      });
 
       if (user) {
         // Link Firebase UID to existing account
@@ -104,7 +183,14 @@ export async function POST(request: NextRequest) {
     // Banned = permanent. Suspended = temporary (admin can un-suspend).
     // We check BOTH because an admin might ban a user after they were
     // already logged in (the Firebase session may still be valid).
-    if (user.isBanned) {
+    //
+    // DEFENSIVE: use safe defaults (false) for isBanned/banReason in
+    // case the fallback query didn't include these fields (production
+    // DB hasn't been migrated yet).
+    const userIsBanned = (user as { isBanned?: boolean }).isBanned ?? false;
+    const userBanReason = (user as { banReason?: string | null }).banReason ?? null;
+
+    if (userIsBanned) {
       // Add to BannedEmail table if not already there (defensive — the
       // ban endpoint should already do this, but we double-check here).
       try {
@@ -113,7 +199,7 @@ export async function POST(request: NextRequest) {
           update: {},
           create: {
             email: user.email.toLowerCase(),
-            reason: user.banReason || 'Permanently banned by admin',
+            reason: userBanReason || 'Permanently banned by admin',
           },
         });
       } catch {
@@ -123,7 +209,7 @@ export async function POST(request: NextRequest) {
         {
           error: 'This account has been permanently banned. Please contact support.',
           banned: true,
-          reason: user.banReason,
+          reason: userBanReason,
         },
         { status: 403 }
       );
@@ -184,9 +270,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ user: userWithoutPassword, token: firebaseUid });
   } catch (error) {
-    console.error('Auth sync error:', error);
+    // Log the FULL error for debugging — the generic "Failed to sync
+    // authentication" message gives the user no clue what went wrong.
+    console.error('Auth sync error:', {
+      message: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5).join(' | ') : undefined,
+    });
     return NextResponse.json(
-      { error: 'Failed to sync authentication' },
+      {
+        error: 'Failed to sync authentication',
+        detail: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

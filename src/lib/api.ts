@@ -221,7 +221,12 @@ export async function apiFetch<T = unknown>(
       .then(async (res) => {
         if (!res.ok) {
           const error = await res.json().catch(() => ({ error: 'Request failed' }));
-          throw new Error(error.error || 'Request failed');
+          // Include `detail` if the server provided it (helps debugging
+          // auth/sync errors where the generic message is unhelpful)
+          const msg = error.detail
+            ? `${error.error} (${error.detail})`
+            : error.error || 'Request failed';
+          throw new Error(msg);
         }
         return res.json();
       })
@@ -263,7 +268,10 @@ export async function apiFetch<T = unknown>(
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || 'Request failed');
+      const msg = error.detail
+        ? `${error.error} (${error.detail})`
+        : error.error || 'Request failed';
+      throw new Error(msg);
     }
 
     // Invalidate cache for related GET endpoints after a successful mutation.
