@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans_Meetei_Mayek } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -42,6 +42,14 @@ export const metadata: Metadata = {
   },
 };
 
+// viewport export (Next.js 16 wants this separated from metadata)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0F4C81",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,6 +57,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      {/*
+        Anti-caching meta tags. APK WebViews often ignore HTTP
+        Cache-Control on the HTML shell and serve a stale document
+        from disk — which references OLD JS chunk filenames that
+        have since been replaced by new builds. Forcing the HTML to
+        always revalidate ensures the WebView always discovers the
+        latest JS chunk URLs (and therefore the latest UI code,
+        including the ₹199 PRO price fix).
+      */}
+      <head>
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
       >
