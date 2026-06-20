@@ -2,29 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 /**
- * SINTHA AI Chat API
+ * SINTHA AI Chat API — Powered by Google Gemini
  * 
- * Calls the Z.ai API directly via fetch (bypassing the SDK which
- * requires a local .z-ai-config file that doesn't exist on Vercel).
- * 
- * The AI has real-time context about:
- * - Available service providers (fetched from database)
- * - Service categories
- * - How SINTHA works (booking, chat, PRO, verification)
+ * Uses the Gemini Flash model (free tier: 15 req/min, 1500/day).
+ * The AI has real-time context about providers and categories from the database.
  */
 
-// Z.ai API configuration
-const ZAI_BASE_URL = 'https://internal-api.z.ai/v1';
-const ZAI_API_KEY = 'Z.ai';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash-exp';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 function buildSystemPrompt(providers: any[], categories: any[]): string {
-  const providerList = providers
-    .map(p => `- ${p.user?.name || 'Unknown'} | Category: ${p.category?.name || 'N/A'} | Skills: ${p.skills || 'N/A'} | Rating: ${p.rating || '0.0'} | Experience: ${p.experience || 'N/A'} | Rate: ₹${p.hourlyRate || 'N/A'}/hr`)
-    .join('\n');
+  const providerList = providers.length > 0
+    ? providers.map(p => `- ${p.user?.name || 'Unknown'} | Category: ${p.category?.name || 'N/A'} | Skills: ${p.skills || 'N/A'} | Rating: ${p.rating || '0.0'} | Experience: ${p.experience || 'N/A'} | Rate: ₹${p.hourlyRate || 'N/A'}/hr`).join('\n')
+    : 'No providers registered yet.';
 
-  const categoryList = categories
-    .map(c => `- ${c.name} (${c._count?.providers || 0} providers)`)
-    .join('\n');
+  const categoryList = categories.map(c => `- ${c.name} (${c._count?.providers || 0} providers)`).join('\n');
 
   return `You are SINTHA AI, the official assistant for SINTHA — Manipur's trusted service marketplace.
 
@@ -60,10 +53,7 @@ export async function POST(request: NextRequest) {
     const { message, conversationHistory = [] } = body;
 
     if (!message || typeof message !== 'string') {
-      return NextResponse.json(
-        { error: 'Message is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
     // Fetch real providers and categories from database
@@ -85,44 +75,43 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(providers, categories);
 
-    // Build messages for the AI
-    const messages = [
-      { role: 'system', content: systemPrompt },
+    // Build conversation contents for Gemini API
+    const contents = [
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: 'I understand. I am SINTHA AI, ready to help users find service providers and answer questions about SINTHA.' }] },
       ...conversationHistory.map((msg: { role: string; content: string }) => ({
-        role: msg.role,
-        content: msg.content,
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
       })),
-      { role: 'user', content: message },
+      { role: 'user', parts: [{ text: message }] },
     ];
 
-    // Call Z.ai API directly via fetch
     let aiResponse: string;
     try {
-      const apiResponse = await fetch(`${ZAI_BASE_URL}/chat/completions`, {
+      const apiResponse = await fetch(GEMINI_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ZAI_API_KEY}`,
-          'X-Z-AI-From': 'Z',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages,
-          temperature: 0.7,
-          max_tokens: 300,
-          thinking: { type: 'disabled' },
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 300,
+          },
         }),
       });
 
       if (!apiResponse.ok) {
-        throw new Error(`API returned ${apiResponse.status}`);
+        const errText = await apiResponse.text();
+        console.error('[AI Chat] Gemini API error:', apiResponse.status, errText);
+        throw new Error(`Gemini API returned ${apiResponse.status}`);
       }
 
       const data = await apiResponse.json();
-      aiResponse = data.choices?.[0]?.message?.content ||
+      aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text ||
         "I'm sorry, I couldn't generate a response. Please try again.";
     } catch (aiErr) {
-      console.error('[AI Chat] API error:', aiErr);
-      aiResponse = "I'm having trouble connecting to my AI brain right now. Please try again in a moment, or browse providers directly from the Home screen!";
+      console.error('[AI Chat] Error:', aiErr);
+      aiResponse = "I'm having trouble connecting right now. Please try again, or browse providers from the Home screen!";
     }
 
     return NextResponse.json({
@@ -130,7 +119,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('[AI Chat] Error:', error);
+    console.error('[AI Chat] Fatal error:', error);
     return NextResponse.json(
       { error: 'Failed to get AI response' },
       { status: 500 }
