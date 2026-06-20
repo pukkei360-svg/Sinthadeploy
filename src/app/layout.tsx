@@ -29,16 +29,45 @@ export const metadata: Metadata = {
   description: "Manipur's trusted service marketplace. Find verified providers for home services, education, transport, events, beauty, and repairs. Zero commission, AI-powered.",
   keywords: ["SINTHA", "Manipur", "services", "marketplace", "verified providers", "zero commission", "AI powered"],
   authors: [{ name: "SINTHA Team" }],
+  // App icons — Meitei Mayek ꯁ (Sa) on blue gradient
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: ["/favicon.ico"],
+  },
+  // Web App Manifest — makes the PWA installable with the Meitei Mayek icon
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "SINTHA",
+    statusBarStyle: "default",
+  },
   openGraph: {
     title: "SINTHA - Trusted Hands. Trusted Services.",
     description: "Manipur's trusted service marketplace with zero commission",
     siteName: "SINTHA",
     type: "website",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "SINTHA",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "SINTHA - Trusted Hands. Trusted Services.",
     description: "Manipur's trusted service marketplace with zero commission",
+    images: ["/icon-512.png"],
   },
 };
 
