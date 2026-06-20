@@ -1,35 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
-import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Sparkles, Shield, Bot, Languages, ArrowRight, Briefcase, Home, Zap, MapPin, Star, Wrench, GraduationCap, Car, Camera, ChevronRight } from 'lucide-react'
+import { Sparkles, Shield, Bot, Languages, ArrowRight, Briefcase, Home, Zap, MapPin, Star, Wrench, GraduationCap, Car, Camera } from 'lucide-react'
 
 export default function LandingScreen() {
-  const { navigate, user } = useAppStore()
-  const [providers, setProviders] = useState<any[]>([])
-
-  useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        const data = await apiFetch('/providers?limit=10&sort=featured')
-        setProviders(data.providers || [])
-      } catch {
-        // Silent fail — marquee just won't show
-      }
-    }
-    fetchProviders()
-  }, [])
-
-  const handleProviderClick = (providerId: string, providerName: string, service: string) => {
-    if (!user) {
-      navigate('login')
-    } else {
-      navigate('booking-form', { providerId, providerName, service })
-    }
-  }
+  const { navigate } = useAppStore()
 
   const features = [
     { icon: Shield, title: 'No Commission', desc: '100% earnings to providers' },
@@ -43,20 +19,6 @@ export default function LandingScreen() {
     { icon: Sparkles, name: 'Beauty & Wellness' },
     { icon: Briefcase, name: 'Professional' },
     { icon: MapPin, name: 'Local Transport' },
-  ]
-
-  // Services for the running marquee animation
-  const marqueeServices = [
-    { icon: Home, name: 'Plumbing' },
-    { icon: Zap, name: 'Electrical' },
-    { icon: GraduationCap, name: 'Tutoring' },
-    { icon: Car, name: 'Driving' },
-    { icon: Camera, name: 'Photography' },
-    { icon: Sparkles, name: 'Makeup' },
-    { icon: Wrench, name: 'Mobile Repair' },
-    { icon: Briefcase, name: 'Carpentry' },
-    { icon: Home, name: 'Cleaning' },
-    { icon: Star, name: 'Event Planning' },
   ]
 
   return (
@@ -121,41 +83,6 @@ export default function LandingScreen() {
           </div>
         </div>
       </div>
-
-      {/* Running Provider Profiles Marquee */}
-      {providers.length > 0 && (
-        <div className="py-6 bg-black overflow-hidden">
-          <p className="text-center text-white/60 text-xs mb-3 font-medium uppercase tracking-wider">Top Providers</p>
-          <div className="flex gap-3 animate-marquee whitespace-nowrap">
-            {[...providers, ...providers].map((p, i) => (
-              <button
-                key={i}
-                onClick={() => handleProviderClick(
-                  p.userId || p.id,
-                  p.user?.name || 'Provider',
-                  p.category?.name || ''
-                )}
-                className="flex items-center gap-3 shrink-0 bg-white/10 hover:bg-white/20 rounded-full pl-2 pr-4 py-2 transition-colors"
-              >
-                <Avatar className="h-8 w-8 border border-white/20">
-                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=fff&color=000&size=64`} />
-                  <AvatarFallback className="text-xs text-black bg-white">{p.user?.name?.[0] || 'P'}</AvatarFallback>
-                </Avatar>
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-white leading-tight">{p.user?.name || 'Provider'}</p>
-                  <p className="text-[10px] text-white/50 leading-tight">{p.category?.name || 'Service'}</p>
-                </div>
-                {p.rating > 0 && (
-                  <div className="flex items-center gap-0.5 ml-1">
-                    <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-                    <span className="text-[10px] text-white/70">{p.rating.toFixed(1)}</span>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Popular Services */}
       <div className="py-10 px-4 bg-gray-50">
