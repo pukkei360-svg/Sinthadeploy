@@ -167,30 +167,83 @@ export default function Home() {
   }, [])
 
   // ─────────────────────────────────────────────────────────────
-  // Android Back Button Handler
+  // Android Back Button / End Key Handler
   // ─────────────────────────────────────────────────────────────
   // When running inside an APK WebView, the phone's hardware Back
-  // button fires a 'popstate' event. We intercept it:
-  // - If the user is on the landing page → close the app (exit)
-  // - Otherwise → navigate back (handled by the store's goBack)
+  // button or End key fires a 'popstate' event.
+  //
+  // Standard Android pattern: "Press back twice to exit"
+  // - First back press: show "Press back again to exit" toast
+  // - Second back press within 2 seconds: close the app
+  // - If on any other screen: navigate back (don't exit)
   useEffect(() => {
+    let backPressCount = 0
+    let backPressTimer: ReturnType<typeof setTimeout> | null = null
+
     const handlePopState = (e: PopStateEvent) => {
-      // If on the landing/home page, tell Android to close the app
+      // If on the landing page → try to exit the app
       if (currentView === 'landing') {
-        // Push a state so the browser doesn't actually go back to a blank page
-        window.history.pushState(null, '', window.location.href)
-        // Try to close the app (works in some WebView wrappers)
-        // Android WebView will handle this by minimizing/exiting the app
-        try {
-          // @ts-ignore
-          if (window.Android && window.Android.closeApp) {
+        backPressCount += 1
+
+        if (backPressCount === 1) {
+          // First press — show exit prompt, don't exit yet
+          window.history.pushState(null, '', window.location.href)
+
+          // Show a toast-like notification
+          const toast = document.createElement('div')
+          toast.style.cssText = `
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: #0F4C81; color: white; padding: 12px 24px;
+            border-radius: 12px; font-size: 14px; font-family: sans-serif;
+            z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: opacity 0.3s; white-space: nowrap;
+          `
+          toast.textContent = 'Press back again to exit'
+          document.body.appendChild(toast)
+
+          // Remove toast after 2 seconds
+          backPressTimer = setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast)
+            backPressCount = 0
+          }, 2000)
+
+          return
+        }
+
+        // Second press within 2 seconds → exit the app
+        if (backPressCount >= 2) {
+          if (backPressTimer) clearTimeout(backPressTimer)
+
+          // Try multiple methods to close the app
+          try {
+            // Method 1: Android JavaScript interface (if wrapper supports it)
             // @ts-ignore
-            window.Android.closeApp()
-          }
-        } catch {}
-        // Fallback: redirect to a blank page that triggers app close
-        // in some WebView wrappers
-        window.location.href = 'about:blank'
+            if (window.Android && window.Android.closeApp) {
+              // @ts-ignore
+              window.Android.closeApp()
+              return
+            }
+          } catch {}
+
+          try {
+            // Method 2: window.close() (works in some WebViews)
+            window.close()
+          } catch {}
+
+          try {
+            // Method 3: Try to move task to back (minimize)
+            // @ts-ignore
+            if (window.Android && window.Android.moveTaskToBack) {
+              // @ts-ignore
+              window.Android.moveTaskToBack(true)
+              return
+            }
+          } catch {}
+
+          // Method 4: Navigate to about:blank (triggers WebView destroy
+          // in most APK wrappers — app closes or minimizes)
+          window.location.href = 'about:blank'
+        }
       } else {
         // Not on landing page — push state so Back doesn't exit
         window.history.pushState(null, '', window.location.href)
@@ -203,6 +256,7 @@ export default function Home() {
 
     return () => {
       window.removeEventListener('popstate', handlePopState)
+      if (backPressTimer) clearTimeout(backPressTimer)
     }
   }, [currentView])
 
