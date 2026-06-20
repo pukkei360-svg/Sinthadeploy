@@ -88,19 +88,29 @@ def find_font_size(font_path: str, target_h: int) -> tuple[ImageFont.FreeTypeFon
     return ImageFont.truetype(font_path, new_size), new_size
 
 
-def render_icon(size: int) -> Image.Image:
-    """Render the icon at the given size."""
+def render_icon(size: int, rounded: bool = True) -> Image.Image:
+    """Render the icon at the given size.
+
+    rounded=True  → rounded-square with transparent corners (for PWA/web)
+    rounded=False → full solid square, no transparency (for APK/Android launcher)
+    """
     # 1. Gradient background (4x supersampled for smooth edges, then downscaled)
     SS = 4
     big = make_gradient_bg(size * SS)
 
-    # 2. Rounded-square mask (so corners are rounded)
-    radius = int(size * 0.22) * SS  # ~22% corner radius
-    mask = draw_rounded_mask(size * SS, radius)
-
-    # 3. Composite gradient onto transparent canvas using the rounded mask
-    icon = Image.new("RGBA", (size * SS, size * SS), (0, 0, 0, 0))
-    icon.paste(big, (0, 0), mask)
+    if rounded:
+        # 2a. Rounded-square mask (so corners are rounded) — for web/PWA
+        radius = int(size * 0.22) * SS  # ~22% corner radius
+        mask = draw_rounded_mask(size * SS, radius)
+        icon = Image.new("RGBA", (size * SS, size * SS), (0, 0, 0, 0))
+        icon.paste(big, (0, 0), mask)
+    else:
+        # 2b. Full solid square — no transparency, no rounded corners.
+        # The Android launcher applies its OWN mask (circle, squircle, etc.)
+        # so we give it a full-bleed icon. This prevents the "black corners"
+        # problem when the icon is displayed on a dark background.
+        icon = Image.new("RGBA", (size * SS, size * SS), (0, 0, 0, 255))
+        icon.paste(big, (0, 0))
 
     # 4. Draw the ꯁ glyph in white, centered, with a soft drop shadow
     target_glyph_h = int(size * SS * 0.55)  # glyph fills ~55% of canvas
@@ -179,7 +189,7 @@ def write_favicon_ico(path: str):
     sizes_in_ico = [16, 32, 48]
     imgs = []
     for s in sizes_in_ico:
-        imgs.append(render_icon(s).convert("RGBA"))
+        imgs.append(render_icon(s, rounded=True).convert("RGBA"))
     # PIL writes ICO when filename ends with .ico
     imgs[0].save(path, format="ICO", sizes=[(s, s) for s in sizes_in_ico],
                  append_images=imgs[1:])
@@ -188,21 +198,37 @@ def write_favicon_ico(path: str):
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
+    # ── Rounded icons (for web/PWA — transparent corners) ──
     for size, name in SIZES:
-        img = render_icon(size)
+        img = render_icon(size, rounded=True)
         out = os.path.join(OUT_DIR, name)
         img.save(out, "PNG")
-        print(f"✓ {name} ({size}x{size})")
+        print(f"✓ {name} ({size}x{size}, rounded — web)")
 
-    # Favicon .ico (multi-size)
+    # Favicon .ico (multi-size, rounded)
     write_favicon_ico(os.path.join(OUT_DIR, "favicon.ico"))
-    print("✓ favicon.ico (16, 32, 48)")
+    print("✓ favicon.ico (16, 32, 48, rounded)")
 
     # Vector source
     write_svg(os.path.join(OUT_DIR, "icon.svg"))
     print("✓ icon.svg (vector source)")
 
+    # ── Solid square icons (for APK / Android launcher — NO transparency) ──
+    # These prevent the "black corners" problem when the APK builder
+    # displays the icon on a dark preview background. The Android launcher
+    # applies its own mask (circle, squircle, etc.) at runtime.
+    apk_sizes = [
+        (512, "icon-512-solid.png"),
+        (192, "icon-192-solid.png"),
+    ]
+    for size, name in apk_sizes:
+        img = render_icon(size, rounded=False)
+        out = os.path.join(OUT_DIR, name)
+        img.save(out, "PNG")
+        print(f"✓ {name} ({size}x{size}, solid — APK)")
+
     print("\nAll icons generated in:", OUT_DIR)
+    print("\nFor APK builder: use icon-512-solid.png (no transparency, no black corners)")
 
 
 if __name__ == "__main__":
