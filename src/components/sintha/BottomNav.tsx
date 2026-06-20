@@ -4,11 +4,15 @@ import { useAppStore } from '@/lib/store'
 import { Home, Calendar, MessageCircle, Sparkles, User, Briefcase, LayoutDashboard } from 'lucide-react'
 
 export default function BottomNav() {
-  const { navigate, user, notifications, conversations, currentView } = useAppStore()
+  const { navigate, user, conversations, currentView } = useAppStore()
 
-  const unreadNotifs = notifications.filter((n) => !n.isRead).length
+  // NOTE: Notification unread count is intentionally NOT included here.
+  // The bottom-nav Chat badge should only reflect unread CHAT messages —
+  // notification alerts belong to the bell icon on the Home/Dashboard
+  // top bar, not to the Messages tab. Mixing them was causing the
+  // notification count to leak onto the Chat tab.
   const unreadMsgs = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0)
-  const badge = unreadNotifs + unreadMsgs
+  const badge = unreadMsgs
 
   const isProvider = user?.role === 'provider'
 
