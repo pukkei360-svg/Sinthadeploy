@@ -121,13 +121,70 @@ export async function DELETE(
       );
     }
 
+    // Don't allow deleting admin accounts
+    if (existing.role === 'admin') {
+      return NextResponse.json(
+        { error: 'Cannot delete admin accounts' },
+        { status: 403 }
+      );
+    }
+
+    // Delete all related records first (foreign key constraints)
+    // Order matters: delete children before parents
+
+    // 1. Password reset tokens
+    await db.passwordResetToken.deleteMany({ where: { userId: id } });
+
+    // 2. Subscriptions
+    await db.subscription.deleteMany({ where: { userId: id } });
+
+    // 3. Verification documents
+    await db.verificationDoc.deleteMany({ where: { userId: id } });
+
+    // 4. Notifications
+    await db.notification.deleteMany({ where: { userId: id } });
+
+    // 5. Reviews (authored by this user)
+    await db.review.deleteMany({ where: { authorId: id } });
+
+    // 6. Chat messages sent by this user
+    await db.chatMessage.deleteMany({ where: { senderId: id } });
+
+    // 7. Chat conversations where this user is a participant
+    //    (must do after messages are deleted)
+    await db.chatConversation.deleteMany({
+      where: {
+        OR: [
+          { participantA: id },
+          { participantB: id },
+        ],
+      },
+    });
+
+    // 8. Bookings where this user is client or provider
+    await db.booking.deleteMany({
+      where: {
+        OR: [
+          { clientId: id },
+          { providerId: id },
+        ],
+      },
+    });
+
+    // 9. Reviews received by this user (targetId)
+    await db.review.deleteMany({ where: { targetId: id } });
+
+    // 10. Provider profile (if they have one)
+    await db.providerProfile.deleteMany({ where: { userId: id } });
+
+    // Finally — delete the user
     await db.user.delete({ where: { id } });
 
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
     return NextResponse.json(
-      { error: 'Failed to delete user' },
+      { error: 'Failed to delete user — ' + (error as Error).message },
       { status: 500 }
     );
   }
