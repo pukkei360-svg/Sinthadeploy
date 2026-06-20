@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Noto_Sans_Meetei_Mayek } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import WebViewInterceptor from "@/components/WebViewInterceptor";
+import OfflineBootstrap from "@/components/sintha/OfflineBootstrap";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +53,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
       >
         <WebViewInterceptor />
+        <OfflineBootstrap />
         {children}
         <Toaster />
       </body>

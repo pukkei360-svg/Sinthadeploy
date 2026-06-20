@@ -177,15 +177,22 @@ export default function Home() {
   // the red unread-count badge never showed until the user actually
   // opened the notifications screen. Fetch once per signed-in user
   // so the badge shows up immediately on app launch / login.
+  //
+  // When offline, this silently no-ops (no toast — notifications are
+  // not a "user action" and the offline banner already explains why).
   useEffect(() => {
     if (!user) return
     let cancelled = false
     const loadNotifications = async () => {
+      // Skip entirely if we know we're offline — saves a fetch that
+      // would just fail and clutter the console.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return
       try {
         const data = await apiFetch(`/notifications?userId=${user.id}`)
         if (!cancelled) setNotifications(data.notifications || [])
       } catch {
-        // Silent — store keeps whatever it had (likely empty)
+        // Silent — store keeps whatever it had (likely empty).
+        // The OfflineBootstrap banner handles the UX.
       }
     }
     loadNotifications()

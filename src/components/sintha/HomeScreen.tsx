@@ -46,16 +46,25 @@ export default function HomeScreen() {
         // Cache categories for 5 min and providers for 2 min on the client.
         // Returning users see the home screen instantly from cache while
         // fresh data loads in the background (stale-while-revalidate).
+        // When offline, apiFetch returns the cached payload (persisted to
+        // localStorage) so the home screen still renders.
         const [catData, provData] = await Promise.all([
           apiFetch('/categories', { cacheTtl: 5 * 60 * 1000 }),
           apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 2 * 60 * 1000 }),
         ])
         setCategories(catData.categories || [])
         setProviders(provData.providers || [])
-        setDataLoaded(true)
       } catch (err) {
+        // Offline or server unreachable — keep whatever the store already
+        // has (possibly populated from a previous session via the persisted
+        // API cache). The OfflineBootstrap banner tells the user why.
         console.error('Failed to load data:', err)
       } finally {
+        // ALWAYS mark data as loaded — even on failure — so the screen
+        // renders with cached/empty state instead of hanging forever
+        // on the loading spinner. This is what makes the app openable
+        // when offline.
+        setDataLoaded(true)
         setIsLoading(false)
       }
     }
