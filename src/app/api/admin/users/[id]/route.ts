@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 // ─────────────────────────────────────────────────────────────
 // PUT /api/admin/users/[id]
@@ -86,6 +87,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Ensure isBanned/banReason/bannedAt columns + BannedEmail table exist
+    // before we try to ban/suspend a user.
+    await ensureSchemaMigrated();
+
     const { id } = await params;
     const body = await request.json();
     const { action, reason, adminId } = body as {

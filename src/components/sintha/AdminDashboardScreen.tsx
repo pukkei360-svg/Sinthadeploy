@@ -63,12 +63,12 @@ export default function AdminDashboardScreen() {
   }, [])
 
   const quickLinks = [
-    { icon: Users, label: 'Users', view: 'admin-users' as const, color: 'bg-blue-100 text-blue-600' },
-    { icon: Briefcase, label: 'Providers', view: 'admin-providers' as const, color: 'bg-green-100 text-green-600' },
-    { icon: Calendar, label: 'Bookings', view: 'admin-bookings' as const, color: 'bg-amber-100 text-amber-600' },
-    { icon: BarChart3, label: 'Categories', view: 'admin-categories' as const, color: 'bg-purple-100 text-purple-600' },
-    { icon: FileCheck, label: 'Verifications', view: 'admin-verifications' as const, color: 'bg-red-100 text-red-600' },
-    { icon: Flag, label: 'Claims', view: 'admin-claims' as const, color: 'bg-rose-100 text-rose-600' },
+    { icon: Users, label: 'Users', view: 'admin-users' as const, color: 'bg-blue-100 text-blue-600', params: { role: 'all' } },
+    { icon: Briefcase, label: 'Providers', view: 'admin-users' as const, color: 'bg-green-100 text-green-600', params: { role: 'provider' } },
+    { icon: Calendar, label: 'Bookings', view: 'admin-bookings' as const, color: 'bg-amber-100 text-amber-600', params: {} },
+    { icon: BarChart3, label: 'Categories', view: 'admin-categories' as const, color: 'bg-purple-100 text-purple-600', params: {} },
+    { icon: FileCheck, label: 'Verifications', view: 'admin-verifications' as const, color: 'bg-red-100 text-red-600', params: {} },
+    { icon: Flag, label: 'Claims', view: 'admin-claims' as const, color: 'bg-rose-100 text-rose-600', params: {} },
   ]
 
   // ── PRO ₹1 → ₹199 cleanup tool ────────────────────────────────
@@ -209,8 +209,8 @@ export default function AdminDashboardScreen() {
           <div className="grid grid-cols-3 gap-3">
             {quickLinks.map((link) => (
               <button
-                key={link.view}
-                onClick={() => navigate(link.view)}
+                key={link.label}
+                onClick={() => navigate(link.view, link.params)}
                 className="bg-white rounded-xl p-3 text-center shadow-sm sintha-card-hover"
               >
                 <div className={`w-10 h-10 rounded-full ${link.color} flex items-center justify-center mx-auto mb-2`}>

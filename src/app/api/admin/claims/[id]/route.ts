@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /api/admin/claims/[id]
@@ -19,6 +20,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureSchemaMigrated();
+
     const { id } = await params;
     const body = await request.json();
     const { adminId, status, resolution, action } = body as {

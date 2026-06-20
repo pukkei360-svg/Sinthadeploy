@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 // ─────────────────────────────────────────────────────────────
 // GET /api/admin/claims
@@ -11,6 +12,8 @@ import { db } from '@/lib/db';
 // ─────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
   try {
+    await ensureSchemaMigrated();
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const adminId = searchParams.get('adminId');

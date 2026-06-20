@@ -23,6 +23,12 @@ model User {
   isPro         Boolean  @default(false)
   proExpiry     DateTime?
   isBlocked     Boolean  @default(false)
+  // Ban feature — created at runtime by src/lib/migrate-schema.ts
+  // (prisma db push doesn't run on Vercel build, so we use raw SQL DDL
+  // at app startup to add these columns idempotently)
+  isBanned      Boolean  @default(false)
+  banReason     String?
+  bannedAt      DateTime?
   fcmToken      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -36,6 +42,45 @@ model User {
   verifications VerificationDoc[]
   subscriptions Subscription[]
   passwordResetTokens PasswordResetToken[]
+  claimsFiled Claim[] @relation("ClaimReporter")
+  claimsAgainst Claim[] @relation("ClaimSubject")
+}
+
+// BannedEmail — email blacklist. Survives user deletion so banned users
+// can't re-register with the same email. Created at runtime by
+// src/lib/migrate-schema.ts
+model BannedEmail {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  bannedAt  DateTime @default(now())
+  bannedBy  String?
+  createdAt DateTime @default(now())
+}
+
+// Claim — a user-filed report against a provider. Created at runtime by
+// src/lib/migrate-schema.ts
+model Claim {
+  id          String   @id @default(cuid())
+  reporterId  String
+  subjectId   String
+  bookingId   String?
+  type        String
+  severity    String   @default("medium")
+  title       String
+  description String
+  status      String   @default("open")
+  resolution  String?
+  handledBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reporter User  @relation("ClaimReporter", fields: [reporterId], references: [id])
+  subject  User  @relation("ClaimSubject", fields: [subjectId], references: [id])
+
+  @@index([subjectId])
+  @@index([reporterId])
+  @@index([status])
 }
 
 // NOTE: The ban/claims feature (isBanned, banReason, bannedAt columns on User,

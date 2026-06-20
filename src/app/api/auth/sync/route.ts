@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 // Admin email — anyone who signs in with this email gets admin role
 const ADMIN_EMAIL = 'sintha37@sintha.app';
@@ -14,6 +15,12 @@ const ADMIN_EMAIL = 'sintha37@sintha.app';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Run schema migration FIRST — ensures isBanned/banReason/bannedAt
+    // columns and BannedEmail/Claim tables exist before we query them.
+    // Idempotent and safe (uses IF NOT EXISTS). Wrapped in try/catch
+    // so login still works even if migration fails.
+    await ensureSchemaMigrated();
+
     const body = await request.json();
     const { firebaseUid, email, name, photoUrl, phone } = body;
 
@@ -57,14 +64,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Check if user exists by firebaseUid
-    // DEFENSIVE: use ONLY pre-existing columns in the select. The new
-    // ban-feature columns (isBanned, banReason, bannedAt) may not exist
-    // on the production DB yet if prisma db push hasn't run. If we
-    // include them in the select, Prisma throws a column-not-found
-    // error and login breaks entirely.
-    //
-    // We check ban status SEPARATELY below with a try/catch so login
-    // works even when the ban feature isn't fully migrated.
+    // Migration has already run (ensureSchemaMigrated above), so the
+    // isBanned/banReason/bannedAt columns exist. We can include them.
     const SAFE_USER_SELECT = {
       id: true,
       firebaseUid: true,
@@ -81,6 +82,9 @@ export async function POST(request: NextRequest) {
       isPro: true,
       proExpiry: true,
       isBlocked: true,
+      isBanned: true,
+      banReason: true,
+      bannedAt: true,
       fcmToken: true,
       createdAt: true,
       updatedAt: true,

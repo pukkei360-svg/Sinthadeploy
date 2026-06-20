@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/claims
@@ -9,6 +10,9 @@ import { db } from '@/lib/db';
 // ─────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
+    // Ensure the Claim table exists before we try to insert into it.
+    await ensureSchemaMigrated();
+
     const body = await request.json();
     const { reporterId, subjectId, bookingId, type, severity, title, description } = body;
 
@@ -103,6 +107,8 @@ export async function POST(request: NextRequest) {
 // (used on the user's profile to show "My Reports" history)
 export async function GET(request: NextRequest) {
   try {
+    await ensureSchemaMigrated();
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 

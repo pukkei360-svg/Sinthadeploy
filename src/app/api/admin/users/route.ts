@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 export async function GET() {
   try {
-    // DEFENSIVE: Only select columns that existed BEFORE the ban-feature
-    // schema change. The new columns (isBanned, banReason, bannedAt) and
-    // new relations (claimsFiled, claimsAgainst) may not exist on the
-    // production DB if prisma db push hasn't run. Including them in the
-    // select would throw a Prisma error and break the entire admin
-    // users list.
+    await ensureSchemaMigrated();
+
     const users = await db.user.findMany({
       select: {
         id: true,
@@ -22,6 +19,9 @@ export async function GET() {
         isPro: true,
         proExpiry: true,
         isBlocked: true,
+        isBanned: true,
+        banReason: true,
+        bannedAt: true,
         createdAt: true,
         _count: {
           select: {
@@ -29,6 +29,8 @@ export async function GET() {
             bookingsAsProvider: true,
             reviewsGiven: true,
             reviewsReceived: true,
+            claimsFiled: true,
+            claimsAgainst: true,
           },
         },
       },

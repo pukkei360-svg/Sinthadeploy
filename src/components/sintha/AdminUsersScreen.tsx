@@ -36,10 +36,15 @@ interface AdminUser {
 }
 
 export default function AdminUsersScreen() {
-  const { navigate, user: adminUser } = useAppStore()
+  const { navigate, user: adminUser, viewParams } = useAppStore()
   const { toast } = useToast()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [search, setSearch] = useState('')
+  // Read initial role from viewParams (set by AdminDashboard quick links).
+  // 'all' = show everyone (including admins)
+  // 'client' / 'provider' / 'admin' = filter to that role
+  const initialRole = (viewParams?.role as 'all' | 'client' | 'provider' | 'admin' | undefined) || 'all'
+  const [roleFilter, setRoleFilter] = useState<'all' | 'client' | 'provider' | 'admin'>(initialRole)
   const [loading, setLoading] = useState(true)
   const [actionMenuFor, setActionMenuFor] = useState<string | null>(null)
   const [banReasonFor, setBanReasonFor] = useState<string | null>(null)
@@ -60,11 +65,27 @@ export default function AdminUsersScreen() {
     loadUsers()
   }, [toast])
 
-  const filtered = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = users.filter((u) => {
+    // Role filter — admins are hidden by default (set to 'all' shows everyone,
+    // but the default is 'client' so admins don't clutter the regular list)
+    if (roleFilter !== 'all' && u.role !== roleFilter) return false
+    // Search filter
+    if (
+      !u.name.toLowerCase().includes(search.toLowerCase()) &&
+      !u.email.toLowerCase().includes(search.toLowerCase())
+    ) {
+      return false
+    }
+    return true
+  })
+
+  // Counts for the filter tabs
+  const counts = {
+    all: users.length,
+    client: users.filter((u) => u.role === 'client').length,
+    provider: users.filter((u) => u.role === 'provider').length,
+    admin: users.filter((u) => u.role === 'admin').length,
+  }
 
   // ── Generic action handler — calls PATCH /admin/users/[id] ──
   const performAction = async (
@@ -188,6 +209,27 @@ export default function AdminUsersScreen() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+        {/* Role filter tabs — separates admins from clients/providers */}
+        <div className="flex gap-1 mt-3 overflow-x-auto">
+          {([
+            { id: 'all', label: `All (${counts.all})` },
+            { id: 'client', label: `Clients (${counts.client})` },
+            { id: 'provider', label: `Providers (${counts.provider})` },
+            { id: 'admin', label: `Admins (${counts.admin})` },
+          ] as const).map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setRoleFilter(tab.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                roleFilter === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 

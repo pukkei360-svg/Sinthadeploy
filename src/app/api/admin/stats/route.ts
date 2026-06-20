@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 
 export async function GET() {
   try {
+    await ensureSchemaMigrated();
+
     const [
       totalUsers,
       totalProviders,
@@ -31,15 +34,12 @@ export async function GET() {
           provider: { select: { name: true } },
         },
       }),
-      // Pending claims — wrapped in catch because Claim table may not exist
+      // Pending claims — wrapped in catch for safety
       db.claim.count({ where: { status: 'open' } }).catch(() => 0),
-      // Suspended users (isBlocked=true). isBanned column may not exist
-      // on the production DB — use a safe query.
-      db.user.count({ where: { isBlocked: true } }).catch(() => 0),
-      // Banned users — if isBanned column doesn't exist, return 0
-      (db as unknown as { user: { count: (args?: unknown) => Promise<number> } })
-        .user.count({ where: { isBanned: true } })
-        .catch(() => 0),
+      // Suspended users (isBlocked=true but not banned)
+      db.user.count({ where: { isBlocked: true, isBanned: false } }).catch(() => 0),
+      // Banned users
+      db.user.count({ where: { isBanned: true } }).catch(() => 0),
     ]);
 
     // Bookings by status
