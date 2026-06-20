@@ -2,61 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
 // ─────────────────────────────────────────────────────────────
-// One-time price migration
+// Stale ₹1 PRO-price notification cleanup
 // ─────────────────────────────────────────────────────────────
-// PRO subscription price was bumped from ₹1 → ₹199. Old
-// notifications sitting in the DB still mention ₹1, and they
-// surface in the bell-icon dropdown and the notifications list.
-// Rather than run a manual DB migration, we transparently rewrite
-// any stale ₹1 reference to ₹199 on read, AND persist the fix back
-// to the DB so subsequent reads skip the rewrite. Idempotent —
-// after the first read, the row is clean and this becomes a no-op.
+// PRO subscription price was bumped from ₹1 → ₹199. Old notifications
+// created when the price was ₹1 are still in the DB and surface in the
+// bell-icon dropdown + notifications list. Rather than rewrite them
+// (which leaves confusing "₹199" text in a notification that was
+// actually about ₹1), we DELETE them entirely on read — both from the
+// response and from the DB. After the first fetch, the row is gone
+// and this becomes a no-op. Idempotent.
 const STALE_PRICE_PATTERN = /₹1(?![0-9])|Rs\.?\s*1\b|Re\.?\s*1\b/;
 const STALE_TITLE_PATTERN = /₹1(?![0-9])/;
 
-function rewritePrice(text: string): string {
-  return text
-    .replace(/₹1(?![0-9])/g, '₹199')
-    .replace(/Rs\.?\s*1\b/g, '₹199')
-    .replace(/Re\.?\s*1\b/g, '₹199');
+function isStaleNotification(n: { title?: string; message?: string }): boolean {
+  return (
+    STALE_PRICE_PATTERN.test(n.message || '') ||
+    STALE_TITLE_PATTERN.test(n.title || '')
+  );
 }
 
-async function migrateStalePrices(notifications: Array<{
-  id: string;
-  title: string;
-  message: string;
-  [k: string]: unknown;
-}>) {
-  const stale = notifications.filter(
-    (n) =>
-      STALE_PRICE_PATTERN.test(n.message || '') ||
-      STALE_TITLE_PATTERN.test(n.title || '')
-  );
-  if (stale.length === 0) return notifications;
+async function deleteStaleNotifications(
+  userId: string,
+  notifications: Array<{ id: string; title?: string; message?: string }>
+) {
+  const staleIds = notifications
+    .filter((n) => isStaleNotification(n))
+    .map((n) => n.id);
 
-  // Rewrite in DB (fire-and-forget, errors swallowed — display still works)
-  await Promise.all(
-    stale.map((n) =>
-      db.notification
-        .update({
-          where: { id: n.id },
-          data: {
-            message: rewritePrice(n.message || ''),
-            title: rewritePrice(n.title || ''),
-          },
-        })
-        .catch(() => {
-          // Ignore — read still returns the rewritten version below.
-        })
-    )
-  );
+  if (staleIds.length === 0) return notifications;
 
-  // Return the rewritten versions to the client immediately
-  return notifications.map((n) =>
-    STALE_PRICE_PATTERN.test(n.message || '') || STALE_TITLE_PATTERN.test(n.title || '')
-      ? { ...n, message: rewritePrice(n.message || ''), title: rewritePrice(n.title || '') }
-      : n
-  );
+  // Delete the stale rows (fire-and-forget, errors swallowed — UI still
+  // hides them below because we filter them out of the response).
+  db.notification
+    .deleteMany({ where: { id: { in: staleIds } } })
+    .catch((err) => {
+      console.error('[cleanup] Failed to delete stale ₹1 notifications:', err);
+    });
+
+  // Return only the clean ones to the client
+  return notifications.filter((n) => !isStaleNotification(n));
 }
 
 export async function GET(request: NextRequest) {
@@ -88,8 +72,8 @@ export async function GET(request: NextRequest) {
       db.notification.count({ where }),
     ]);
 
-    // Rewrite any stale ₹1 → ₹199 (and persist the fix in the background)
-    const notifications = await migrateStalePrices(rawNotifications as any);
+    // Delete any stale ₹1 notifications (and return only the clean ones)
+    const notifications = await deleteStaleNotifications(userId, rawNotifications as any);
 
     const unreadCount = await db.notification.count({
       where: { userId, isRead: false },
