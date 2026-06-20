@@ -9,15 +9,26 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import BottomNav from './BottomNav'
+import WhatsAppIcon from './WhatsAppIcon'
 import {
   Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
-  MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users
+  MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
+  QrCode, Share2, Package, Tag, BarChart3, Copy
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ProviderDashboardScreen() {
   const { navigate, user, bookings, setBookings, setMyProviderProfile, myProviderProfile, notifications } = useAppStore()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(true)
+  const [showQR, setShowQR] = useState(false)
+  const [packages, setPackages] = useState<any[]>([])
+  const [offers, setOffers] = useState<any[]>([])
+  const [showPackageForm, setShowPackageForm] = useState(false)
+  const [showOfferForm, setShowOfferForm] = useState(false)
+  const [newPackage, setNewPackage] = useState({ name: '', price: '', description: '' })
+  const [newOffer, setNewOffer] = useState({ title: '', discount: '', description: '', validDays: '7' })
   const [availability, setAvailability] = useState('available')
 
   useEffect(() => {
@@ -31,6 +42,13 @@ export default function ProviderDashboardScreen() {
         if (providers.length > 0) {
           setMyProviderProfile(providers[0])
           setAvailability(providers[0].availability || 'available')
+          // Load existing packages and offers
+          if (providers[0].packages) {
+            try { setPackages(JSON.parse(providers[0].packages)) } catch {}
+          }
+          if (providers[0].offers) {
+            try { setOffers(JSON.parse(providers[0].offers)) } catch {}
+          }
         }
 
         // Load bookings

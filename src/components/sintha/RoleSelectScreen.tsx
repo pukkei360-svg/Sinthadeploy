@@ -5,7 +5,7 @@ import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users, Camera } from 'lucide-react'
+import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users, Camera, ImagePlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { uploadPhoto } from '@/lib/cloudinary'
 
@@ -15,56 +15,27 @@ export default function RoleSelectScreen() {
   const [loading, setLoading] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
-  // Whether user has uploaded a photo
-  const hasPhoto = !!(photoUrl || user?.photoUrl)
-  // PHOTO IS OPTIONAL for both Client and Provider — but we strongly
-  // encourage it with trust warnings. Users can always proceed.
-  // This is the "soft compulsory" approach: optional but warned.
-
-  // Handle photo upload — user uploads photo during role selection
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-
-    // Reset the input so the same file can be selected again later
-    if (fileInputRef.current) fileInputRef.current.value = ''
-
+    if (event.target === cameraInputRef.current) cameraInputRef.current.value = ''
+    if (event.target === galleryInputRef.current) galleryInputRef.current.value = ''
     setUploadingPhoto(true)
     try {
       const result = await uploadPhoto(file, 'profiles')
-      if (!result.success || !result.url) {
-        throw new Error(result.error || 'Upload failed')
-      }
+      if (!result.success || !result.url) throw new Error(result.error || 'Upload failed')
       setPhotoUrl(result.url)
-      toast({
-        title: 'Photo Added!',
-        description: 'Looking great! Now choose your role to continue',
-      })
+      toast({ title: 'Photo Added!', description: 'Looking great! Now choose your role' })
     } catch (err: unknown) {
-      const message = (err as Error).message || 'Failed to upload photo'
-      toast({ title: 'Upload Failed', description: message, variant: 'destructive' })
-    } finally {
-      setUploadingPhoto(false)
-    }
+      toast({ title: 'Upload Failed', description: (err as Error).message, variant: 'destructive' })
+    } finally { setUploadingPhoto(false) }
   }
 
   const selectRole = async (role: string) => {
     if (!user || loading) return
-
-    // Photo is OPTIONAL but strongly recommended for trust.
-    // Show a warning toast (not blocking) if user proceeds without photo.
-    if (!hasPhoto) {
-      toast({
-        title: '⚠ Photo Recommended for Trust',
-        description: role === 'provider'
-          ? 'Providers without photos get fewer bookings. You can add one later from your profile.'
-          : 'Clients without photos may get slower responses. You can add one later from your profile.',
-        variant: 'destructive',
-      })
-    }
-
     setLoading(role)
     try {
       // If user uploaded a photo, save it to their profile first
@@ -72,16 +43,10 @@ export default function RoleSelectScreen() {
         try {
           await apiFetch('/user/profile', {
             method: 'PATCH',
-            body: JSON.stringify({
-              userId: user.id,
-              photoUrl: photoUrl,
-            }),
+            body: JSON.stringify({ userId: user.id, photoUrl: photoUrl }),
           })
-          // Update local user state with the photo
-          setUser({ ...user, photoUrl }, token)
         } catch {
           // Photo save failed — continue with role selection anyway
-          // (user can upload photo later from Profile screen)
         }
       }
 
@@ -91,15 +56,18 @@ export default function RoleSelectScreen() {
           method: 'POST',
           body: JSON.stringify({ userId: user.id, role: 'client' }),
         })
+        // Include photoUrl in the updated user state
         const updatedUser = { ...user, role: 'client', photoUrl: photoUrl || user.photoUrl }
-        setUser(updatedUser, token)
+        setUser(updatedUser)
         toast({
           title: 'Welcome to SINTHA!',
           description: 'Find trusted service providers in Manipur',
         })
         navigate('home')
       } else if (role === 'provider') {
-        // Navigate to provider onboarding - role will be set after profile creation
+        // Include photoUrl in the user state before navigating to onboarding
+        const updatedUser = { ...user, photoUrl: photoUrl || user.photoUrl }
+        setUser(updatedUser)
         toast({
           title: "Let's set up your provider profile",
           description: 'Fill in your details to start offering services',
@@ -112,9 +80,11 @@ export default function RoleSelectScreen() {
       // Still navigate on client side even if API fails
       if (role === 'client') {
         const updatedUser = { ...user, role: 'client', photoUrl: photoUrl || user.photoUrl }
-        setUser(updatedUser, token)
+        setUser(updatedUser)
         navigate('home')
       } else {
+        const updatedUser = { ...user, photoUrl: photoUrl || user.photoUrl }
+        setUser(updatedUser)
         navigate('provider-onboarding')
       }
     } finally {
@@ -124,88 +94,51 @@ export default function RoleSelectScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex flex-col items-center justify-center px-4 py-8">
-      <div className="text-center mb-6">
+      <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-gray-800">How would you like to use SINTHA?</h1>
         <p className="text-gray-500 mt-2">You can always switch later from your profile</p>
       </div>
 
       <div className="w-full max-w-md space-y-4">
-        {/* Photo Upload Section
-            - OPTIONAL for both Client and Provider
-            - STRONG WARNING about trust (recommended, not blocking)
-        */}
-        <div className={`bg-white border-2 rounded-2xl p-6 text-center shadow-sm transition-colors ${
-          hasPhoto ? 'border-green-300' : 'border-amber-300'
-        }`}>
-          <p className="text-sm font-semibold text-gray-700 mb-1">
-            📷 Add your profile photo
-          </p>
-          <p className={`text-[11px] mb-3 font-medium ${
-            hasPhoto ? 'text-green-600' : 'text-amber-600'
-          }`}>
-            {hasPhoto
-              ? '✓ Photo added — your profile is now trustworthy!'
-              : '⚠ Strongly recommended for building trust'}
-          </p>
-          {/* Avatar with camera button */}
-          <div className="relative inline-block">
-            <Avatar className={`h-24 w-24 border-4 mx-auto ${hasPhoto ? 'border-green-200' : 'border-amber-200'}`}>
+        {/* Photo Upload Section — two options: Take Selfie or Upload from Gallery */}
+        <div className="bg-white border-2 border-blue-200 rounded-2xl p-6 text-center shadow-sm">
+          <p className="text-sm font-semibold text-gray-700 mb-1">Add your profile photo</p>
+          <p className="text-[11px] text-gray-500 mb-4">Strongly recommended for building trust</p>
+          <div className="relative inline-block mb-4">
+            <Avatar className="h-24 w-24 border-4 border-blue-100 mx-auto">
               <AvatarImage src={photoUrl || user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=2563eb&color=fff&size=200`} />
               <AvatarFallback className="text-3xl font-bold text-blue-600">{user?.name?.[0] || 'U'}</AvatarFallback>
             </Avatar>
-            {/* Camera button overlay */}
+          </div>
+          {/* Two buttons: Camera (selfie) + Gallery */}
+          <div className="flex gap-3 justify-center">
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => cameraInputRef.current?.click()}
               disabled={uploadingPhoto}
-              aria-label="Upload profile photo"
-              className="absolute -bottom-1 -right-1 w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed border-2 border-white"
+              className="flex flex-col items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
             >
-              {uploadingPhoto ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4" />
-              )}
+              {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+              <span className="text-xs font-medium">Take Selfie</span>
             </button>
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-              capture="user"
-            />
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="flex flex-col items-center gap-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-xl px-4 py-3 transition-colors disabled:opacity-50"
+            >
+              {uploadingPhoto ? <Loader2 className="h-6 w-6 animate-spin" /> : <ImagePlus className="h-6 w-6" />}
+              <span className="text-xs font-medium">Gallery</span>
+            </button>
           </div>
-          {/* Helper text — changes based on state */}
-          <p className={`text-xs mt-3 font-medium ${
-            uploadingPhoto ? 'text-gray-400'
-            : hasPhoto ? 'text-green-600'
-            : 'text-gray-600'
-          }`}>
-            {uploadingPhoto
-              ? 'Uploading...'
-              : hasPhoto
-              ? '✓ Photo added! You can continue as Client or Provider'
-              : 'Tap the camera to upload your photo'}
-          </p>
-          {/* Strong trust warning — only shown when no photo */}
-          {!hasPhoto && (
-            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-left">
-              <p className="text-[11px] text-amber-800 font-semibold mb-1">
-                ⚠ Why upload a photo?
-              </p>
-              <ul className="text-[10px] text-amber-700 space-y-0.5 list-disc list-inside">
-                <li>Builds trust — people do business with people they can see</li>
-                <li>Providers without photos get <b>fewer bookings</b></li>
-                <li>Clients without photos get <b>slower responses</b></li>
-                <li>You can add it later from your Profile, but we recommend doing it now</li>
-              </ul>
-            </div>
+          {/* Hidden file inputs */}
+          <input ref={cameraInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" capture="user" />
+          <input ref={galleryInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+          {photoUrl && (
+            <p className="text-xs text-green-600 mt-3 font-medium">✓ Photo added! You can continue now</p>
           )}
         </div>
-
-        {/* Client Card — always enabled (photo optional for clients) */}
+        {/* Client Card */}
         <Card
           className="cursor-pointer sintha-card-hover border-2 border-transparent hover:border-blue-300"
           onClick={() => selectRole('client')}
@@ -253,7 +186,7 @@ export default function RoleSelectScreen() {
           </CardContent>
         </Card>
 
-        {/* Provider Card — always enabled (photo optional but recommended) */}
+        {/* Provider Card */}
         <Card
           className="cursor-pointer sintha-card-hover border-2 border-transparent hover:border-green-300"
           onClick={() => selectRole('provider')}
@@ -297,13 +230,6 @@ export default function RoleSelectScreen() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Soft nudge — encourages photo upload but doesn't block either role */}
-      {!hasPhoto && !loading && (
-        <div className="mt-4 text-sm text-amber-600 font-medium text-center">
-          💡 You can skip the photo, but we strongly recommend adding one for trust
-        </div>
-      )}
 
       {loading && (
         <div className="mt-6 text-sm text-gray-400">Setting up your account...</div>

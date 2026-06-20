@@ -109,27 +109,31 @@ export async function dialPhone(phone: string): Promise<DialResult> {
 
   // Try to open the dialer
   try {
-    // Use an anchor element instead of window.location.href because:
-    // - Anchor click events are more reliably intercepted by WebView wrappers
-    // - Doesn't pollute browser history
-    // - Easier to clean up
-    const anchor = document.createElement('a')
-    anchor.href = `tel:${cleaned}`
-    anchor.style.position = 'fixed'
-    anchor.style.top = '0'
-    anchor.style.left = '0'
-    anchor.style.opacity = '0'
-    anchor.style.pointerEvents = 'none'
-    document.body.appendChild(anchor)
-    anchor.click()
-    // Clean up the anchor after a short delay
-    setTimeout(() => {
-      if (anchor.parentNode) {
-        anchor.parentNode.removeChild(anchor)
-      }
-    }, 100)
+    // Use window.location.href directly — this bypasses the WebViewInterceptor
+    // (which intercepts anchor clicks and can break tel: links).
+    // WebView's shouldOverrideUrlLoading will still catch this URL change.
+    window.location.href = `tel:${cleaned}`
   } catch (e) {
-    // Anchor click threw — fall through to copy fallback
+    // location change threw — try anchor as fallback
+    try {
+      const anchor = document.createElement('a')
+      anchor.href = `tel:${cleaned}`
+      anchor.setAttribute('data-skip-interceptor', 'true')
+      anchor.style.position = 'fixed'
+      anchor.style.top = '0'
+      anchor.style.left = '0'
+      anchor.style.opacity = '0'
+      anchor.style.pointerEvents = 'none'
+      document.body.appendChild(anchor)
+      anchor.click()
+      setTimeout(() => {
+        if (anchor.parentNode) {
+          anchor.parentNode.removeChild(anchor)
+        }
+      }, 100)
+    } catch {
+      // Both methods failed — fall through to copy fallback
+    }
   }
 
   // Wait to see if the dialer opened

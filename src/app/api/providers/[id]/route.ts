@@ -72,6 +72,8 @@ export async function PUT(
       availability,
       portfolioUrls,
       isFeatured,
+      packages,
+      offers,
     } = body;
 
     const existing = await db.providerProfile.findUnique({ where: { id } });
@@ -93,6 +95,8 @@ export async function PUT(
         ...(availability !== undefined && { availability }),
         ...(portfolioUrls !== undefined && { portfolioUrls }),
         ...(isFeatured !== undefined && { isFeatured }),
+        ...(packages !== undefined && { packages }),
+        ...(offers !== undefined && { offers }),
       },
       include: {
         user: {

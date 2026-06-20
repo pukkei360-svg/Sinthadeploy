@@ -166,6 +166,46 @@ export default function Home() {
     return () => unsubscribe()
   }, [])
 
+  // ─────────────────────────────────────────────────────────────
+  // Android Back Button Handler
+  // ─────────────────────────────────────────────────────────────
+  // When running inside an APK WebView, the phone's hardware Back
+  // button fires a 'popstate' event. We intercept it:
+  // - If the user is on the landing page → close the app (exit)
+  // - Otherwise → navigate back (handled by the store's goBack)
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      // If on the landing/home page, tell Android to close the app
+      if (currentView === 'landing') {
+        // Push a state so the browser doesn't actually go back to a blank page
+        window.history.pushState(null, '', window.location.href)
+        // Try to close the app (works in some WebView wrappers)
+        // Android WebView will handle this by minimizing/exiting the app
+        try {
+          // @ts-ignore
+          if (window.Android && window.Android.closeApp) {
+            // @ts-ignore
+            window.Android.closeApp()
+          }
+        } catch {}
+        // Fallback: redirect to a blank page that triggers app close
+        // in some WebView wrappers
+        window.location.href = 'about:blank'
+      } else {
+        // Not on landing page — push state so Back doesn't exit
+        window.history.pushState(null, '', window.location.href)
+      }
+    }
+
+    // Push initial state so popstate fires on Back button
+    window.history.pushState(null, '', window.location.href)
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [currentView])
+
   const renderView = () => {
     switch (currentView) {
       case 'landing':
