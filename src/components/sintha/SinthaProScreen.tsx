@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Check, Crown, X, ChevronDown, ChevronUp, Copy, ExternalLink, Loader2, RefreshCw, Smartphone } from 'lucide-react'
+import { ArrowLeft, Check, Crown, X, ChevronDown, ChevronUp, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const benefits = [
@@ -35,18 +35,6 @@ export default function SinthaProScreen() {
   const [autoVerifying, setAutoVerifying] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const pollingCountRef = useRef(0)
-
-  // ── UPI Collect state (Option B) ──────────────────────────────
-  // UPI Collect sends a payment request directly to the user's UPI app
-  // (GPay/PhonePe/Paytm) — bypassing Razorpay's checkout.js popup
-  // entirely. This works in WebView where checkout.js fails to detect
-  // GPay. Falls back to checkout.js if UPI Collect is unavailable.
-  const [upiVpa, setUpiVpa] = useState('') // User's UPI ID, e.g. "ram@okhdfcbank"
-  const [upiLoading, setUpiLoading] = useState(false)
-  const [upiPaymentId, setUpiPaymentId] = useState<string | null>(null)
-  const [upiStatus, setUpiStatus] = useState<string | null>(null) // 'created' | 'captured' | 'failed' | null
-  const [upiPolling, setUpiPolling] = useState(false)
-  const [showUpiForm, setShowUpiForm] = useState(false)
 
   // Auto-polling: check payment status every 5 seconds after payment link is opened
   const startPolling = useCallback((linkId: string) => {
@@ -307,120 +295,6 @@ export default function SinthaProScreen() {
     }
   }
 
-  // ── UPI Collect (Option B) ────────────────────────────────────
-  // Sends a ₹199 collect request to the user's UPI app. The user opens
-  // GPay/PhonePe/Paytm, approves the request, and the webhook activates
-  // PRO. We poll the status every 4 seconds.
-  const handleUpiCollect = async () => {
-    if (!user) {
-      toast({ title: 'Please log in', variant: 'destructive' })
-      return
-    }
-    if (!upiVpa.trim() || !upiVpa.includes('@')) {
-      toast({ title: 'Invalid UPI ID', description: 'Enter your UPI ID like yourname@okhdfcbank', variant: 'destructive' })
-      return
-    }
-
-    setUpiLoading(true)
-    setUpiStatus(null)
-    try {
-      const data = await apiFetch('/razorpay/upi-collect', {
-        method: 'POST',
-        body: JSON.stringify({ userId: user.id, vpa: upiVpa.trim() }),
-      })
-
-      setUpiPaymentId(data.paymentId)
-      setUpiStatus(data.status || 'created')
-      toast({
-        title: 'Request sent!',
-        description: 'Open your UPI app (GPay/PhonePe/Paytm) and approve the ₹199 request.',
-      })
-
-      // Start polling for payment status
-      startUpiPolling(data.paymentId)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to send UPI request'
-      toast({ title: 'UPI Request Failed', description: msg, variant: 'destructive' })
-      setUpiStatus('failed')
-    } finally {
-      setUpiLoading(false)
-    }
-  }
-
-  // Poll /razorpay/upi-status every 4 seconds for up to 5 minutes
-  const startUpiPolling = (paymentId: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current)
-    pollingCountRef.current = 0
-    setUpiPolling(true)
-
-    pollingRef.current = setInterval(async () => {
-      pollingCountRef.current += 1
-      // Stop after 75 attempts (5 minutes)
-      if (pollingCountRef.current > 75) {
-        if (pollingRef.current) clearInterval(pollingRef.current)
-        setUpiPolling(false)
-        toast({ title: 'Still waiting', description: 'Tap "Check Status" to verify manually.' })
-        return
-      }
-
-      try {
-        const data = await apiFetch(`/razorpay/upi-status?userId=${user!.id}&paymentId=${paymentId}`)
-
-        if (data.paid && data.user) {
-          // Payment captured — PRO activated!
-          if (pollingRef.current) clearInterval(pollingRef.current)
-          setUpiPolling(false)
-          setUpiStatus('captured')
-          setUser(data.user, null)
-          toast({ title: 'PRO Activated!', description: 'Payment received via UPI! Your SINTHA PRO is now active.' })
-          navigate('profile')
-        } else if (data.failed) {
-          if (pollingRef.current) clearInterval(pollingRef.current)
-          setUpiPolling(false)
-          setUpiStatus('failed')
-          toast({ title: 'Payment Failed', description: data.error || 'The UPI payment was declined.', variant: 'destructive' })
-        } else {
-          setUpiStatus(data.status || 'created')
-        }
-      } catch {
-        // Silently retry on next interval
-      }
-    }, 4000) // Check every 4 seconds
-  }
-
-  // Manual status check (used by the "Check Status" button)
-  const handleCheckUpiStatus = async () => {
-    if (!user || !upiPaymentId) return
-    setCheckingPayment(true)
-    try {
-      const data = await apiFetch(`/razorpay/upi-status?userId=${user.id}&paymentId=${upiPaymentId}`)
-      if (data.paid && data.user) {
-        if (pollingRef.current) clearInterval(pollingRef.current)
-        setUpiPolling(false)
-        setUpiStatus('captured')
-        setUser(data.user, null)
-        toast({ title: 'PRO Activated!', description: 'Payment received! Your SINTHA PRO is now active.' })
-        navigate('profile')
-      } else if (data.failed) {
-        setUpiStatus('failed')
-        toast({ title: 'Payment Failed', description: data.error || 'The UPI payment was declined.', variant: 'destructive' })
-      } else {
-        toast({ title: 'Still waiting', description: data.message || 'Open your UPI app to approve the request.' })
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
-    } finally {
-      setCheckingPayment(false)
-    }
-  }
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
-    }
-  }, [])
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -471,174 +345,27 @@ export default function SinthaProScreen() {
             <h3 className="font-bold text-green-800 mb-1">You're a PRO Member!</h3>
             <p className="text-xs text-green-600">Your SINTHA PRO subscription is active.</p>
           </div>
-        ) : !upiPaymentId && !paymentLinkUrl ? (
-          <div className="space-y-4">
-            {/* ── Primary: UPI Collect (Option B) ─────────────────────── */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-blue-600" />
-                <h3 className="font-bold text-blue-800 text-sm">Pay via UPI (Recommended)</h3>
-              </div>
-              <p className="text-xs text-blue-700">
-                Enter your UPI ID — we'll send a ₹199 request to your GPay/PhonePe/Paytm.
-                Open the app, approve, and PRO activates instantly.
-              </p>
-
-              {!showUpiForm ? (
-                <Button
-                  className="w-full sintha-gradient text-white py-4 font-bold text-sm"
-                  onClick={() => setShowUpiForm(true)}
-                >
-                  <Smartphone className="h-4 w-4 mr-2" /> Pay ₹199 via UPI
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="yourname@okhdfcbank"
-                    value={upiVpa}
-                    onChange={(e) => setUpiVpa(e.target.value)}
-                    className="w-full p-3 border border-blue-200 rounded-lg bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-300"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                  />
-                  <p className="text-[10px] text-blue-600">
-                    💡 Find your UPI ID in GPay → Profile, or PhonePe → Profile
-                  </p>
-                  <Button
-                    className="w-full sintha-gradient text-white py-4 font-bold text-sm"
-                    onClick={handleUpiCollect}
-                    disabled={upiLoading || !upiVpa.trim()}
-                  >
-                    {upiLoading ? (
-                      <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sending request...</>
-                    ) : (
-                      <><Smartphone className="h-4 w-4 mr-2" /> Send ₹199 Request</>
-                    )}
-                  </Button>
-                  <button
-                    onClick={() => setShowUpiForm(false)}
-                    className="w-full text-xs text-gray-500 hover:text-gray-700 py-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* ── Divider ── */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-[10px] text-gray-400 font-medium">OR</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            {/* ── Fallback: Razorpay checkout.js (Card / Net Banking) ── */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
-              <p className="text-xs text-gray-600 font-medium text-center">
-                Card / Net Banking / Wallet
-              </p>
-              <Button
-                variant="outline"
-                className="w-full border-gray-300 text-gray-700 py-4 font-semibold text-sm"
-                onClick={handlePaymentLink}
-                disabled={paymentLinkLoading}
-              >
-                {paymentLinkLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Crown className="h-4 w-4 mr-2" />
-                )}
-                {paymentLinkLoading ? 'Creating...' : 'Pay ₹199 via Card / Net Banking'}
-              </Button>
-              <p className="text-[10px] text-gray-400 text-center">
-                Use this if UPI doesn't work
+        ) : !paymentLinkUrl ? (
+          <div className="space-y-3">
+            {/* Single clean Pay button */}
+            <Button
+              className="w-full sintha-gradient text-white py-6 font-bold text-base"
+              onClick={handlePaymentLink}
+              disabled={paymentLinkLoading}
+            >
+              {paymentLinkLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Crown className="h-5 w-5 mr-2" />}
+              {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹199 & Activate PRO'}
+            </Button>
+            <p className="text-[11px] text-center text-gray-500">
+              Pay with PhonePe, Paytm, BHIM, UPI, Cards, or Net Banking
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+              <p className="text-[10px] text-amber-700 text-center">
+                💡 <b>Recommended:</b> Use <b>PhonePe</b> or <b>Paytm</b> for the fastest payment experience.
               </p>
             </div>
-          </div>
-        ) : upiPaymentId ? (
-          /* ── UPI Collect: Waiting for approval ── */
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                {upiStatus === 'failed' ? (
-                  <X className="h-8 w-8 text-red-500" />
-                ) : upiStatus === 'captured' ? (
-                  <Check className="h-8 w-8 text-green-500" />
-                ) : (
-                  <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-                )}
-              </div>
-              <h3 className="font-bold text-gray-800 text-sm">
-                {upiStatus === 'failed'
-                  ? 'Payment Failed'
-                  : upiStatus === 'captured'
-                  ? 'Payment Successful!'
-                  : 'Waiting for Approval'}
-              </h3>
-              <p className="text-xs text-gray-600 mt-1">
-                {upiStatus === 'failed'
-                  ? 'The UPI payment was declined or timed out. Please try again.'
-                  : upiStatus === 'captured'
-                  ? 'Your SINTHA PRO is now active!'
-                  : `Open your UPI app (${upiVpa}) and approve the ₹199 request from SINTHA.`}
-              </p>
-            </div>
-
-            {upiPolling && upiStatus !== 'failed' && upiStatus !== 'captured' && (
-              <div className="bg-white border border-blue-200 rounded-lg p-2 flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 shrink-0" />
-                <p className="text-[11px] text-blue-700">
-                  Auto-checking... PRO will activate automatically once you approve.
-                </p>
-              </div>
-            )}
-
-            {upiStatus === 'failed' ? (
-              <Button
-                className="w-full sintha-gradient text-white py-3 font-bold text-sm"
-                onClick={() => {
-                  setUpiPaymentId(null)
-                  setUpiStatus(null)
-                  setUpiVpa('')
-                  if (pollingRef.current) clearInterval(pollingRef.current)
-                  setUpiPolling(false)
-                }}
-              >
-                Try Again
-              </Button>
-            ) : upiStatus !== 'captured' ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 border-blue-300 text-blue-700 py-3 text-xs font-semibold"
-                  onClick={handleCheckUpiStatus}
-                  disabled={checkingPayment}
-                >
-                  {checkingPayment ? (
-                    <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> Checking...</>
-                  ) : (
-                    <><RefreshCw className="h-3.5 w-3.5 mr-1" /> Check Status</>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="flex-1 text-gray-500 py-3 text-xs"
-                  onClick={() => {
-                    if (pollingRef.current) clearInterval(pollingRef.current)
-                    setUpiPolling(false)
-                    setUpiPaymentId(null)
-                    setUpiStatus(null)
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : null}
           </div>
         ) : (
-          /* ── Legacy: Payment link flow (checkout.js fallback) ── */
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-3">
             {/* Auto-verify status indicator */}
             {autoVerifying && (
