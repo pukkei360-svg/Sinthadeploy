@@ -195,20 +195,20 @@ export default function HomeScreen() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {categories.map((cat: ServiceCategory) => {
               const IconComp = categoryIcons[cat.icon || ''] || Home
               return (
                 <button
                   key={cat.id}
                   onClick={() => navigate('category', { categoryId: cat.id, categoryName: cat.name })}
-                  className="bg-white rounded-xl p-4 text-center sintha-card-hover shadow-sm"
+                  className="bg-white rounded-2xl p-4 text-center sintha-card-hover shadow-sm border border-[#E2E8F0]"
                 >
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
-                    <IconComp className="h-6 w-6 text-blue-600" />
+                  <div className="w-16 h-16 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-2">
+                    <IconComp className="h-8 w-8 text-[#0F4C81]" />
                   </div>
-                  <p className="text-xs font-semibold text-gray-700 line-clamp-1">{cat.name}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{cat._count?.providers || 0} providers</p>
+                  <p className="text-sm font-bold text-[#1E293B] line-clamp-1">{cat.name}</p>
+                  <p className="text-[10px] text-[#64748B] mt-0.5">{cat._count?.providers || 0} providers</p>
                 </button>
               )
             })}
@@ -281,25 +281,27 @@ export default function HomeScreen() {
             ))}
           </div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto px-4 pb-2 sintha-scrollbar">
+          <div className="flex gap-4 overflow-x-auto px-4 pb-2 sintha-scrollbar">
             {topProviders.map((p: ProviderProfile) => (
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="bg-white rounded-xl p-3 shadow-sm min-w-[140px] shrink-0 sintha-card-hover text-left"
+                className="bg-white rounded-2xl p-4 shadow-sm min-w-[160px] shrink-0 sintha-card-hover text-left border border-[#E2E8F0]"
               >
-                <Avatar className="h-14 w-14 mx-auto mb-2">
-                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=2563eb&color=fff`} />
-                  <AvatarFallback>{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                <Avatar className="h-20 w-20 mx-auto mb-2 border-2 border-[#E2E8F0]">
+                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
+                  <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <p className="text-sm font-semibold text-gray-800 text-center truncate">{p.user?.name}</p>
-                <p className="text-[11px] text-gray-400 text-center truncate">{p.category?.name}</p>
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  <span className="text-xs font-semibold text-gray-600">{p.rating}</span>
-                  {p.isVerified && <CheckCircle className="h-3 w-3 text-green-500" />}
+                <p className="text-sm font-bold text-[#1E293B] text-center truncate">{p.user?.name}</p>
+                <p className="text-xs text-[#0F4C81] font-medium text-center truncate mt-0.5">{p.category?.name}</p>
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <div className="flex items-center gap-0.5">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-bold text-[#1E293B]">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
+                  </div>
+                  {p.isVerified && <CheckCircle className="h-4 w-4 text-[#10B981]" />}
                   {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                    <Crown className="h-3 w-3 text-amber-500" />
+                    <Crown className="h-4 w-4 text-amber-500" />
                   )}
                 </div>
               </button>
@@ -320,11 +322,11 @@ export default function HomeScreen() {
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="w-full bg-white rounded-xl p-4 shadow-sm sintha-card-hover flex items-center gap-3 text-left"
+                className="w-full bg-white rounded-2xl p-4 shadow-sm sintha-card-hover flex items-center gap-4 text-left border border-[#E2E8F0]"
               >
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=2563eb&color=fff`} />
-                  <AvatarFallback>{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                <Avatar className="h-16 w-16 border-2 border-[#E2E8F0]">
+                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
+                  <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
