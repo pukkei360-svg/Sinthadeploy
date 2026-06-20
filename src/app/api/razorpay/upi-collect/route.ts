@@ -12,24 +12,18 @@ const razorpay = new Razorpay({
  *
  * UPI Collect flow (Option B):
  *   1. User enters their UPI ID (VPA — e.g. "ram@okhdfcbank")
- *   2. This endpoint creates a Razorpay order + creates a UPI collect payment
- *      against that order. Razorpay sends a collect request to the user's UPI app.
- *   3. User opens GPay/PhonePe/Paytm → sees "SINTHA requested ₹199" → approves.
- *   4. Razorpay fires payment.captured webhook → user's PRO activates.
- *   5. Frontend polls /api/razorpay/upi-status to detect activation.
+ *   2. We validate the VPA via Razorpay's validateVpa API
+ *   3. We create a Razorpay order
+ *   4. We create a UPI collect payment via razorpay.payments.createUpi()
+ *      — this sends a collect request to the user's UPI app
+ *   5. User opens GPay/PhonePe/Paytm → sees "SINTHA requested ₹199" → approves
+ *   6. Razorpay fires payment.captured webhook → user's PRO activates
+ *   7. Frontend polls /api/razorpay/upi-status to detect activation
  *
  * WHY THIS EXISTS:
  *   Razorpay's checkout.js detects WebView (via User-Agent) and hides/disables
  *   GPay in the standard checkout flow. UPI Collect bypasses checkout.js entirely
  *   — the payment happens inside the user's UPI app, not in a WebView popup.
- *   Works in every browser, every WebView, every APK wrapper.
- *
- * Request body:
- *   { userId, vpa }  — vpa = UPI ID like "name@okhdfcbank"
- *
- * Response:
- *   { orderId, paymentId, status: 'created' }  — payment request sent
- *   { error }                                    — on failure
  */
 export async function POST(request: NextRequest) {
   try {
@@ -79,12 +73,31 @@ export async function POST(request: NextRequest) {
     const amount = 19900; // ₹199 in paise
     const cleanVpa = vpa.trim().toLowerCase();
 
-    // Step 1: Create a Razorpay order
+    // Step 1: Validate the VPA using Razorpay's validateVpa API
+    // This checks if the UPI ID is registered before we send a collect request
+    try {
+      const vpaValidation = await razorpay.payments.validateVpa({ vpa: cleanVpa });
+      console.log(`[UPI Collect] VPA validation for ${cleanVpa}:`, vpaValidation);
+      if (!vpaValidation.success) {
+        return NextResponse.json(
+          { error: `UPI ID "${cleanVpa}" is not valid or not registered. Please check and try again.` },
+          { status: 400 }
+        );
+      }
+    } catch (validateErr) {
+      // validateVpa may fail if the feature isn't enabled, or VPA is invalid
+      const errMsg = validateErr instanceof Error ? validateErr.message : String(validateErr);
+      console.warn('[UPI Collect] VPA validation failed (continuing anyway):', errMsg);
+      // Don't fail here — some Razorpay accounts don't have validateVpa enabled.
+      // The createUpi call below will fail with a clearer error if the VPA is bad.
+    }
+
+    // Step 2: Create a Razorpay order
     const order = await razorpay.orders.create({
       amount,
       currency: 'INR',
       receipt: `sintha_pro_upi_${Date.now()}`,
-      method: ['upi'], // Restrict to UPI only (no card/netbanking on this order)
+      method: ['upi'],
       notes: {
         userId,
         plan: 'pro',
@@ -93,37 +106,43 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Step 2: Create a UPI collect payment against the order
-    // This sends a collect request to the user's UPI app.
-    // Razorpay API: POST /v1/payments
-    //   { amount, currency, order_id, method: 'upi', upi: { flow: 'collect', vpa } }
-    let payment;
+    // Step 3: Create a UPI collect payment using razorpay.payments.createUpi()
+    // This is the correct SDK method for UPI Collect (not payments.create)
+    // Required fields: amount, currency, order_id, method, email, contact, ip, referer, user_agent, upi.flow, upi.vpa
+    let paymentId: string;
     try {
-      payment = await razorpay.payments.create({
+      const payment = await razorpay.payments.createUpi({
         amount,
         currency: 'INR',
         order_id: order.id,
         method: 'upi',
-        upi: {
-          flow: 'collect',
-          vpa: cleanVpa,
-        },
+        email: user.email || 'customer@sintha.app',
+        contact: user.phone || '9999999999',
+        ip: '127.0.0.1', // Server IP — Razorpay requires this field
+        referer: 'https://sinthadeploy.vercel.app',
+        user_agent: 'SINTHA/1.0',
         notes: {
           userId,
           plan: 'pro',
           flow: 'upi_collect',
         },
+        upi: {
+          flow: 'collect',
+          vpa: cleanVpa,
+          expiry_time: 5, // 5 minutes (Razorpay default)
+        },
       });
+      paymentId = payment.razorpay_payment_id;
+      console.log(`[UPI Collect] Payment created: ${paymentId} for VPA ${cleanVpa}`);
     } catch (payErr) {
       const errMsg = payErr instanceof Error ? payErr.message : String(payErr);
+      console.error('[UPI Collect] createUpi failed:', errMsg);
 
-      // Common error: UPI Collect not enabled on the Razorpay account.
-      // Surface a helpful message so the user knows it's a config issue,
-      // not their fault.
+      // Common error: UPI Collect not enabled on the Razorpay account
       if (errMsg.toLowerCase().includes('not enabled') || errMsg.toLowerCase().includes('not available')) {
         return NextResponse.json(
           {
-            error: 'UPI Collect is not enabled on this Razorpay account. Please use the Card/Net Banking option instead, or contact support.',
+            error: 'UPI Collect is not enabled on this Razorpay account. Please use the Card/Net Banking option instead, or contact Razorpay support to enable UPI Collect.',
             code: 'UPI_COLLECT_NOT_ENABLED',
           },
           { status: 400 }
@@ -148,7 +167,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 3: Save subscription record with the payment ID so we can poll
+    // Step 4: Save subscription record with the payment ID so we can poll
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 1);
 
@@ -157,22 +176,22 @@ export async function POST(request: NextRequest) {
         userId,
         plan: 'pro',
         razorpayOrderId: order.id,
-        razorpayPaymentId: payment.id, // Save payment ID for polling
+        razorpayPaymentId: paymentId,
         amount: amount / 100,
         currency: 'INR',
-        status: 'created', // Will be updated to 'active' when payment.captured fires
+        status: 'created',
         startDate: new Date(),
         endDate,
       },
     });
 
-    console.log(`[UPI Collect] Payment request sent to ${cleanVpa} for user ${userId}, payment ID: ${payment.id}, status: ${payment.status}`);
+    console.log(`[UPI Collect] Payment request sent to ${cleanVpa} for user ${userId}, payment ID: ${paymentId}`);
 
     return NextResponse.json({
       orderId: order.id,
-      paymentId: payment.id,
+      paymentId,
       subscriptionId: subscription.id,
-      status: payment.status || 'created',
+      status: 'created',
       vpa: cleanVpa,
       amount: amount / 100,
       message: 'Payment request sent! Open your UPI app (GPay/PhonePe/Paytm) to approve the ₹199 request.',
