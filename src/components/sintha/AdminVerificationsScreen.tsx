@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   ArrowLeft, CheckCircle, XCircle, Clock, User, FileText, Camera,
-  ShieldCheck, AlertCircle, ExternalLink, Loader2
+  ShieldCheck, ExternalLink, Loader2
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -27,7 +27,6 @@ interface VerificationDoc {
   aadhaarPhotoUrl?: string
   aadhaarBackPhotoUrl?: string
   passportPhotoUrl?: string
-  faceDetected?: boolean
   user: {
     id: string
     name: string
@@ -228,22 +227,7 @@ export default function AdminVerificationsScreen() {
                               <span className="text-[10px] text-gray-400">No photo</span>
                             </div>
                           )}
-                          {/* Face check badge */}
-                          <div className="mt-1 flex justify-center">
-                            {v.faceDetected === true && (
-                              <Badge className="bg-green-100 text-green-700 border-0 text-[9px]">
-                                <CheckCircle className="h-2.5 w-2.5 mr-0.5" /> Face OK
-                              </Badge>
-                            )}
-                            {v.faceDetected === false && (
-                              <Badge className="bg-red-100 text-red-700 border-0 text-[9px]">
-                                <AlertCircle className="h-2.5 w-2.5 mr-0.5" /> No face
-                              </Badge>
-                            )}
-                            {v.faceDetected === null || v.faceDetected === undefined && (
-                              <Badge variant="secondary" className="text-[9px]">Not checked</Badge>
-                            )}
-                          </div>
+                          <p className="text-[9px] text-gray-400 mt-1 text-center">Verify face manually</p>
                         </div>
                       </div>
 

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import {
   ArrowLeft, Upload, CheckCircle, Clock, XCircle, FileText, Camera,
-  User, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff
+  User, Loader2, ShieldCheck, Lock
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -21,7 +21,6 @@ interface ExistingVerification {
   aadhaarPhotoUrl?: string
   aadhaarBackPhotoUrl?: string
   passportPhotoUrl?: string
-  faceDetected?: boolean
   reviewNote?: string
   createdAt: string
 }
@@ -41,7 +40,6 @@ export default function VerificationScreen() {
 
   // Upload state
   const [uploadingField, setUploadingField] = useState<'aadhaar' | 'aadhaarBack' | 'passport' | null>(null)
-  const [faceCheckStatus, setFaceCheckStatus] = useState<'none' | 'checking' | 'passed' | 'failed'>('none')
   const [submitting, setSubmitting] = useState(false)
 
   // Existing verification (if user already submitted)
@@ -112,8 +110,7 @@ export default function VerificationScreen() {
     }
     setPassportFile(file)
     setPassportPreview(URL.createObjectURL(file))
-    setFaceCheckStatus('none')
-    toast({ title: 'Passport photo selected', description: 'Tap Submit to upload and check for face' })
+    toast({ title: 'Passport photo selected', description: 'Tap Submit to upload' })
   }
 
   const handleSubmit = async () => {
@@ -126,7 +123,7 @@ export default function VerificationScreen() {
       return
     }
     if (!aadhaarFile && !aadhaarPreview) {
-      toast({ title: 'Aadhaar photo required', variant: 'destructive' })
+      toast({ title: 'Aadhaar front photo required', variant: 'destructive' })
       return
     }
     if (!passportFile && !passportPreview) {
@@ -139,13 +136,12 @@ export default function VerificationScreen() {
     let aadhaarUrl: string | null = null
     let aadhaarBackUrl: string | null = null
     let passportUrl: string | null = null
-    let faceDetected: boolean | null = null
 
     try {
-      // Step 1: Upload Aadhaar FRONT photo (no face detection needed)
+      // Step 1: Upload Aadhaar FRONT photo
       if (aadhaarFile) {
         setUploadingField('aadhaar')
-        const aadhaarResult = await uploadVerificationPhoto(aadhaarFile, 'verifications/aadhaar', { detectFace: false })
+        const aadhaarResult = await uploadVerificationPhoto(aadhaarFile, 'verifications/aadhaar')
         if (!aadhaarResult.success || !aadhaarResult.url) {
           throw new Error(aadhaarResult.error || 'Failed to upload Aadhaar front photo')
         }
@@ -154,10 +150,10 @@ export default function VerificationScreen() {
         aadhaarUrl = existing.aadhaarPhotoUrl
       }
 
-      // Step 2: Upload Aadhaar BACK photo (optional — has address + QR)
+      // Step 2: Upload Aadhaar BACK photo (optional)
       if (aadhaarBackFile) {
         setUploadingField('aadhaarBack')
-        const aadhaarBackResult = await uploadVerificationPhoto(aadhaarBackFile, 'verifications/aadhaar', { detectFace: false })
+        const aadhaarBackResult = await uploadVerificationPhoto(aadhaarBackFile, 'verifications/aadhaar')
         if (!aadhaarBackResult.success || !aadhaarBackResult.url) {
           throw new Error(aadhaarBackResult.error || 'Failed to upload Aadhaar back photo')
         }
@@ -166,32 +162,16 @@ export default function VerificationScreen() {
         aadhaarBackUrl = existing.aadhaarBackPhotoUrl
       }
 
-      // Step 3: Upload passport photo WITH face detection
+      // Step 3: Upload passport photo
       if (passportFile) {
         setUploadingField('passport')
-        setFaceCheckStatus('checking')
-        const passportResult = await uploadVerificationPhoto(passportFile, 'verifications/passport', { detectFace: true })
+        const passportResult = await uploadVerificationPhoto(passportFile, 'verifications/passport')
         if (!passportResult.success || !passportResult.url) {
           throw new Error(passportResult.error || 'Failed to upload passport photo')
         }
         passportUrl = passportResult.url
-        faceDetected = passportResult.faceDetected ?? false
-
-        if (faceDetected) {
-          setFaceCheckStatus('passed')
-        } else {
-          setFaceCheckStatus('failed')
-          // Don't throw — let the user decide whether to re-upload or submit anyway
-          // (admin will see faceDetected=false and can reject)
-          toast({
-            title: 'No face detected',
-            description: 'Cloudinary AI could not detect a face in your passport photo. Please re-upload a clearer photo, or submit anyway (admin will review).',
-            variant: 'destructive',
-          })
-        }
       } else if (existing?.passportPhotoUrl) {
         passportUrl = existing.passportPhotoUrl
-        faceDetected = existing.faceDetected ?? null
       }
 
       setUploadingField(null)
@@ -205,7 +185,6 @@ export default function VerificationScreen() {
           aadhaarPhotoUrl: aadhaarUrl,
           aadhaarBackPhotoUrl: aadhaarBackUrl,
           passportPhotoUrl: passportUrl,
-          faceDetected,
         }),
       })
 
@@ -214,7 +193,7 @@ export default function VerificationScreen() {
         description: 'Our admin team will review your documents within 24-48 hours.',
       })
 
-      // Update existing state
+      // Update existing state — form will now be locked
       setExisting({
         id: data.verification.id,
         status: 'pending',
@@ -222,7 +201,6 @@ export default function VerificationScreen() {
         aadhaarPhotoUrl: aadhaarUrl || undefined,
         aadhaarBackPhotoUrl: aadhaarBackUrl || undefined,
         passportPhotoUrl: passportUrl || undefined,
-        faceDetected: faceDetected ?? undefined,
         createdAt: new Date().toISOString(),
       })
 
@@ -233,7 +211,6 @@ export default function VerificationScreen() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Submission failed'
       toast({ title: 'Submission failed', description: msg, variant: 'destructive' })
-      setFaceCheckStatus('none')
     } finally {
       setUploadingField(null)
       setSubmitting(false)
@@ -243,6 +220,9 @@ export default function VerificationScreen() {
   const isVerified = user?.isVerified
   const hasPending = existing?.status === 'pending'
   const hasRejected = existing?.status === 'rejected'
+  // Form is locked when verification is under review (pending) or already verified.
+  // User can only re-submit if their previous submission was REJECTED.
+  const isFormLocked = isVerified || hasPending
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -270,7 +250,12 @@ export default function VerificationScreen() {
           <div className="rounded-xl p-4 bg-blue-50 border border-blue-200 text-center">
             <Clock className="h-10 w-10 text-blue-500 mx-auto mb-2" />
             <h2 className="font-bold text-blue-800">Under Review</h2>
-            <p className="text-sm text-blue-600">Your documents are being reviewed. This typically takes 24-48 hours.</p>
+            <p className="text-sm text-blue-600">
+              Your documents are being reviewed by our admin team. This typically takes 24-48 hours.
+            </p>
+            <p className="text-xs text-blue-500 mt-2">
+              You cannot re-submit while your verification is under review.
+            </p>
           </div>
         ) : hasRejected ? (
           <div className="rounded-xl p-4 bg-red-50 border border-red-200 text-center">
@@ -290,8 +275,8 @@ export default function VerificationScreen() {
           </div>
         )}
 
-        {/* Verification form — show if not verified */}
-        {!isVerified && (
+        {/* Verification form — show if not verified AND not under review */}
+        {!isFormLocked && (
           <>
             {/* What we need */}
             <Card className="border-0 shadow-sm">
@@ -312,7 +297,7 @@ export default function VerificationScreen() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
-                    <span>A <strong>passport-size photo</strong> (we auto-check it has a face) <span className="text-red-500">*</span></span>
+                    <span>A <strong>passport-size photo</strong> <span className="text-red-500">*</span></span>
                   </li>
                 </ul>
               </CardContent>
@@ -378,7 +363,7 @@ export default function VerificationScreen() {
               </CardContent>
             </Card>
 
-            {/* Aadhaar Back Photo Upload (optional — has address) */}
+            {/* Aadhaar Back Photo Upload (optional) */}
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 space-y-3">
                 <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
@@ -438,7 +423,7 @@ export default function VerificationScreen() {
                   <div className="relative">
                     <img src={passportPreview} alt="Passport" className="w-full rounded-lg border border-gray-200 max-h-48 object-contain bg-gray-50" />
                     <button
-                      onClick={() => { setPassportFile(null); setPassportPreview(null); setFaceCheckStatus('none'); if (passportInputRef.current) passportInputRef.current.value = '' }}
+                      onClick={() => { setPassportFile(null); setPassportPreview(null); if (passportInputRef.current) passportInputRef.current.value = '' }}
                       className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
                       disabled={submitting}
                     >
@@ -453,28 +438,8 @@ export default function VerificationScreen() {
                   >
                     <Camera className="h-6 w-6 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600 font-medium">Upload passport photo</p>
-                    <p className="text-[10px] text-gray-400 mt-1">Clear face photo · We auto-check for face presence</p>
+                    <p className="text-[10px] text-gray-400 mt-1">Clear face photo</p>
                   </button>
-                )}
-
-                {/* Face check status */}
-                {faceCheckStatus === 'checking' && (
-                  <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-lg p-2">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Checking for face...
-                  </div>
-                )}
-                {faceCheckStatus === 'passed' && (
-                  <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-lg p-2">
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    Face detected! Looks good.
-                  </div>
-                )}
-                {faceCheckStatus === 'failed' && (
-                  <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg p-2">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                    <span>No face detected. Please re-upload a clearer photo with your face visible, or submit anyway (admin will review).</span>
-                  </div>
                 )}
               </CardContent>
             </Card>
@@ -507,26 +472,63 @@ export default function VerificationScreen() {
                 </>
               )}
             </Button>
-
-            {hasPending && (
-              <p className="text-[11px] text-center text-gray-400">
-                You have a verification under review. Re-submitting will replace your pending request.
-              </p>
-            )}
           </>
         )}
 
-        {/* What happens next — show if pending */}
+        {/* Locked notice — shown when form is hidden because pending */}
         {hasPending && !isVerified && (
           <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="p-4">
-              <h3 className="font-bold text-blue-800 text-sm mb-2">What happens next?</h3>
-              <ol className="text-xs text-blue-700 space-y-1.5 list-decimal list-inside">
-                <li>Our admin team reviews your documents</li>
-                <li>We compare your entered name with the name on your Aadhaar</li>
-                <li>We verify your passport photo shows a clear face</li>
-                <li>If approved, you get the green ✓ Verified badge within 24-48 hours</li>
-              </ol>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <Lock className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-bold text-blue-800 text-sm">Submission Locked</h3>
+                  <p className="text-xs text-blue-700 mt-1">
+                    You have a verification request under review. The upload form is locked until the admin
+                    approves or rejects it. You'll be notified when the review is complete.
+                  </p>
+                </div>
+              </div>
+
+              {/* Show what was submitted */}
+              {existing && (
+                <div className="bg-white rounded-lg p-3 space-y-2 border border-blue-100">
+                  <p className="text-[10px] font-semibold text-gray-500 uppercase">Submitted Documents</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {existing.aadhaarPhotoUrl && (
+                      <div>
+                        <p className="text-[9px] text-gray-400 mb-1">Aadhaar Front</p>
+                        <img src={existing.aadhaarPhotoUrl} alt="Aadhaar front" className="w-full h-20 object-cover rounded border border-gray-200" />
+                      </div>
+                    )}
+                    {existing.aadhaarBackPhotoUrl && (
+                      <div>
+                        <p className="text-[9px] text-gray-400 mb-1">Aadhaar Back</p>
+                        <img src={existing.aadhaarBackPhotoUrl} alt="Aadhaar back" className="w-full h-20 object-cover rounded border border-gray-200" />
+                      </div>
+                    )}
+                    {existing.passportPhotoUrl && (
+                      <div>
+                        <p className="text-[9px] text-gray-400 mb-1">Passport</p>
+                        <img src={existing.passportPhotoUrl} alt="Passport" className="w-full h-20 object-cover rounded border border-gray-200" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Submitted on {new Date(existing.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-white border border-blue-100 rounded-lg p-3">
+                <h3 className="font-bold text-blue-800 text-sm mb-2">What happens next?</h3>
+                <ol className="text-xs text-blue-700 space-y-1.5 list-decimal list-inside">
+                  <li>Our admin team reviews your documents</li>
+                  <li>We compare your entered name with the name on your Aadhaar</li>
+                  <li>We verify your passport photo shows a clear face</li>
+                  <li>If approved, you get the green ✓ Verified badge within 24-48 hours</li>
+                </ol>
+              </div>
             </CardContent>
           </Card>
         )}

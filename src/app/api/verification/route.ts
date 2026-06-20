@@ -53,20 +53,20 @@ export async function GET(request: NextRequest) {
  *
  * The client uploads the Aadhaar photo and passport photo directly to
  * Cloudinary (browser → Cloudinary, no server middleman), then calls
- * this endpoint with the resulting URLs + the entered name + the face
- * detection result.
+ * this endpoint with the resulting URLs + the entered name.
  *
  * Body:
  *   {
  *     userId,
  *     fullNameAsPerAadhaar,  // text the user entered
- *     aadhaarPhotoUrl,       // Cloudinary URL
- *     passportPhotoUrl,      // Cloudinary URL
- *     faceDetected           // boolean — did Cloudinary detect a face?
+ *     aadhaarPhotoUrl,       // Cloudinary URL (front side)
+ *     aadhaarBackPhotoUrl,   // Cloudinary URL (back side — optional)
+ *     passportPhotoUrl       // Cloudinary URL
  *   }
  *
  * The endpoint creates a single VerificationDoc row with docType='identity'
  * and status='pending'. Admin reviews it in the Admin Verifications screen.
+ * Face detection is NOT done automatically — admin manually reviews.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -79,14 +79,12 @@ export async function POST(request: NextRequest) {
       aadhaarPhotoUrl,
       aadhaarBackPhotoUrl,
       passportPhotoUrl,
-      faceDetected,
     } = body as {
       userId: string;
       fullNameAsPerAadhaar: string;
       aadhaarPhotoUrl: string;
       aadhaarBackPhotoUrl?: string;
       passportPhotoUrl: string;
-      faceDetected?: boolean;
     };
 
     // Validate required fields
@@ -151,7 +149,6 @@ export async function POST(request: NextRequest) {
           aadhaarPhotoUrl,
           aadhaarBackPhotoUrl: aadhaarBackPhotoUrl || null,
           passportPhotoUrl,
-          faceDetected: faceDetected ?? null,
           status: 'pending',
           reviewNote: null,
           reviewedBy: null,
@@ -175,7 +172,6 @@ export async function POST(request: NextRequest) {
         aadhaarPhotoUrl,
         aadhaarBackPhotoUrl: aadhaarBackPhotoUrl || null,
         passportPhotoUrl,
-        faceDetected: faceDetected ?? null,
         status: 'pending',
       },
       include: {

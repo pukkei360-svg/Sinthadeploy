@@ -20,8 +20,6 @@ export interface UploadResult {
   url?: string  // Cloudinary secure URL (https://res.cloudinary.com/...)
   publicId?: string
   bytes?: number
-  faceDetected?: boolean  // true if Cloudinary detected a face (passport photo check)
-  faceConfidence?: number // 0..1 — how confident Cloudinary is about the face
   error?: string
 }
 
@@ -178,22 +176,19 @@ export async function uploadPhoto(
 /**
  * Upload a verification document (Aadhaar card photo or passport photo).
  *
- * Different from uploadPhoto in two ways:
- *   1. Larger maxSize (1600px) — Aadhaar cards need legible text
- *   2. Optional face detection — for passport photos, Cloudinary's AI
- *      checks whether a face is present and returns faceDetected +
- *      faceConfidence in the result. The caller can reject the upload
- *      if no face is detected.
+ * Different from uploadPhoto in one way:
+ *   - Larger maxSize (1600px) — Aadhaar cards need legible text
+ *
+ * Face detection is intentionally NOT done here. The admin manually
+ * reviews each photo in the Admin Verifications screen.
  *
  * @param file The image File to upload
  * @param folder Cloudinary folder (default 'verifications')
- * @param options.detectFace If true, request face detection from Cloudinary
- * @returns UploadResult with url + optional faceDetected/faceConfidence
+ * @returns UploadResult with url
  */
 export async function uploadVerificationPhoto(
   file: File,
-  folder: string = 'verifications',
-  options: { detectFace?: boolean } = {}
+  folder: string = 'verifications'
 ): Promise<UploadResult> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     return {
@@ -228,18 +223,6 @@ export async function uploadVerificationPhoto(
     formData.append('upload_preset', UPLOAD_PRESET)
     formData.append('folder', folder)
 
-    // NOTE: We intentionally do NOT send the `detection` parameter here.
-    // Cloudinary's unsigned uploads only allow: upload_preset, callback,
-    // public_id, folder, asset_folder, tags, context. The `detection`
-    // parameter requires a signed upload (with API secret, which we don't
-    // expose in the browser).
-    //
-    // HOWEVER — Cloudinary returns basic face detection data by DEFAULT
-    // in the upload response (the `faces` field = array of bounding boxes).
-    // We check that below to determine if a face was detected.
-    // This gives us basic face presence checking without needing the
-    // `detection` parameter.
-
     // Upload to Cloudinary
     const response = await fetch(CLOUDINARY_UPLOAD_URL, {
       method: 'POST',
@@ -258,23 +241,6 @@ export async function uploadVerificationPhoto(
       secure_url: string
       public_id: string
       bytes: number
-      faces?: Array<Array<number>> // Cloudinary returns this by default — array of face bounding boxes
-    }
-
-    // Determine face detection result from the DEFAULT `faces` field.
-    // Cloudinary populates this automatically on every upload — no special
-    // parameter needed. Empty array or missing = no face detected.
-    let faceDetected: boolean | undefined
-    let faceConfidence: number | undefined
-    if (options.detectFace) {
-      const faceBoxes = data.faces
-      faceDetected = !!(faceBoxes && faceBoxes.length > 0)
-      // We don't get a confidence score without the `detection` parameter,
-      // but we know whether a face was found (boolean) — which is all we
-      // need for the "is there a face in this photo?" check.
-      if (faceDetected) {
-        faceConfidence = undefined // Not available without detection param
-      }
     }
 
     return {
@@ -282,8 +248,6 @@ export async function uploadVerificationPhoto(
       url: data.secure_url,
       publicId: data.public_id,
       bytes: data.bytes,
-      faceDetected,
-      faceConfidence,
     }
   } catch (err: unknown) {
     const message = (err as Error).message || 'Upload failed'
