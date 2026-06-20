@@ -2,7 +2,7 @@
 
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Shield, Bot, Languages, ArrowRight, Briefcase, Home, Zap, MapPin, Star } from 'lucide-react'
+import { Sparkles, Shield, Bot, Languages, ArrowRight, Briefcase, Home, Zap, MapPin, Star, Wrench, GraduationCap, Car, Camera } from 'lucide-react'
 
 export default function LandingScreen() {
   const { navigate } = useAppStore()
@@ -15,10 +15,24 @@ export default function LandingScreen() {
   ]
 
   const services = [
-    { icon: Home, name: 'Home Services', color: 'bg-blue-100 text-blue-600' },
-    { icon: Sparkles, name: 'Beauty & Wellness', color: 'bg-pink-100 text-pink-600' },
-    { icon: Briefcase, name: 'Professional', color: 'bg-emerald-100 text-emerald-600' },
-    { icon: MapPin, name: 'Local Transport', color: 'bg-amber-100 text-amber-600' },
+    { icon: Home, name: 'Home Services' },
+    { icon: Sparkles, name: 'Beauty & Wellness' },
+    { icon: Briefcase, name: 'Professional' },
+    { icon: MapPin, name: 'Local Transport' },
+  ]
+
+  // Services for the running marquee animation
+  const marqueeServices = [
+    { icon: Home, name: 'Plumbing' },
+    { icon: Zap, name: 'Electrical' },
+    { icon: GraduationCap, name: 'Tutoring' },
+    { icon: Car, name: 'Driving' },
+    { icon: Camera, name: 'Photography' },
+    { icon: Sparkles, name: 'Makeup' },
+    { icon: Wrench, name: 'Mobile Repair' },
+    { icon: Briefcase, name: 'Carpentry' },
+    { icon: Home, name: 'Cleaning' },
+    { icon: Star, name: 'Event Planning' },
   ]
 
   return (
@@ -84,6 +98,21 @@ export default function LandingScreen() {
         </div>
       </div>
 
+      {/* Running Services Marquee */}
+      <div className="py-4 bg-black overflow-hidden">
+        <div className="flex gap-4 animate-marquee whitespace-nowrap">
+          {[...marqueeServices, ...marqueeServices].map((s, i) => (
+            <div key={i} className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                <s.icon className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-white">{s.name}</span>
+              <span className="text-white/30 ml-2">•</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Popular Services */}
       <div className="py-10 px-4 bg-gray-50">
         <div className="max-w-lg mx-auto">
@@ -91,8 +120,8 @@ export default function LandingScreen() {
           <div className="grid grid-cols-4 gap-3">
             {services.map((s) => (
               <div key={s.name} className="text-center">
-                <div className={`w-14 h-14 rounded-2xl ${s.color} flex items-center justify-center mx-auto mb-2`}>
-                  <s.icon className="h-6 w-6" />
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-2">
+                  <s.icon className="h-6 w-6 text-black" />
                 </div>
                 <p className="text-[11px] font-medium text-gray-700">{s.name}</p>
               </div>
