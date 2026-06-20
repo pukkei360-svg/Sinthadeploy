@@ -141,7 +141,23 @@ async function runMigration(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS "Claim_status_idx" ON "Claim"("status")`
   );
 
-  console.log('[schema-migration] Ban/claims schema is ready');
+  // ── Phase 1 identity verification columns on VerificationDoc ──
+  // These store the Aadhaar photo, passport photo, entered name, and
+  // face-detection result. All nullable so existing rows are unaffected.
+  await safeExec(
+    `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "fullNameAsPerAadhaar" TEXT`
+  );
+  await safeExec(
+    `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "aadhaarPhotoUrl" TEXT`
+  );
+  await safeExec(
+    `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "passportPhotoUrl" TEXT`
+  );
+  await safeExec(
+    `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "faceDetected" BOOLEAN`
+  );
+
+  console.log('[schema-migration] Ban/claims + verification schema is ready');
 }
 
 /**

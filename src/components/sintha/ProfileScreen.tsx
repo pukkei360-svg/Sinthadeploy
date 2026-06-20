@@ -10,7 +10,8 @@ import { Separator } from '@/components/ui/separator'
 import BottomNav from './BottomNav'
 import {
   Calendar, Star, Crown, Bell, HelpCircle, LogOut, Briefcase,
-  ChevronRight, PenLine, MapPin, Phone, Camera, Loader2, ImagePlus
+  ChevronRight, PenLine, MapPin, Phone, Camera, Loader2, ImagePlus,
+  ShieldCheck
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { signOut as firebaseSignOut } from 'firebase/auth'
@@ -256,6 +257,34 @@ export default function ProfileScreen() {
               <p className="text-xs text-amber-600">Get premium features at just ₹199/mo</p>
             </div>
             <ChevronRight className="h-4 w-4 text-amber-400" />
+          </div>
+        )}
+
+        {/* Verification Status — shows for providers who aren't verified yet */}
+        {user?.role === 'provider' && !user?.isVerified && (
+          <div
+            className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer"
+            onClick={() => navigate('verification')}
+          >
+            <ShieldCheck className="h-5 w-5 text-green-600" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-800">Get Verified</p>
+              <p className="text-xs text-green-600">
+                Verify with Aadhaar + passport photo to earn the ✓ badge
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-green-400" />
+          </div>
+        )}
+
+        {/* Already verified — show confirmation */}
+        {user?.isVerified && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-green-600 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-800">✓ Verified</p>
+              <p className="text-xs text-green-600">Your identity is verified</p>
+            </div>
           </div>
         )}
 

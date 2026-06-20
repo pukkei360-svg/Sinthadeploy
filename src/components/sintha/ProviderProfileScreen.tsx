@@ -121,9 +121,13 @@ export default function ProviderProfileScreen() {
             )}
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-bold text-gray-800">{provider.user?.name}</h2>
-              {provider.isVerified && <CheckCircle className="h-5 w-5 text-green-500" />}
+              {provider.isVerified && (
+                <Badge className="bg-green-100 text-green-700 border-0 text-[10px] px-2 py-0.5">
+                  <CheckCircle className="h-3 w-3 mr-1" />Verified
+                </Badge>
+              )}
               {/* PRO badge — shows if the user has an active PRO subscription */}
               {provider.user?.isPro && (!provider.user?.proExpiry || new Date(provider.user.proExpiry) > new Date()) && (
                 <Badge className="sintha-pro-badge text-[10px] text-white px-2 py-0.5 border-0">

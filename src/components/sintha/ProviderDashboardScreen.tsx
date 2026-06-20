@@ -14,7 +14,8 @@ import {
   Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
   MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
-  QrCode, Share2, Package, Tag, BarChart3, Copy
+  QrCode, Share2, Package, Tag, BarChart3, Copy,
+  ShieldCheck, ChevronRight
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -177,6 +178,31 @@ export default function ProviderDashboardScreen() {
             </div>
           </div>
         </div>
+
+        {/* Verification nudge — shows if the provider is PRO but not yet verified,
+            OR if they're not verified at all (regardless of PRO status). Encourages
+            them to complete identity verification to earn the green ✓ badge. */}
+        {user && !user.isVerified && (
+          <div
+            className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-green-100 transition-colors"
+            onClick={() => navigate('verification')}
+          >
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+              <ShieldCheck className="h-5 w-5 text-green-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-green-800">
+                {user.isPro ? 'Complete your verification' : 'Get the Verified badge'}
+              </p>
+              <p className="text-xs text-green-600 truncate">
+                {user.isPro
+                  ? 'You\'re PRO! Now verify your identity to earn the ✓ badge and get more bookings.'
+                  : 'Verify your identity with Aadhaar + passport photo. Takes 2 minutes.'}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-green-600 shrink-0" />
+          </div>
+        )}
 
         {/* Availability Toggle */}
         <Card className="border-0 shadow-sm">

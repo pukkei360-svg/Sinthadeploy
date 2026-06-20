@@ -212,8 +212,24 @@ model ChatMessage {
 model VerificationDoc {
   id         String   @id @default(cuid())
   userId     String
-  docType    String   // aadhaar, selfie, address_proof
-  docUrl     String
+  // docType: 'identity' (Aadhaar + passport photo combined verification)
+  // Legacy types 'aadhaar', 'selfie', 'address_proof' kept for backward compat
+  docType    String
+  docUrl     String   // Primary doc URL (Aadhaar photo for 'identity' type)
+
+  // ── Phase 1 identity verification fields ──────────────────────
+  // Full name as the user entered it (should match the name on the Aadhaar card).
+  // Admin compares this manually with the name visible on aadhaarPhotoUrl.
+  fullNameAsPerAadhaar String?
+  // URL of the uploaded Aadhaar card photo (stored in Cloudinary 'verifications' folder)
+  aadhaarPhotoUrl String?
+  // URL of the uploaded passport-size photo (stored in Cloudinary 'verifications' folder)
+  // Auto-checked for face presence via Cloudinary's face detection on upload.
+  passportPhotoUrl String?
+  // Whether Cloudinary's AI detected a face in the passport photo (true/false/null)
+  // null = not checked yet, true = face detected (good), false = no face (rejected at upload)
+  faceDetected Boolean?
+
   status     String   @default("pending") // pending, verified, rejected
   reviewedBy String?
   reviewNote String?
