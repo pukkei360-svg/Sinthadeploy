@@ -228,12 +228,17 @@ export async function uploadVerificationPhoto(
     formData.append('upload_preset', UPLOAD_PRESET)
     formData.append('folder', folder)
 
-    // Request face detection if asked (Cloudinary's 'adv_face' detection)
-    // This makes Cloudinary run its AI face detection and include the
-    // results in the upload response under `faces` and `info.detection.adv_face`
-    if (options.detectFace) {
-      formData.append('detection', 'adv_face')
-    }
+    // NOTE: We intentionally do NOT send the `detection` parameter here.
+    // Cloudinary's unsigned uploads only allow: upload_preset, callback,
+    // public_id, folder, asset_folder, tags, context. The `detection`
+    // parameter requires a signed upload (with API secret, which we don't
+    // expose in the browser).
+    //
+    // HOWEVER — Cloudinary returns basic face detection data by DEFAULT
+    // in the upload response (the `faces` field = array of bounding boxes).
+    // We check that below to determine if a face was detected.
+    // This gives us basic face presence checking without needing the
+    // `detection` parameter.
 
     // Upload to Cloudinary
     const response = await fetch(CLOUDINARY_UPLOAD_URL, {
@@ -253,26 +258,22 @@ export async function uploadVerificationPhoto(
       secure_url: string
       public_id: string
       bytes: number
-      faces?: Array<Array<number>> // Cloudinary returns array of face bounding boxes
-      info?: {
-        detection?: {
-          adv_face?: Array<{ confidence: number }>
-        }
-      }
+      faces?: Array<Array<number>> // Cloudinary returns this by default — array of face bounding boxes
     }
 
-    // Determine face detection result
+    // Determine face detection result from the DEFAULT `faces` field.
+    // Cloudinary populates this automatically on every upload — no special
+    // parameter needed. Empty array or missing = no face detected.
     let faceDetected: boolean | undefined
     let faceConfidence: number | undefined
     if (options.detectFace) {
-      // Cloudinary returns `faces` as an array of bounding boxes.
-      // Empty array or missing = no face detected.
       const faceBoxes = data.faces
       faceDetected = !!(faceBoxes && faceBoxes.length > 0)
-      // Confidence comes from the adv_face detection data (0..1)
-      const advFace = data.info?.detection?.adv_face
-      if (advFace && advFace.length > 0) {
-        faceConfidence = advFace[0].confidence
+      // We don't get a confidence score without the `detection` parameter,
+      // but we know whether a face was found (boolean) — which is all we
+      // need for the "is there a face in this photo?" check.
+      if (faceDetected) {
+        faceConfidence = undefined // Not available without detection param
       }
     }
 
