@@ -57,46 +57,38 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Check if user exists by firebaseUid
-    // DEFENSIVE: use a minimal select that only references fields that
-    // existed BEFORE the ban-feature schema change. This way login works
-    // even if the new columns (isBanned, banReason, bannedAt) haven't
-    // been added to the production DB yet.
+    // DEFENSIVE: use ONLY pre-existing columns in the select. The new
+    // ban-feature columns (isBanned, banReason, bannedAt) may not exist
+    // on the production DB yet if prisma db push hasn't run. If we
+    // include them in the select, Prisma throws a column-not-found
+    // error and login breaks entirely.
+    //
+    // We check ban status SEPARATELY below with a try/catch so login
+    // works even when the ban feature isn't fully migrated.
+    const SAFE_USER_SELECT = {
+      id: true,
+      firebaseUid: true,
+      email: true,
+      name: true,
+      password: true,
+      photoUrl: true,
+      role: true,
+      phone: true,
+      location: true,
+      latitude: true,
+      longitude: true,
+      isVerified: true,
+      isPro: true,
+      proExpiry: true,
+      isBlocked: true,
+      fcmToken: true,
+      createdAt: true,
+      updatedAt: true,
+    } as const;
+
     let user = await db.user.findUnique({
       where: { firebaseUid },
-      select: {
-        id: true,
-        firebaseUid: true,
-        email: true,
-        name: true,
-        password: true,
-        photoUrl: true,
-        role: true,
-        phone: true,
-        location: true,
-        latitude: true,
-        longitude: true,
-        isVerified: true,
-        isPro: true,
-        proExpiry: true,
-        isBlocked: true,
-        fcmToken: true,
-        createdAt: true,
-        updatedAt: true,
-        // New fields — included ONLY if they exist. Prisma will include
-        // them if the client knows about them, and the DB has them. If
-        // the DB doesn't have them yet, this select will fail and we
-        // fall back to the safe select below.
-        isBanned: true,
-        banReason: true,
-        bannedAt: true,
-      },
-    }).catch(async (err) => {
-      // If the select failed because of missing columns, retry without
-      // the new fields. This is the migration-safety fallback.
-      console.warn('[auth/sync] User query with new fields failed, retrying with safe fields:', err instanceof Error ? err.message : 'unknown');
-      return db.user.findUnique({
-        where: { firebaseUid },
-      });
+      select: SAFE_USER_SELECT,
     });
 
     if (user) {
@@ -109,41 +101,21 @@ export async function POST(request: NextRequest) {
       if (isAdmin && user.role !== 'admin') updateData.role = 'admin';
 
       if (Object.keys(updateData).length > 0) {
+        // DEFENSIVE: use safe select on update too — without it, Prisma
+        // returns all columns including isBanned/banReason/bannedAt
+        // which don't exist yet on the production DB.
         user = await db.user.update({
           where: { id: user.id },
           data: updateData,
+          select: SAFE_USER_SELECT,
         });
       }
     } else {
       // 2. Check if user exists by email (may have been created via another method)
-      // DEFENSIVE: same fallback pattern as above.
+      // DEFENSIVE: same safe select — no new columns.
       user = await db.user.findUnique({
         where: { email },
-        select: {
-          id: true,
-          firebaseUid: true,
-          email: true,
-          name: true,
-          password: true,
-          photoUrl: true,
-          role: true,
-          phone: true,
-          location: true,
-          latitude: true,
-          longitude: true,
-          isVerified: true,
-          isPro: true,
-          proExpiry: true,
-          isBlocked: true,
-          fcmToken: true,
-          createdAt: true,
-          updatedAt: true,
-          isBanned: true,
-          banReason: true,
-          bannedAt: true,
-        },
-      }).catch(async () => {
-        return db.user.findUnique({ where: { email } });
+        select: SAFE_USER_SELECT,
       });
 
       if (user) {
@@ -161,11 +133,13 @@ export async function POST(request: NextRequest) {
         user = await db.user.update({
           where: { id: user.id },
           data: updateData,
+          select: SAFE_USER_SELECT,
         });
       } else {
         // 3. Create new user — leave role EMPTY so the frontend can route
         // them to the role-select screen to choose client or provider.
         // (Admin email detection is handled below — admins get 'admin' role.)
+        // DEFENSIVE: use safe select on create too.
         user = await db.user.create({
           data: {
             firebaseUid,
@@ -175,6 +149,7 @@ export async function POST(request: NextRequest) {
             phone: phone || null,
             role: isAdmin ? 'admin' : '',
           },
+          select: SAFE_USER_SELECT,
         });
       }
     }
