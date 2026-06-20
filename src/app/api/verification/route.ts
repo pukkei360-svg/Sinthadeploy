@@ -77,12 +77,14 @@ export async function POST(request: NextRequest) {
       userId,
       fullNameAsPerAadhaar,
       aadhaarPhotoUrl,
+      aadhaarBackPhotoUrl,
       passportPhotoUrl,
       faceDetected,
     } = body as {
       userId: string;
       fullNameAsPerAadhaar: string;
       aadhaarPhotoUrl: string;
+      aadhaarBackPhotoUrl?: string;
       passportPhotoUrl: string;
       faceDetected?: boolean;
     };
@@ -100,9 +102,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!aadhaarPhotoUrl || !passportPhotoUrl) {
+    if (!aadhaarPhotoUrl) {
       return NextResponse.json(
-        { error: 'Both Aadhaar photo and passport photo are required' },
+        { error: 'Aadhaar front photo is required' },
+        { status: 400 }
+      );
+    }
+    // Aadhaar back photo is optional but recommended (has address)
+    // Passport photo is required (face check)
+    if (!passportPhotoUrl) {
+      return NextResponse.json(
+        { error: 'Passport photo is required' },
         { status: 400 }
       );
     }
@@ -136,9 +146,10 @@ export async function POST(request: NextRequest) {
       const verification = await db.verificationDoc.update({
         where: { id: existingPending.id },
         data: {
-          docUrl: aadhaarPhotoUrl, // primary URL = Aadhaar photo
+          docUrl: aadhaarPhotoUrl, // primary URL = Aadhaar front photo
           fullNameAsPerAadhaar: fullNameAsPerAadhaar.trim(),
           aadhaarPhotoUrl,
+          aadhaarBackPhotoUrl: aadhaarBackPhotoUrl || null,
           passportPhotoUrl,
           faceDetected: faceDetected ?? null,
           status: 'pending',
@@ -159,9 +170,10 @@ export async function POST(request: NextRequest) {
       data: {
         userId,
         docType: 'identity',
-        docUrl: aadhaarPhotoUrl, // primary URL = Aadhaar photo (backward compat)
+        docUrl: aadhaarPhotoUrl, // primary URL = Aadhaar front photo (backward compat)
         fullNameAsPerAadhaar: fullNameAsPerAadhaar.trim(),
         aadhaarPhotoUrl,
+        aadhaarBackPhotoUrl: aadhaarBackPhotoUrl || null,
         passportPhotoUrl,
         faceDetected: faceDetected ?? null,
         status: 'pending',

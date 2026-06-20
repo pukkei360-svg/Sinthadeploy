@@ -221,8 +221,10 @@ model VerificationDoc {
   // Full name as the user entered it (should match the name on the Aadhaar card).
   // Admin compares this manually with the name visible on aadhaarPhotoUrl.
   fullNameAsPerAadhaar String?
-  // URL of the uploaded Aadhaar card photo (stored in Cloudinary 'verifications' folder)
+  // URL of the uploaded Aadhaar card FRONT photo (has name + photo + DOB)
   aadhaarPhotoUrl String?
+  // URL of the uploaded Aadhaar card BACK photo (has address + QR code)
+  aadhaarBackPhotoUrl String?
   // URL of the uploaded passport-size photo (stored in Cloudinary 'verifications' folder)
   // Auto-checked for face presence via Cloudinary's face detection on upload.
   passportPhotoUrl String?

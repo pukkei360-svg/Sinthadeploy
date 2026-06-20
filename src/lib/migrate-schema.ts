@@ -151,6 +151,9 @@ async function runMigration(): Promise<void> {
     `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "aadhaarPhotoUrl" TEXT`
   );
   await safeExec(
+    `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "aadhaarBackPhotoUrl" TEXT`
+  );
+  await safeExec(
     `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "passportPhotoUrl" TEXT`
   );
   await safeExec(

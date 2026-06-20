@@ -19,6 +19,7 @@ interface ExistingVerification {
   status: string
   fullNameAsPerAadhaar?: string
   aadhaarPhotoUrl?: string
+  aadhaarBackPhotoUrl?: string
   passportPhotoUrl?: string
   faceDetected?: boolean
   reviewNote?: string
@@ -33,11 +34,13 @@ export default function VerificationScreen() {
   const [fullName, setFullName] = useState('')
   const [aadhaarFile, setAadhaarFile] = useState<File | null>(null)
   const [aadhaarPreview, setAadhaarPreview] = useState<string | null>(null)
+  const [aadhaarBackFile, setAadhaarBackFile] = useState<File | null>(null)
+  const [aadhaarBackPreview, setAadhaarBackPreview] = useState<string | null>(null)
   const [passportFile, setPassportFile] = useState<File | null>(null)
   const [passportPreview, setPassportPreview] = useState<string | null>(null)
 
   // Upload state
-  const [uploadingField, setUploadingField] = useState<'aadhaar' | 'passport' | null>(null)
+  const [uploadingField, setUploadingField] = useState<'aadhaar' | 'aadhaarBack' | 'passport' | null>(null)
   const [faceCheckStatus, setFaceCheckStatus] = useState<'none' | 'checking' | 'passed' | 'failed'>('none')
   const [submitting, setSubmitting] = useState(false)
 
@@ -46,6 +49,7 @@ export default function VerificationScreen() {
   const [loadingExisting, setLoadingExisting] = useState(true)
 
   const aadhaarInputRef = useRef<HTMLInputElement>(null)
+  const aadhaarBackInputRef = useRef<HTMLInputElement>(null)
   const passportInputRef = useRef<HTMLInputElement>(null)
 
   // Load existing verification status on mount
@@ -84,7 +88,19 @@ export default function VerificationScreen() {
     }
     setAadhaarFile(file)
     setAadhaarPreview(URL.createObjectURL(file))
-    toast({ title: 'Aadhaar photo selected', description: 'Tap Submit to upload' })
+    toast({ title: 'Aadhaar front photo selected', description: 'Tap Submit to upload' })
+  }
+
+  const handleAadhaarBackSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please select an image file (JPG, PNG)', variant: 'destructive' })
+      return
+    }
+    setAadhaarBackFile(file)
+    setAadhaarBackPreview(URL.createObjectURL(file))
+    toast({ title: 'Aadhaar back photo selected', description: 'Tap Submit to upload' })
   }
 
   const handlePassportSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,23 +137,36 @@ export default function VerificationScreen() {
     setSubmitting(true)
 
     let aadhaarUrl: string | null = null
+    let aadhaarBackUrl: string | null = null
     let passportUrl: string | null = null
     let faceDetected: boolean | null = null
 
     try {
-      // Step 1: Upload Aadhaar photo (no face detection needed)
+      // Step 1: Upload Aadhaar FRONT photo (no face detection needed)
       if (aadhaarFile) {
         setUploadingField('aadhaar')
         const aadhaarResult = await uploadVerificationPhoto(aadhaarFile, 'verifications/aadhaar', { detectFace: false })
         if (!aadhaarResult.success || !aadhaarResult.url) {
-          throw new Error(aadhaarResult.error || 'Failed to upload Aadhaar photo')
+          throw new Error(aadhaarResult.error || 'Failed to upload Aadhaar front photo')
         }
         aadhaarUrl = aadhaarResult.url
       } else if (existing?.aadhaarPhotoUrl) {
         aadhaarUrl = existing.aadhaarPhotoUrl
       }
 
-      // Step 2: Upload passport photo WITH face detection
+      // Step 2: Upload Aadhaar BACK photo (optional — has address + QR)
+      if (aadhaarBackFile) {
+        setUploadingField('aadhaarBack')
+        const aadhaarBackResult = await uploadVerificationPhoto(aadhaarBackFile, 'verifications/aadhaar', { detectFace: false })
+        if (!aadhaarBackResult.success || !aadhaarBackResult.url) {
+          throw new Error(aadhaarBackResult.error || 'Failed to upload Aadhaar back photo')
+        }
+        aadhaarBackUrl = aadhaarBackResult.url
+      } else if (existing?.aadhaarBackPhotoUrl) {
+        aadhaarBackUrl = existing.aadhaarBackPhotoUrl
+      }
+
+      // Step 3: Upload passport photo WITH face detection
       if (passportFile) {
         setUploadingField('passport')
         setFaceCheckStatus('checking')
@@ -167,13 +196,14 @@ export default function VerificationScreen() {
 
       setUploadingField(null)
 
-      // Step 3: Submit to backend
+      // Step 4: Submit to backend
       const data = await apiFetch('/verification', {
         method: 'POST',
         body: JSON.stringify({
           userId: user.id,
           fullNameAsPerAadhaar: fullName.trim(),
           aadhaarPhotoUrl: aadhaarUrl,
+          aadhaarBackPhotoUrl: aadhaarBackUrl,
           passportPhotoUrl: passportUrl,
           faceDetected,
         }),
@@ -190,6 +220,7 @@ export default function VerificationScreen() {
         status: 'pending',
         fullNameAsPerAadhaar: fullName.trim(),
         aadhaarPhotoUrl: aadhaarUrl || undefined,
+        aadhaarBackPhotoUrl: aadhaarBackUrl || undefined,
         passportPhotoUrl: passportUrl || undefined,
         faceDetected: faceDetected ?? undefined,
         createdAt: new Date().toISOString(),
@@ -197,6 +228,7 @@ export default function VerificationScreen() {
 
       // Clear file inputs (keep the name)
       setAadhaarFile(null)
+      setAadhaarBackFile(null)
       setPassportFile(null)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Submission failed'
@@ -272,11 +304,15 @@ export default function VerificationScreen() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
-                    <span>A clear photo of your <strong>Aadhaar card</strong> (front side)</span>
+                    <span>Aadhaar card <strong>front side</strong> photo (has your name + photo) <span className="text-red-500">*</span></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
-                    <span>A <strong>passport-size photo</strong> (we auto-check it has a face)</span>
+                    <span>Aadhaar card <strong>back side</strong> photo (has your address) <span className="text-gray-400">(optional but recommended)</span></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                    <span>A <strong>passport-size photo</strong> (we auto-check it has a face) <span className="text-red-500">*</span></span>
                   </li>
                 </ul>
               </CardContent>
@@ -302,12 +338,12 @@ export default function VerificationScreen() {
               </CardContent>
             </Card>
 
-            {/* Aadhaar Photo Upload */}
+            {/* Aadhaar Front Photo Upload */}
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 space-y-3">
                 <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
                   <FileText className="h-4 w-4 text-blue-600" />
-                  Aadhaar Card Photo <span className="text-red-500">*</span>
+                  Aadhaar Card — Front Side <span className="text-red-500">*</span>
                 </label>
                 <input
                   ref={aadhaarInputRef}
@@ -319,7 +355,7 @@ export default function VerificationScreen() {
                 />
                 {aadhaarPreview ? (
                   <div className="relative">
-                    <img src={aadhaarPreview} alt="Aadhaar" className="w-full rounded-lg border border-gray-200 max-h-48 object-contain bg-gray-50" />
+                    <img src={aadhaarPreview} alt="Aadhaar front" className="w-full rounded-lg border border-gray-200 max-h-48 object-contain bg-gray-50" />
                     <button
                       onClick={() => { setAadhaarFile(null); setAadhaarPreview(null); if (aadhaarInputRef.current) aadhaarInputRef.current.value = '' }}
                       className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
@@ -335,8 +371,49 @@ export default function VerificationScreen() {
                     disabled={submitting}
                   >
                     <Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 font-medium">Upload Aadhaar photo</p>
-                    <p className="text-[10px] text-gray-400 mt-1">JPG or PNG · Front side · Clear text</p>
+                    <p className="text-sm text-gray-600 font-medium">Upload Aadhaar front side</p>
+                    <p className="text-[10px] text-gray-400 mt-1">JPG or PNG · The side with your name + photo</p>
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Aadhaar Back Photo Upload (optional — has address) */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4 space-y-3">
+                <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  Aadhaar Card — Back Side
+                  <span className="text-[10px] text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  ref={aadhaarBackInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAadhaarBackSelect}
+                  className="hidden"
+                  disabled={submitting}
+                />
+                {aadhaarBackPreview ? (
+                  <div className="relative">
+                    <img src={aadhaarBackPreview} alt="Aadhaar back" className="w-full rounded-lg border border-gray-200 max-h-48 object-contain bg-gray-50" />
+                    <button
+                      onClick={() => { setAadhaarBackFile(null); setAadhaarBackPreview(null); if (aadhaarBackInputRef.current) aadhaarBackInputRef.current.value = '' }}
+                      className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-100"
+                      disabled={submitting}
+                    >
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => aadhaarBackInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors"
+                    disabled={submitting}
+                  >
+                    <Upload className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600 font-medium">Upload Aadhaar back side</p>
+                    <p className="text-[10px] text-gray-400 mt-1">The side with your address · Optional but recommended</p>
                   </button>
                 )}
               </CardContent>
@@ -421,7 +498,7 @@ export default function VerificationScreen() {
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {uploadingField === 'aadhaar' ? 'Uploading Aadhaar...' : uploadingField === 'passport' ? 'Uploading passport...' : 'Submitting...'}
+                  {uploadingField === 'aadhaar' ? 'Uploading Aadhaar front...' : uploadingField === 'aadhaarBack' ? 'Uploading Aadhaar back...' : uploadingField === 'passport' ? 'Uploading passport...' : 'Submitting...'}
                 </>
               ) : (
                 <>

@@ -25,6 +25,7 @@ interface VerificationDoc {
   // Phase 1 identity verification fields
   fullNameAsPerAadhaar?: string
   aadhaarPhotoUrl?: string
+  aadhaarBackPhotoUrl?: string
   passportPhotoUrl?: string
   faceDetected?: boolean
   user: {
@@ -141,12 +142,12 @@ export default function AdminVerificationsScreen() {
                         </p>
                       </div>
 
-                      {/* Aadhaar photo + Passport photo side by side */}
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* Aadhaar */}
+                      {/* Aadhaar front + back + passport photo side by side */}
+                      <div className="grid grid-cols-3 gap-2">
+                        {/* Aadhaar Front */}
                         <div>
                           <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1 flex items-center gap-1">
-                            <FileText className="h-3 w-3" /> Aadhaar Card
+                            <FileText className="h-3 w-3" /> Aadhaar Front
                           </p>
                           {v.aadhaarPhotoUrl ? (
                             <a
@@ -157,25 +158,54 @@ export default function AdminVerificationsScreen() {
                             >
                               <img
                                 src={v.aadhaarPhotoUrl}
-                                alt="Aadhaar"
-                                className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                alt="Aadhaar front"
+                                className="w-full h-28 object-cover rounded-lg border border-gray-200"
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg flex items-center justify-center">
-                                <ExternalLink className="h-5 w-5 text-white opacity-0 group-hover:opacity-100" />
+                                <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100" />
                               </div>
                             </a>
                           ) : (
-                            <div className="w-full h-32 rounded-lg border border-dashed border-gray-300 flex items-center justify-center">
+                            <div className="w-full h-28 rounded-lg border border-dashed border-gray-300 flex items-center justify-center">
                               <span className="text-[10px] text-gray-400">No photo</span>
                             </div>
                           )}
                           <p className="text-[9px] text-gray-400 mt-1 text-center">Tap to enlarge</p>
                         </div>
 
+                        {/* Aadhaar Back */}
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1 flex items-center gap-1">
+                            <FileText className="h-3 w-3" /> Aadhaar Back
+                          </p>
+                          {v.aadhaarBackPhotoUrl ? (
+                            <a
+                              href={v.aadhaarBackPhotoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block relative group"
+                            >
+                              <img
+                                src={v.aadhaarBackPhotoUrl}
+                                alt="Aadhaar back"
+                                className="w-full h-28 object-cover rounded-lg border border-gray-200"
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg flex items-center justify-center">
+                                <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100" />
+                              </div>
+                            </a>
+                          ) : (
+                            <div className="w-full h-28 rounded-lg border border-dashed border-gray-300 flex items-center justify-center">
+                              <span className="text-[10px] text-gray-400">Not uploaded</span>
+                            </div>
+                          )}
+                          <p className="text-[9px] text-gray-400 mt-1 text-center">Address side</p>
+                        </div>
+
                         {/* Passport photo */}
                         <div>
                           <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1 flex items-center gap-1">
-                            <Camera className="h-3 w-3" /> Passport Photo
+                            <Camera className="h-3 w-3" /> Passport
                           </p>
                           {v.passportPhotoUrl ? (
                             <a
@@ -187,14 +217,14 @@ export default function AdminVerificationsScreen() {
                               <img
                                 src={v.passportPhotoUrl}
                                 alt="Passport"
-                                className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                                className="w-full h-28 object-cover rounded-lg border border-gray-200"
                               />
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-lg flex items-center justify-center">
-                                <ExternalLink className="h-5 w-5 text-white opacity-0 group-hover:opacity-100" />
+                                <ExternalLink className="h-4 w-4 text-white opacity-0 group-hover:opacity-100" />
                               </div>
                             </a>
                           ) : (
-                            <div className="w-full h-32 rounded-lg border border-dashed border-gray-300 flex items-center justify-center">
+                            <div className="w-full h-28 rounded-lg border border-dashed border-gray-300 flex items-center justify-center">
                               <span className="text-[10px] text-gray-400">No photo</span>
                             </div>
                           )}
@@ -224,11 +254,11 @@ export default function AdminVerificationsScreen() {
                         </p>
                         <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
                           <input type="checkbox" className="mt-0.5" />
-                          <span>Name on form matches name on Aadhaar card</span>
+                          <span>Name on form matches name on Aadhaar (front)</span>
                         </label>
                         <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
                           <input type="checkbox" className="mt-0.5" />
-                          <span>Aadhaar card is clear and not obviously fake</span>
+                          <span>Aadhaar (front + back) is clear and not obviously fake</span>
                         </label>
                         <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
                           <input type="checkbox" className="mt-0.5" />
