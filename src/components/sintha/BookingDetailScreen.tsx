@@ -256,11 +256,20 @@ export default function BookingDetailScreen() {
                     const cleaned = getDigitsOnly(otherPersonPhone)
                     const fullNumber = `91${cleaned}`
                     const msg = encodeURIComponent(`Hi ${otherPerson.name}, regarding my SINTHA booking.`)
-                    window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
-                    // Also try whatsapp:// directly as fallback (works if WhatsApp is installed)
-                    setTimeout(() => {
-                      window.open(`whatsapp://send?phone=${fullNumber}&text=${msg}`, '_blank')
-                    }, 500)
+                    // Use <a> tag with target=_blank — Capacitor opens this in the
+                    // system browser (not the WebView). The system browser handles
+                    // the wa.me → WhatsApp redirect correctly.
+                    const anchor = document.createElement('a')
+                    anchor.href = `https://wa.me/${fullNumber}?text=${msg}`
+                    anchor.target = '_blank'
+                    anchor.rel = 'noopener noreferrer'
+                    anchor.style.position = 'fixed'
+                    anchor.style.top = '0'
+                    anchor.style.left = '0'
+                    anchor.style.opacity = '0'
+                    document.body.appendChild(anchor)
+                    anchor.click()
+                    setTimeout(() => { if (anchor.parentNode) anchor.parentNode.removeChild(anchor) }, 200)
                   }}
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >
