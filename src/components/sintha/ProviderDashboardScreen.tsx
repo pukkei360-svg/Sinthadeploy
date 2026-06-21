@@ -10,13 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import BottomNav from './BottomNav'
 import WhatsAppIcon from './WhatsAppIcon'
-import FestivalBanner from './FestivalBanner'
 import {
   Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
   MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
   QrCode, Share2, Package, Tag, BarChart3, Copy,
-  ShieldCheck, ChevronRight, Siren
+  ShieldCheck, ChevronRight
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -204,17 +203,6 @@ export default function ProviderDashboardScreen() {
             <ChevronRight className="h-4 w-4 text-green-600 shrink-0" />
           </div>
         )}
-
-        {/* Festival Banner — auto-detects current festival */}
-        <FestivalBanner onNavigate={navigate} />
-
-        {/* SOS Emergency Button */}
-        <button
-          onClick={() => navigate('sos')}
-          className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-3 flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-colors"
-        >
-          <Siren className="h-4 w-4" /> SOS Emergency
-        </button>
 
         {/* Availability Toggle */}
         <Card className="border-0 shadow-sm">
@@ -433,31 +421,24 @@ export default function ProviderDashboardScreen() {
         {/* Quick Actions */}
         <div>
           <h3 className="font-bold text-gray-800 mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-4 gap-2">
-            <button
-              onClick={() => navigate('open-jobs')}
-              className="bg-white rounded-xl p-2.5 text-center shadow-sm"
-            >
-              <Briefcase className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-              <span className="text-[9px] text-gray-600">Open Jobs</span>
-            </button>
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => navigate('provider-onboarding')}
-              className="bg-white rounded-xl p-2.5 text-center shadow-sm"
+              className="bg-white rounded-xl p-3 text-center shadow-sm"
             >
               <PenLine className="h-5 w-5 text-blue-600 mx-auto mb-1" />
               <span className="text-[9px] text-gray-600">Edit Profile</span>
             </button>
             <button
               onClick={() => navigate('sintha-pro')}
-              className="bg-white rounded-xl p-2.5 text-center shadow-sm"
+              className="bg-white rounded-xl p-3 text-center shadow-sm"
             >
               <Crown className="h-5 w-5 text-amber-500 mx-auto mb-1" />
               <span className="text-[9px] text-gray-600">Go PRO</span>
             </button>
             <button
               onClick={() => navigate('ai-assistant')}
-              className="bg-white rounded-xl p-2.5 text-center shadow-sm"
+              className="bg-white rounded-xl p-3 text-center shadow-sm"
             >
               <Bot className="h-5 w-5 text-purple-600 mx-auto mb-1" />
               <span className="text-[9px] text-gray-600">AI Help</span>

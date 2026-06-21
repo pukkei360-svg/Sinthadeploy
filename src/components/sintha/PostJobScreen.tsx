@@ -6,7 +6,6 @@ import { apiFetch } from '@/lib/api'
 import { uploadVerificationPhoto } from '@/lib/cloudinary'
 import { useToast } from '@/hooks/use-toast'
 import { cleanError } from '@/lib/clean-error'
-import { getFestivalJobTemplates } from '@/lib/festivals'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -28,8 +27,6 @@ export default function PostJobScreen() {
   const { navigate, user, categories } = useAppStore()
   const { toast } = useToast()
 
-  // Festival quick-fill templates (only shown when a festival is active/upcoming)
-  const festivalTemplates = getFestivalJobTemplates()
 
   const [categoryId, setCategoryId] = useState('')
   const [title, setTitle] = useState('')
@@ -188,26 +185,6 @@ export default function PostJobScreen() {
       </div>
 
       <div className="px-4 py-4 space-y-5 max-w-lg mx-auto pb-10">
-        {/* Festival quick-fill templates */}
-        {festivalTemplates && festivalTemplates.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-            <p className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1">
-              <Zap className="h-3.5 w-3.5" /> Festival quick-fill
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {festivalTemplates.map((tpl) => (
-                <button
-                  key={tpl}
-                  onClick={() => setTitle(tpl)}
-                  className="px-3 py-1.5 rounded-full bg-white border border-amber-300 text-xs text-amber-800 font-medium hover:bg-amber-100 transition-colors"
-                >
-                  {tpl}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Category picker */}
         <div>
           <Label className="text-sm font-semibold text-gray-800 mb-2 block">

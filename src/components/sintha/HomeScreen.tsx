@@ -9,11 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import BottomNav from './BottomNav'
-import FestivalBanner from './FestivalBanner'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot, Siren, Briefcase
+  MapPin, TrendingUp, Zap, Shield, Bot
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -168,49 +167,29 @@ export default function HomeScreen() {
 
       {/* Quick Stats for Client */}
       <div className="px-4 pt-4">
-        <div className="grid grid-cols-4 gap-2">
-          <button
-            onClick={() => navigate('post-job')}
-            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
-          >
-            <Briefcase className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">Post Job</span>
-          </button>
-          <button
-            onClick={() => navigate('my-jobs')}
-            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
-          >
-            <Calendar className="h-5 w-5 text-amber-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">My Jobs</span>
-          </button>
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => navigate('my-bookings')}
-            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
+            className="bg-white rounded-xl p-3 text-center shadow-sm"
           >
-            <Calendar className="h-5 w-5 text-green-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">Bookings</span>
+            <Calendar className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">My Bookings</span>
           </button>
           <button
             onClick={() => navigate('chat-list')}
-            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
+            className="bg-white rounded-xl p-3 text-center shadow-sm"
           >
-            <MessageCircle className="h-5 w-5 text-purple-600 mx-auto mb-1" />
+            <MessageCircle className="h-5 w-5 text-green-600 mx-auto mb-1" />
             <span className="text-[10px] font-medium text-gray-600">Messages</span>
           </button>
+          <button
+            onClick={() => navigate('ai-assistant')}
+            className="bg-white rounded-xl p-3 text-center shadow-sm"
+          >
+            <Bot className="h-5 w-5 text-purple-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">AI Assistant</span>
+          </button>
         </div>
-      </div>
-
-      {/* Festival Banner — auto-detects current festival */}
-      <FestivalBanner onNavigate={navigate} />
-
-      {/* SOS Emergency Button */}
-      <div className="px-4 pt-3">
-        <button
-          onClick={() => navigate('sos')}
-          className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-3 flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-colors"
-        >
-          <Siren className="h-4 w-4" /> SOS Emergency
-        </button>
       </div>
 
       {/* Categories */}
