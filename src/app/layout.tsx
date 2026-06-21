@@ -1,18 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Noto_Sans_Meetei_Mayek } from "next/font/google";
+import { Inter, Noto_Sans_Meetei_Mayek } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import WebViewInterceptor from "@/components/WebViewInterceptor";
 import OfflineBootstrap from "@/components/sintha/OfflineBootstrap";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Inter — modern, premium sans-serif used by Vercel, Stripe, GitHub, etc.
+// Replaces the default Geist font for a more "big company" look.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 // Meitei Mayek font for Manipuri script (used on RoleSelectScreen)
@@ -101,7 +100,7 @@ export default function RootLayout({
         <meta httpEquiv="Expires" content="0" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
+        className={`${inter.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
       >
         <WebViewInterceptor />
         <OfflineBootstrap />
