@@ -33,6 +33,8 @@ import ForgotPasswordScreen from '@/components/sintha/ForgotPasswordScreen'
 import ReportProviderScreen from '@/components/sintha/ReportProviderScreen'
 import AdminClaimsScreen from '@/components/sintha/AdminClaimsScreen'
 import AdminBroadcastScreen from '@/components/sintha/AdminBroadcastScreen'
+import SOSScreen from '@/components/sintha/SOSScreen'
+import EmergencyContactsScreen from '@/components/sintha/EmergencyContactsScreen'
 
 export default function Home() {
   const {
@@ -385,6 +387,10 @@ export default function Home() {
         return <AdminClaimsScreen />
       case 'admin-broadcast':
         return <AdminBroadcastScreen />
+      case 'sos':
+        return <SOSScreen />
+      case 'emergency-contacts':
+        return <EmergencyContactsScreen />
       default:
         return <LandingScreen />
     }

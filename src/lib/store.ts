@@ -29,6 +29,8 @@ export type View =
   | 'admin-verifications'
   | 'admin-claims'
   | 'admin-broadcast'
+  | 'sos'
+  | 'emergency-contacts'
   | 'provider-dashboard'
   | 'provider-onboarding'
   | 'forgot-password'

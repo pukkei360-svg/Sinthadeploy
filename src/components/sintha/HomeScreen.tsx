@@ -12,7 +12,7 @@ import BottomNav from './BottomNav'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot
+  MapPin, TrendingUp, Zap, Shield, Bot, Siren
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -190,6 +190,16 @@ export default function HomeScreen() {
             <span className="text-[10px] font-medium text-gray-600">AI Assistant</span>
           </button>
         </div>
+      </div>
+
+      {/* SOS Emergency Button */}
+      <div className="px-4 pt-3">
+        <button
+          onClick={() => navigate('sos')}
+          className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-3 flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-colors"
+        >
+          <Siren className="h-4 w-4" /> SOS Emergency
+        </button>
       </div>
 
       {/* Categories */}

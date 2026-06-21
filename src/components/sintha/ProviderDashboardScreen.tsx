@@ -15,7 +15,7 @@ import {
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
   MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
   QrCode, Share2, Package, Tag, BarChart3, Copy,
-  ShieldCheck, ChevronRight
+  ShieldCheck, ChevronRight, Siren
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -203,6 +203,14 @@ export default function ProviderDashboardScreen() {
             <ChevronRight className="h-4 w-4 text-green-600 shrink-0" />
           </div>
         )}
+
+        {/* SOS Emergency Button */}
+        <button
+          onClick={() => navigate('sos')}
+          className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl py-3 flex items-center justify-center gap-2 font-bold text-sm shadow-md transition-colors"
+        >
+          <Siren className="h-4 w-4" /> SOS Emergency
+        </button>
 
         {/* Availability Toggle */}
         <Card className="border-0 shadow-sm">
