@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
 import { cleanError } from '@/lib/clean-error'
+import { generateICSFile } from '@/lib/calendar'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -159,6 +160,31 @@ export default function BookingDetailScreen() {
               </div>
             )}
           </div>
+
+          {/* Feature 5: Add to Calendar — generates an .ics file the user
+              can import into Google / Apple / Outlook Calendar. */}
+          <button
+            onClick={() => {
+              try {
+                generateICSFile({
+                  title: booking.service,
+                  date: booking.date,
+                  location: booking.address,
+                  description: booking.description,
+                })
+                toast({
+                  title: 'Calendar event ready',
+                  description: 'sintha-booking.ics downloaded — import it into your calendar.',
+                })
+              } catch (err: unknown) {
+                toast({ title: 'Could not create calendar event', description: cleanError(err) })
+              }
+            }}
+            className="mt-4 w-full flex items-center justify-center gap-2 sintha-gradient text-white rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm"
+          >
+            <Calendar className="h-4 w-4" />
+            Add to Calendar
+          </button>
         </div>
 
         {/* Status Timeline */}

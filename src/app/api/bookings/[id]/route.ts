@@ -137,6 +137,21 @@ export async function PUT(
           relatedId: existing.id,
         },
       });
+
+      // Feature 3: Predictive maintenance reminder — drives repeat bookings.
+      // Sent immediately on completion so the client can re-book the same
+      // provider with one tap. (We can't schedule notifications in the DB,
+      // so an instant nudge is the pragmatic alternative to a 30-day timer.)
+      await notify({
+        data: {
+          userId: existing.clientId,
+          title: '✅ Service Complete!',
+          message: `Need ${existing.service} again? Book the same provider with one tap on SINTHA!`,
+          type: 'system',
+          relatedId: existing.id,
+        },
+      });
+
       // Update provider's total bookings
       await db.providerProfile.update({
         where: { userId: existing.providerId },

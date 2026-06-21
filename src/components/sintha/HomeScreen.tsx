@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAppStore, type ServiceCategory, type ProviderProfile } from '@/lib/store'
+import { useAppStore, type ServiceCategory, type ProviderProfile, type User } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
+import { sortByDistance } from '@/lib/distance'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -32,6 +33,24 @@ export default function HomeScreen() {
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoaded, setDataLoaded] = useState(false)
+
+  // Feature 2: Location-based provider sorting
+  // Toggle between featured (default) and nearby (distance) sorting.
+  const [sortBy, setSortBy] = useState<'featured' | 'nearby'>('featured')
+
+  // Feature 4: Same-day service filter
+  // 'all' (default) | 'today' (available now) | 'verified'
+  const [providerFilter, setProviderFilter] = useState<'all' | 'today' | 'verified'>('all')
+
+  // The User interface in the store doesn't yet declare lat/lng, but the
+  // Prisma `User` model has `latitude` / `longitude` and the API already
+  // returns them. Extend the type locally so we can use them safely.
+  type UserWithLatLng = User & { latitude?: number | null; longitude?: number | null }
+  const userLat = (user as UserWithLatLng | null)?.latitude
+  const userLng = (user as UserWithLatLng | null)?.longitude
+  const hasUserLocation =
+    typeof userLat === 'number' && typeof userLng === 'number' &&
+    !Number.isNaN(userLat) && !Number.isNaN(userLng)
 
   const unreadNotifs = notifications.filter((n) => !n.isRead).length
 
@@ -78,7 +97,30 @@ export default function HomeScreen() {
     p.isVerified ||
     (p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()))
   )
-  const topProviders = providers.slice(0, 8)
+
+  // Base list shown when the user isn't searching.
+  // Apply Feature 4 (filter) and Feature 2 (sort) in sequence so the
+  // "Nearby Providers" section reflects both the active filter pills and
+  // the Featured/Nearby sort toggle.
+  const baseProviders = (() => {
+    let list = providers.slice(0, 8)
+
+    // Feature 4: filter pills
+    if (providerFilter === 'today') {
+      list = list.filter((p) => p.availability === 'available')
+    } else if (providerFilter === 'verified') {
+      list = list.filter((p) => p.isVerified === true)
+    }
+
+    // Feature 2: distance sort (only when the user has lat/lng and
+    // explicitly opts into the Nearby toggle)
+    if (sortBy === 'nearby' && hasUserLocation) {
+      list = sortByDistance(list, userLat as number, userLng as number)
+    }
+
+    return list
+  })()
+  const topProviders = baseProviders
 
   // Filter providers by search
   const filteredProviders = searchQuery.trim()
@@ -247,6 +289,61 @@ export default function HomeScreen() {
             </button>
           )}
         </div>
+
+        {/* Feature 2 & 4: Sort + filter toggles (only shown when not searching) */}
+        {!searchQuery && providers.length > 0 && (
+          <div className="px-4 mb-3 flex flex-col gap-2">
+            {/* Sort row: Featured (default) | Nearby (only if user has lat/lng) */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Sort</span>
+              <button
+                onClick={() => setSortBy('featured')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                  sortBy === 'featured'
+                    ? 'sintha-gradient text-white shadow-sm'
+                    : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                Featured
+              </button>
+              {hasUserLocation && (
+                <button
+                  onClick={() => setSortBy('nearby')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1 ${
+                    sortBy === 'nearby'
+                      ? 'sintha-gradient text-white shadow-sm'
+                      : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                >
+                  <MapPin className="h-3 w-3" />
+                  Nearby
+                </button>
+              )}
+            </div>
+
+            {/* Filter row: All | Available Today | Verified */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Filter</span>
+              {([
+                { key: 'all', label: 'All' },
+                { key: 'today', label: 'Available Today' },
+                { key: 'verified', label: 'Verified' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setProviderFilter(opt.key)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    providerFilter === opt.key
+                      ? 'sintha-gradient text-white shadow-sm'
+                      : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {filteredProviders.length === 0 ? (
           <div className="px-4">
             <div className="bg-white rounded-xl p-8 text-center shadow-sm">
