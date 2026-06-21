@@ -124,16 +124,7 @@ export default function BookingFormScreen() {
                     const cleaned = getDigitsOnly(providerPhone)
                     const fullNumber = `91${cleaned}`
                     const msg = encodeURIComponent(`Hi ${providerName}, I booked your service on SINTHA.`)
-                    // Use <a> tag click so WebViewInterceptor catches it and calls window.open
-                    const anchor = document.createElement('a')
-                    anchor.href = `https://wa.me/${fullNumber}?text=${msg}`
-                    anchor.style.position = 'fixed'
-                    anchor.style.top = '0'
-                    anchor.style.left = '0'
-                    anchor.style.opacity = '0'
-                    document.body.appendChild(anchor)
-                    anchor.click()
-                    setTimeout(() => { if (anchor.parentNode) anchor.parentNode.removeChild(anchor) }, 200)
+                    window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
                   }}
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >
