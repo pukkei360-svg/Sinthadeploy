@@ -107,13 +107,14 @@ export async function dialPhone(phone: string): Promise<DialResult> {
     }, 1500)
   })
 
-  // Try to open the dialer — use an anchor tag click (most reliable in WebView)
-  // The WebViewInterceptor catches <a> clicks with tel: href and hands them
-  // to the system dialer via shouldOverrideUrlLoading.
+  // Try to open the dialer — use an anchor tag click
+  // Do NOT set data-skip-interceptor — we WANT the WebViewInterceptor to
+  // catch this and use window.open() which triggers shouldOverrideUrlLoading
+  // in the Android WebView, handing off to the system dialer.
   try {
     const anchor = document.createElement('a')
     anchor.href = `tel:${cleaned}`
-    anchor.setAttribute('data-skip-interceptor', 'true')
+    // NO data-skip-interceptor — let WebViewInterceptor handle it
     anchor.style.position = 'fixed'
     anchor.style.top = '0'
     anchor.style.left = '0'
@@ -127,9 +128,9 @@ export async function dialPhone(phone: string): Promise<DialResult> {
       }
     }, 100)
   } catch {
-    // Anchor click failed — try window.location.href as fallback
+    // Anchor click failed — try window.open as fallback
     try {
-      window.location.href = `tel:${cleaned}`
+      window.open(`tel:${cleaned}`, '_blank')
     } catch {
       // Both methods failed — fall through to copy fallback
     }
