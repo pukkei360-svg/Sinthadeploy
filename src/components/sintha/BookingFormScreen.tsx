@@ -125,6 +125,10 @@ export default function BookingFormScreen() {
                     const fullNumber = `91${cleaned}`
                     const msg = encodeURIComponent(`Hi ${providerName}, I booked your service on SINTHA.`)
                     window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
+                    // Also try whatsapp:// directly as fallback (works if WhatsApp is installed)
+                    setTimeout(() => {
+                      window.open(`whatsapp://send?phone=${fullNumber}&text=${msg}`, '_blank')
+                    }, 500)
                   }}
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >
