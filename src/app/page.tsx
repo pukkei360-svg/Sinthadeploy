@@ -32,6 +32,7 @@ import ReviewsScreen from '@/components/sintha/ReviewsScreen'
 import ForgotPasswordScreen from '@/components/sintha/ForgotPasswordScreen'
 import ReportProviderScreen from '@/components/sintha/ReportProviderScreen'
 import AdminClaimsScreen from '@/components/sintha/AdminClaimsScreen'
+import AdminBroadcastScreen from '@/components/sintha/AdminBroadcastScreen'
 import PostJobScreen from '@/components/sintha/PostJobScreen'
 import MyJobsScreen from '@/components/sintha/MyJobsScreen'
 import OpenJobsScreen from '@/components/sintha/OpenJobsScreen'
@@ -391,6 +392,8 @@ export default function Home() {
         return <ReportProviderScreen />
       case 'admin-claims':
         return <AdminClaimsScreen />
+      case 'admin-broadcast':
+        return <AdminBroadcastScreen />
       case 'post-job':
         return <PostJobScreen />
       case 'my-jobs':
