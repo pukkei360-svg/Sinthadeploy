@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import BottomNav from './BottomNav'
 import WhatsAppIcon from './WhatsAppIcon'
+import FestivalBanner from './FestivalBanner'
 import {
   Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
@@ -203,6 +204,9 @@ export default function ProviderDashboardScreen() {
             <ChevronRight className="h-4 w-4 text-green-600 shrink-0" />
           </div>
         )}
+
+        {/* Festival Banner — auto-detects current festival */}
+        <FestivalBanner onNavigate={navigate} />
 
         {/* SOS Emergency Button */}
         <button

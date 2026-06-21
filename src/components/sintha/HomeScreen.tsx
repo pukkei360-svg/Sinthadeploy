@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import BottomNav from './BottomNav'
+import FestivalBanner from './FestivalBanner'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
@@ -191,6 +192,9 @@ export default function HomeScreen() {
           </button>
         </div>
       </div>
+
+      {/* Festival Banner — auto-detects current festival */}
+      <FestivalBanner onNavigate={navigate} />
 
       {/* SOS Emergency Button */}
       <div className="px-4 pt-3">
