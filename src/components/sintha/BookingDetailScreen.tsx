@@ -13,7 +13,7 @@ import {
   CheckCircle, XCircle, Play, Star, Copy
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { dialPhone, normalizePhoneNumber, getDigitsOnly, openWhatsApp } from '@/lib/phone'
+import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
 import { cleanError } from '@/lib/clean-error'
 
@@ -250,10 +250,13 @@ export default function BookingDetailScreen() {
                   <Phone className="h-4 w-4" />
                   Call
                 </button>
-                {/* WhatsApp button */}
+                {/* WhatsApp button — green with proper WhatsApp logo */}
                 <button
                   onClick={() => {
-                    openWhatsApp(otherPersonPhone, `Hi ${otherPerson.name}, regarding my SINTHA booking.`)
+                    const cleaned = getDigitsOnly(otherPersonPhone)
+                    const fullNumber = `91${cleaned}`
+                    const msg = encodeURIComponent(`Hi ${otherPerson.name}, regarding my SINTHA booking.`)
+                    window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
                   }}
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >

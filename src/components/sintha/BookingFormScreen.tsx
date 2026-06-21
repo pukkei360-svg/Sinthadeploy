@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircle, Copy, Phone, Share2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { dialPhone, normalizePhoneNumber, getDigitsOnly, openWhatsApp } from '@/lib/phone'
+import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
 import { cleanError } from '@/lib/clean-error'
 
@@ -121,7 +121,10 @@ export default function BookingFormScreen() {
                 {/* WhatsApp button — proper WhatsApp logo on green background */}
                 <button
                   onClick={() => {
-                    openWhatsApp(providerPhone, `Hi ${providerName}, I booked your service on SINTHA.`)
+                    const cleaned = getDigitsOnly(providerPhone)
+                    const fullNumber = `91${cleaned}`
+                    const msg = encodeURIComponent(`Hi ${providerName}, I booked your service on SINTHA.`)
+                    window.open(`https://wa.me/${fullNumber}?text=${msg}`, '_blank')
                   }}
                   className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-lg py-3 text-sm font-semibold transition-colors w-full shadow-sm"
                 >
