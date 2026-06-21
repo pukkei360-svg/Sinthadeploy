@@ -35,6 +35,10 @@ import AdminClaimsScreen from '@/components/sintha/AdminClaimsScreen'
 import AdminBroadcastScreen from '@/components/sintha/AdminBroadcastScreen'
 import SOSScreen from '@/components/sintha/SOSScreen'
 import EmergencyContactsScreen from '@/components/sintha/EmergencyContactsScreen'
+import PostJobScreen from '@/components/sintha/PostJobScreen'
+import MyJobsScreen from '@/components/sintha/MyJobsScreen'
+import OpenJobsScreen from '@/components/sintha/OpenJobsScreen'
+import JobDetailScreen from '@/components/sintha/JobDetailScreen'
 
 export default function Home() {
   const {
@@ -391,6 +395,14 @@ export default function Home() {
         return <SOSScreen />
       case 'emergency-contacts':
         return <EmergencyContactsScreen />
+      case 'post-job':
+        return <PostJobScreen />
+      case 'my-jobs':
+        return <MyJobsScreen />
+      case 'open-jobs':
+        return <OpenJobsScreen />
+      case 'job-detail':
+        return <JobDetailScreen />
       default:
         return <LandingScreen />
     }

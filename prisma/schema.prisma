@@ -44,6 +44,8 @@ model User {
   passwordResetTokens PasswordResetToken[]
   claimsFiled Claim[] @relation("ClaimReporter")
   claimsAgainst Claim[] @relation("ClaimSubject")
+  jobsPosted Job[] @relation("JobClient")
+  jobQuotes JobQuote[] @relation("JobQuoteProvider")
 }
 
 // BannedEmail — email blacklist. Survives user deletion so banned users
@@ -107,6 +109,7 @@ model ServiceCategory {
   updatedAt   DateTime @updatedAt
 
   providers ProviderProfile[]
+  jobs      Job[]
 }
 
 model ProviderProfile {
@@ -288,4 +291,49 @@ model PasswordResetToken {
 
   @@index([userId])
   @@index([token])
+}
+
+// ── Job Marketplace ──────────────────────────────────────────────
+model Job {
+  id            String   @id @default(cuid())
+  clientId      String
+  categoryId    String
+  title         String
+  description   String
+  location      String?
+  budget        Float?
+  preferredDate DateTime?
+  urgency       String   @default("flexible")
+  photoUrls     String?
+  status        String   @default("open")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  client   User             @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
+  category ServiceCategory  @relation(fields: [categoryId], references: [id])
+  quotes   JobQuote[]
+
+  @@index([clientId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model JobQuote {
+  id            String   @id @default(cuid())
+  jobId         String
+  providerId    String
+  price         Float
+  message       String
+  estimatedTime String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  job      Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  provider User @relation("JobQuoteProvider", fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([providerId])
+  @@index([status])
 }

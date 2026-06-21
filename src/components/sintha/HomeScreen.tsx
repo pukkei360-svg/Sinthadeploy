@@ -13,7 +13,7 @@ import FestivalBanner from './FestivalBanner'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot, Siren
+  MapPin, TrendingUp, Zap, Shield, Bot, Siren, Briefcase
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -168,27 +168,34 @@ export default function HomeScreen() {
 
       {/* Quick Stats for Client */}
       <div className="px-4 pt-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => navigate('post-job')}
+            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
+          >
+            <Briefcase className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">Post Job</span>
+          </button>
+          <button
+            onClick={() => navigate('my-jobs')}
+            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
+          >
+            <Calendar className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">My Jobs</span>
+          </button>
           <button
             onClick={() => navigate('my-bookings')}
-            className="bg-white rounded-xl p-3 text-center shadow-sm"
+            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
           >
-            <Calendar className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">My Bookings</span>
+            <Calendar className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">Bookings</span>
           </button>
           <button
             onClick={() => navigate('chat-list')}
-            className="bg-white rounded-xl p-3 text-center shadow-sm"
+            className="bg-white rounded-xl p-2.5 text-center shadow-sm sintha-card-hover"
           >
-            <MessageCircle className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <MessageCircle className="h-5 w-5 text-purple-600 mx-auto mb-1" />
             <span className="text-[10px] font-medium text-gray-600">Messages</span>
-          </button>
-          <button
-            onClick={() => navigate('ai-assistant')}
-            className="bg-white rounded-xl p-3 text-center shadow-sm"
-          >
-            <Bot className="h-5 w-5 text-purple-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">AI Assistant</span>
           </button>
         </div>
       </div>

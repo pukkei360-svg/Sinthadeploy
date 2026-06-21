@@ -160,7 +160,78 @@ async function runMigration(): Promise<void> {
     `ALTER TABLE "VerificationDoc" ADD COLUMN IF NOT EXISTS "faceDetected" BOOLEAN`
   );
 
-  console.log('[schema-migration] Ban/claims + verification schema is ready');
+  
+
+  // ── Job Marketplace tables ─────────────────────────────────────
+  await safeExec(`
+    CREATE TABLE IF NOT EXISTS "Job" (
+      "id" TEXT NOT NULL,
+      "clientId" TEXT NOT NULL,
+      "categoryId" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "description" TEXT NOT NULL,
+      "location" TEXT,
+      "budget" DOUBLE PRECISION,
+      "preferredDate" TIMESTAMP(3),
+      "urgency" TEXT NOT NULL DEFAULT 'flexible',
+      "photoUrls" TEXT,
+      "status" TEXT NOT NULL DEFAULT 'open',
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "Job_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await safeExec('CREATE INDEX IF NOT EXISTS "Job_clientId_idx" ON "Job"("clientId")');
+  await safeExec('CREATE INDEX IF NOT EXISTS "Job_categoryId_idx" ON "Job"("categoryId")');
+  await safeExec('CREATE INDEX IF NOT EXISTS "Job_status_idx" ON "Job"("status")');
+  await safeExec('CREATE INDEX IF NOT EXISTS "Job_createdAt_idx" ON "Job"("createdAt")');
+  await safeExec(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'Job_clientId_fkey') THEN
+        ALTER TABLE "Job" ADD CONSTRAINT "Job_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$;
+  `);
+  await safeExec(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'Job_categoryId_fkey') THEN
+        ALTER TABLE "Job" ADD CONSTRAINT "Job_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "ServiceCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+      END IF;
+    END $$;
+  `);
+  await safeExec(`
+    CREATE TABLE IF NOT EXISTS "JobQuote" (
+      "id" TEXT NOT NULL,
+      "jobId" TEXT NOT NULL,
+      "providerId" TEXT NOT NULL,
+      "price" DOUBLE PRECISION NOT NULL,
+      "message" TEXT NOT NULL,
+      "estimatedTime" TEXT,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "JobQuote_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await safeExec('CREATE INDEX IF NOT EXISTS "JobQuote_jobId_idx" ON "JobQuote"("jobId")');
+  await safeExec('CREATE INDEX IF NOT EXISTS "JobQuote_providerId_idx" ON "JobQuote"("providerId")');
+  await safeExec('CREATE INDEX IF NOT EXISTS "JobQuote_status_idx" ON "JobQuote"("status")');
+  await safeExec(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'JobQuote_jobId_fkey') THEN
+        ALTER TABLE "JobQuote" ADD CONSTRAINT "JobQuote_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "Job"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$;
+  `);
+  await safeExec(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'JobQuote_providerId_fkey') THEN
+        ALTER TABLE "JobQuote" ADD CONSTRAINT "JobQuote_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      END IF;
+    END $$;
+  `);
+
+  console.log('[schema-migration] All tables ready');
 }
 
 /**

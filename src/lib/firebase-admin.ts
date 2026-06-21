@@ -9,7 +9,7 @@ import * as admin from 'firebase-admin'
 
 let adminApp: admin.app.App | null = null
 
-function getAdminApp(): admin.app.App | null {
+export function getAdminApp(): admin.app.App | null {
   if (adminApp) return adminApp
 
   try {
