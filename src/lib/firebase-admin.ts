@@ -23,12 +23,44 @@ export function getAdminApp(): admin.app.App | null {
     const serviceAccountStr = process.env.FIREBASE_SERVICE_ACCOUNT
 
     if (serviceAccountStr) {
-      const serviceAccount = JSON.parse(serviceAccountStr)
-      adminApp = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      })
-      console.log('[Firebase Admin] Initialized with service account')
-      return adminApp
+      try {
+        let serviceAccount: any;
+
+        // The env var could be:
+        // 1. A JSON string (standard)
+        // 2. A base64-encoded JSON string (avoids newline/escaping issues)
+        if (serviceAccountStr.trim().startsWith('{')) {
+          serviceAccount = JSON.parse(serviceAccountStr)
+        } else {
+          // Try base64 decode
+          const decoded = Buffer.from(serviceAccountStr, 'base64').toString('utf8')
+          serviceAccount = JSON.parse(decoded)
+        }
+
+        // Fix: replace literal \n with actual newlines in private_key
+        if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
+          serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n')
+        }
+
+        // Validate required fields
+        if (!serviceAccount.private_key || !serviceAccount.client_email) {
+          console.warn('[Firebase Admin] Missing private_key or client_email')
+          return null
+        }
+
+        adminApp = admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: serviceAccount.project_id,
+            clientEmail: serviceAccount.client_email,
+            privateKey: serviceAccount.private_key,
+          }),
+        })
+        console.log('[Firebase Admin] Initialized with service account')
+        return adminApp
+      } catch (err) {
+        console.warn('[Firebase Admin] Init failed:', err instanceof Error ? err.message : err)
+        return null
+      }
     }
 
     // Try Application Default Credentials
