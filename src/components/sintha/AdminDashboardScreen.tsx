@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
-  ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell, Flag
+  ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell, Flag, Megaphone
 } from 'lucide-react'
 
 interface AdminStats {
@@ -53,6 +53,7 @@ export default function AdminDashboardScreen() {
     { icon: BarChart3, label: 'Categories', view: 'admin-categories' as const, color: 'bg-purple-100 text-purple-600', params: {} },
     { icon: FileCheck, label: 'Verifications', view: 'admin-verifications' as const, color: 'bg-red-100 text-red-600', params: {} },
     { icon: Flag, label: 'Claims', view: 'admin-claims' as const, color: 'bg-rose-100 text-rose-600', params: {} },
+    { icon: Megaphone, label: 'Broadcast', view: 'admin-broadcast' as const, color: 'bg-indigo-100 text-indigo-600', params: {} },
   ]
 
   return (
