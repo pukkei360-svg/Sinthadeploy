@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast'
 import { signOut as firebaseSignOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { uploadPhoto } from '@/lib/cloudinary'
+import { cleanError } from '@/lib/clean-error'
 
 
 export default function ProfileScreen() {
@@ -33,7 +34,7 @@ export default function ProfileScreen() {
     if (event.target === cameraInputRef.current) cameraInputRef.current.value = ''
     if (event.target === galleryInputRef.current) galleryInputRef.current.value = ''
 
-    if (!user) { toast({ title: 'Error', description: 'Please login first', variant: 'destructive' }); return }
+    if (!user) { toast({ title: 'Error', description: 'Please login first' }); return }
     setUploadingPhoto(true)
     try {
       const result = await uploadPhoto(file, 'profiles')
@@ -54,7 +55,7 @@ export default function ProfileScreen() {
       
       toast({ title: 'Photo Updated!', description: 'Your profile photo has been updated' })
     } catch (err: unknown) {
-      toast({ title: 'Upload Failed', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Upload Failed', description: cleanError(err) })
     } finally { setUploadingPhoto(false) }
   }
 
@@ -131,7 +132,7 @@ export default function ProfileScreen() {
       }
     } catch (err: unknown) {
       const message = (err as Error).message || 'Failed to switch role'
-      toast({ title: 'Error', description: message, variant: 'destructive' })
+      toast({ title: 'Error', description: message })
     } finally {
       setSwitching(false)
     }

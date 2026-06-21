@@ -14,6 +14,7 @@ import {
   ShieldCheck, ExternalLink, Loader2
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { cleanError } from '@/lib/clean-error'
 
 interface VerificationDoc {
   id: string
@@ -53,7 +54,7 @@ export default function AdminVerificationsScreen() {
       const data = await apiFetch('/verification?status=pending')
       setVerifications(data.verifications || [])
     } catch {
-      toast({ title: 'Error', description: 'Failed to load verifications', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Failed to load verifications' })
     } finally {
       setLoading(false)
     }
@@ -76,7 +77,7 @@ export default function AdminVerificationsScreen() {
         description: `Verification ${status}. User will be notified.`,
       })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     } finally {
       setActing(null)
     }

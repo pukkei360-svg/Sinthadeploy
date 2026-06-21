@@ -28,10 +28,13 @@ export type View =
   | 'admin-categories'
   | 'admin-verifications'
   | 'admin-claims'
-  | 'admin-broadcast'
   | 'provider-dashboard'
   | 'provider-onboarding'
   | 'forgot-password'
+  | 'post-job'
+  | 'my-jobs'
+  | 'open-jobs'
+  | 'job-detail'
 
 export interface User {
   id: string

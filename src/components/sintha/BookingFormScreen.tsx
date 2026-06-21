@@ -12,6 +12,7 @@ import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircl
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
+import { cleanError } from '@/lib/clean-error'
 
 export default function BookingFormScreen() {
   const { navigate, viewParams, user, addBooking } = useAppStore()
@@ -32,11 +33,11 @@ export default function BookingFormScreen() {
 
   const handleSubmit = async () => {
     if (!serviceField || !date) {
-      toast({ title: 'Error', description: 'Service and date are required', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Service and date are required' })
       return
     }
     if (!user) {
-      toast({ title: 'Error', description: 'Please login first', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Please login first' })
       return
     }
 
@@ -59,7 +60,7 @@ export default function BookingFormScreen() {
       setSuccess(true)
       toast({ title: 'Booking Confirmed!', description: 'Your booking has been auto-confirmed.' })
     } catch (err: unknown) {
-      toast({ title: 'Booking Failed', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Booking Failed', description: cleanError(err) })
     } finally {
       setLoading(false)
     }

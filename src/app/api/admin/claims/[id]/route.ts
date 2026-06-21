@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureSchemaMigrated } from '@/lib/migrate-schema';
+import { notify } from '@/lib/notify';
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /api/admin/claims/[id]
@@ -133,7 +134,7 @@ export async function PATCH(
     // Notify the reporter that their claim was handled
     if (status === 'resolved' || status === 'dismissed') {
       try {
-        await db.notification.create({
+        await notify({
           data: {
             userId: existing.reporterId,
             title: `📋 Claim ${status}`,

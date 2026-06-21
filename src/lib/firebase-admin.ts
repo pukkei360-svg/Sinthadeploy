@@ -9,7 +9,21 @@ import * as admin from 'firebase-admin'
 
 let adminApp: admin.app.App | null = null
 
+/**
+ * Get the initialized Firebase Admin app (for use by other modules
+ * like push notifications).
+ *
+ * Returns null if Firebase Admin couldn't be initialized (e.g. no
+ * service account configured). Callers should handle null gracefully.
+ */
 export function getAdminApp(): admin.app.App | null {
+  return getAdminAppInternal()
+}
+
+/**
+ * Internal initializer — kept separate so the export name is clean.
+ */
+function getAdminAppInternal(): admin.app.App | null {
   if (adminApp) return adminApp
 
   try {
@@ -30,6 +44,7 @@ export function getAdminApp(): admin.app.App | null {
         // 1. A JSON string (standard)
         // 2. A base64-encoded JSON string (avoids newline/escaping issues)
         if (serviceAccountStr.trim().startsWith('{')) {
+          // It's JSON
           serviceAccount = JSON.parse(serviceAccountStr)
         } else {
           // Try base64 decode
@@ -48,6 +63,7 @@ export function getAdminApp(): admin.app.App | null {
           return null
         }
 
+        // Use explicit field mapping (avoids 'reading length' errors)
         adminApp = admin.initializeApp({
           credential: admin.credential.cert({
             projectId: serviceAccount.project_id,
@@ -83,7 +99,7 @@ export function getAdminApp(): admin.app.App | null {
  */
 export async function updateFirebasePassword(firebaseUid: string, newPassword: string): Promise<boolean> {
   try {
-    const app = getAdminApp()
+    const app = getAdminAppInternal()
     if (!app) {
       console.warn('[Firebase Admin] Not available - password only updated in local DB')
       return false
@@ -104,5 +120,5 @@ export async function updateFirebasePassword(firebaseUid: string, newPassword: s
  * Check if Firebase Admin SDK is available.
  */
 export function isFirebaseAdminAvailable(): boolean {
-  return getAdminApp() !== null
+  return getAdminAppInternal() !== null
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureSchemaMigrated } from '@/lib/migrate-schema';
+import { notify } from '@/lib/notify';
 
 // Admin email — anyone who signs in with this email gets admin role
 const ADMIN_EMAIL = 'sintha37@sintha.app';
@@ -230,7 +231,7 @@ export async function POST(request: NextRequest) {
 
         if (!existingReminder) {
           // Create a PRO reminder notification
-          await db.notification.create({
+          await notify({
             data: {
               userId: user.id,
               title: '👑 Upgrade to SINTHA PRO',

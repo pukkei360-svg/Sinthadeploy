@@ -4,24 +4,19 @@ import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 import { notify, notifyMany } from '@/lib/notify';
 
 /**
- * PATCH /api/jobs/:id/quotes/:quoteId
+ * PATCH /api/jobs/[id]/quotes/[quoteId]
+ *   Body: { status }  — 'accepted' | 'rejected'
  *
- * Update a quote's status.
+ * When a quote is 'accepted':
+ *   - The quote's status → 'accepted'
+ *   - All other quotes on the same job → 'rejected'
+ *   - The job's status → 'awarded'
+ *   - Notifications sent to the winning provider (congrats) and
+ *     losing providers (job taken)
  *
- * Body: { status }
- *   status: 'accepted' | 'rejected'
- *
- * If status === 'accepted':
- *   - marks THIS quote as 'accepted'
- *   - rejects ALL other quotes on the job
- *   - updates the job status to 'awarded'
- *   - notifies the winning provider via notify()
- *   - notifies all losing providers via notifyMany()
- *
- * If status === 'rejected':
- *   - just marks this quote as 'rejected' (no other side effects)
- *
- * Returns the updated quote with provider info.
+ * When a quote is 'rejected':
+ *   - Only that quote's status → 'rejected'
+ *   - Job stays 'open' (other quotes can still be accepted)
  */
 export async function PATCH(
   request: NextRequest,
@@ -30,122 +25,86 @@ export async function PATCH(
   try {
     await ensureSchemaMigrated();
 
-    const { id, quoteId } = await params;
+    const { id: jobId, quoteId } = await params;
     const body = await request.json();
-    const { status } = body;
+    const { status } = body as { status: string };
 
-    if (!status || !['accepted', 'rejected'].includes(status)) {
+    if (!['accepted', 'rejected'].includes(status)) {
       return NextResponse.json(
-        { error: "status must be 'accepted' or 'rejected'" },
+        { error: 'Status must be "accepted" or "rejected"' },
         { status: 400 }
       );
     }
 
-    // The quote must exist and belong to this job
     const quote = await db.jobQuote.findUnique({
       where: { id: quoteId },
-      select: { id: true, jobId: true, providerId: true },
     });
-    if (!quote || quote.jobId !== id) {
+    if (!quote || quote.jobId !== jobId) {
       return NextResponse.json(
         { error: 'Quote not found for this job' },
         { status: 404 }
       );
     }
 
-    const job = await db.job.findUnique({ where: { id } });
-    if (!job) {
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      );
-    }
+    // Update the quote
+    await db.jobQuote.update({
+      where: { id: quoteId },
+      data: { status },
+    });
 
     if (status === 'accepted') {
-      // Mark THIS quote accepted
-      await db.jobQuote.update({
-        where: { id: quoteId },
-        data: { status: 'accepted' },
+      // Reject all other quotes on this job
+      await db.jobQuote.updateMany({
+        where: { jobId, id: { not: quoteId } },
+        data: { status: 'rejected' },
       });
 
-      // Reject all OTHER quotes on the job
-      const otherQuotes = await db.jobQuote.findMany({
-        where: { jobId: id, id: { not: quoteId } },
-        select: { id: true, providerId: true },
-      });
-
-      if (otherQuotes.length > 0) {
-        await db.jobQuote.updateMany({
-          where: { jobId: id, id: { not: quoteId } },
-          data: { status: 'rejected' },
-        });
-      }
-
-      // Update the job status to 'awarded'
+      // Mark the job as awarded
       await db.job.update({
-        where: { id },
+        where: { id: jobId },
         data: { status: 'awarded' },
       });
 
       // Notify the winning provider
       try {
-        await notify({
-          data: {
-            userId: quote.providerId,
-            title: 'Quote Accepted! 🎉',
-            message: `Your quote for "${job.title}" has been accepted.`,
-            type: 'system',
-            relatedId: id,
-          },
+        const job = await db.job.findUnique({
+          where: { id: jobId },
+          select: { title: true, clientId: true },
         });
-      } catch (e) {
-        console.error('[quote PATCH] notify winner failed:', e);
-      }
-
-      // Notify all losing providers (dedupe providerIds just in case)
-      const loserIds = [...new Set(otherQuotes.map((q) => q.providerId))];
-      if (loserIds.length > 0) {
-        try {
-          await notifyMany({
-            data: loserIds.map((uid) => ({
-              userId: uid,
-              title: 'Quote Update',
-              message: `The job "${job.title}" has been awarded to another provider.`,
+        if (job) {
+          await notify({
+            data: {
+              userId: quote.providerId,
+              title: '🎉 Quote Accepted!',
+              message: `Your quote for "${job.title}" was accepted! The client will contact you to arrange the service.`,
               type: 'system',
-              relatedId: id,
-            })),
+              isRead: false,
+              relatedId: jobId,
+            },
           });
-        } catch (e) {
-          console.error('[quote PATCH] notifyMany losers failed:', e);
+
+          // Notify losing providers
+          const losingQuotes = await db.jobQuote.findMany({
+            where: { jobId, id: { not: quoteId } },
+            select: { providerId: true },
+          });
+          if (losingQuotes.length > 0) {
+            await notifyMany({
+              data: losingQuotes.map((q) => ({
+                userId: q.providerId,
+                title: 'Quote Update',
+                message: `The job "${job.title}" was awarded to another provider. Keep an eye out for new jobs!`,
+                type: 'system',
+                isRead: false,
+                relatedId: jobId,
+              })),
+            });
+          }
         }
-      }
-    } else {
-      // status === 'rejected' — just update this quote
-      await db.jobQuote.update({
-        where: { id: quoteId },
-        data: { status: 'rejected' },
-      });
+      } catch {}
     }
 
-    // Return the updated quote with provider info
-    const updatedQuote = await db.jobQuote.findUnique({
-      where: { id: quoteId },
-      include: {
-        provider: {
-          select: {
-            id: true,
-            name: true,
-            photoUrl: true,
-            location: true,
-            isVerified: true,
-            isPro: true,
-            proExpiry: true,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json({ quote: updatedQuote });
+    return NextResponse.json({ success: true, quoteId, status });
   } catch (error) {
     console.error('Update quote error:', error);
     return NextResponse.json(

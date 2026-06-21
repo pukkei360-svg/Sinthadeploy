@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { notify } from '@/lib/notify';
 
 export async function GET(request: NextRequest) {
   try {
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create notification for the reviewed person
-    await db.notification.create({
+    await notify({
       data: {
         userId: targetId,
         title: 'New Review',

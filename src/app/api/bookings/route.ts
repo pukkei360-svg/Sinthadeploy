@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { notify } from '@/lib/notify';
 
 export async function GET(request: NextRequest) {
   try {
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create notification for provider (auto-accepted)
-    await db.notification.create({
+    await notify({
       data: {
         userId: providerId,
         title: 'New Booking',
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create notification for client (auto-accepted)
-    await db.notification.create({
+    await notify({
       data: {
         userId: clientId,
         title: 'Booking Confirmed',

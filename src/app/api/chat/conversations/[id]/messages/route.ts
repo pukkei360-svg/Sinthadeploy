@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { notify } from '@/lib/notify';
 
 export async function GET(
   request: NextRequest,
@@ -123,7 +124,7 @@ export async function POST(
         ? conversation.participantB
         : conversation.participantA;
 
-    await db.notification.create({
+    await notify({
       data: {
         userId: otherUserId,
         title: 'New Message',

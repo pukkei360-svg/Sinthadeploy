@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Check, Crown, X, ChevronDown, ChevronUp, Copy, ExternalLink, Loader2, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { cleanError } from '@/lib/clean-error'
 
 const benefits = [
   'Higher search ranking',
@@ -138,7 +139,7 @@ export default function SinthaProScreen() {
 
   const handlePaymentLink = async () => {
     if (!user) {
-      toast({ title: 'Error', description: 'Please login first', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Please login first' })
       return
     }
 
@@ -240,7 +241,6 @@ export default function SinthaProScreen() {
           toast({
             title: 'Payment Failed',
             description: response.error?.description || 'Payment was not completed. Please try again.',
-            variant: 'destructive',
           })
         })
 
@@ -255,7 +255,6 @@ export default function SinthaProScreen() {
         toast({
           title: 'Error',
           description: 'Could not load Razorpay checkout. Please check your internet connection.',
-          variant: 'destructive',
         })
       }
 
@@ -263,8 +262,7 @@ export default function SinthaProScreen() {
     } catch (err: unknown) {
       toast({
         title: 'Error',
-        description: (err as Error).message || 'Failed to start payment',
-        variant: 'destructive',
+        description: cleanError(err),
       })
     } finally {
       setPaymentLinkLoading(false)
@@ -289,7 +287,7 @@ export default function SinthaProScreen() {
         toast({ title: 'Payment Pending', description: data.message || 'Payment not completed yet. Please complete payment first.' })
       }
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message || 'Failed to verify payment', variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     } finally {
       setCheckingPayment(false)
     }

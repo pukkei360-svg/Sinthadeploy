@@ -4,13 +4,20 @@ import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 import { notify } from '@/lib/notify';
 
 /**
- * GET /api/jobs/:id/quotes
+ * GET /api/jobs/[id]/quotes
+ *   Returns all quotes for a job, with provider info.
+ *   Used by the client to review quotes on their job.
  *
- * Returns all quotes for a job, each with provider info
- * (id, name, photoUrl, location, isVerified, isPro, proExpiry).
+ * POST /api/jobs/[id]/quotes
+ *   Body: { providerId, price, message, estimatedTime? }
+ *   A provider sends a quote (offer) on a job.
+ *   - Validates: job is still 'open'
+ *   - Validates: provider hasn't already quoted (no duplicates)
+ *   - Validates: max 20 quotes per job (anti-spam)
+ *   - Notifies the client that a new quote arrived
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -20,6 +27,7 @@ export async function GET(
 
     const quotes = await db.jobQuote.findMany({
       where: { jobId: id },
+      orderBy: { createdAt: 'desc' },
       include: {
         provider: {
           select: {
@@ -33,7 +41,6 @@ export async function GET(
           },
         },
       },
-      orderBy: { createdAt: 'asc' },
     });
 
     return NextResponse.json({ quotes });
@@ -46,22 +53,6 @@ export async function GET(
   }
 }
 
-/**
- * POST /api/jobs/:id/quotes
- *
- * Submit a quote on a job.
- *
- * Body: { providerId, price, message, estimatedTime? }
- *
- * Validations:
- *   - job must exist and be 'open'
- *   - provider cannot quote their own job
- *   - provider cannot quote twice (no duplicates)
- *   - max 20 quotes per job
- *
- * Notifies the job's client via notify().
- * Returns the created quote with provider info.
- */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -69,39 +60,40 @@ export async function POST(
   try {
     await ensureSchemaMigrated();
 
-    const { id } = await params;
+    const { id: jobId } = await params;
     const body = await request.json();
-    const { providerId, price, message, estimatedTime } = body;
+    const { providerId, price, message, estimatedTime } = body as {
+      providerId: string;
+      price: number;
+      message: string;
+      estimatedTime?: string;
+    };
 
-    // Required fields
-    if (!providerId || price == null || !message) {
+    if (!providerId || !price || !message) {
       return NextResponse.json(
-        { error: 'providerId, price, and message are required' },
+        { error: 'Provider ID, price, and message are required' },
         { status: 400 }
       );
     }
 
-    if (typeof message !== 'string' || message.trim().length === 0) {
+    if (price <= 0) {
       return NextResponse.json(
-        { error: 'message is required' },
+        { error: 'Price must be greater than 0' },
         { status: 400 }
       );
     }
 
-    if (typeof price !== 'number' || isNaN(price) || price <= 0) {
+    if (message.trim().length < 5) {
       return NextResponse.json(
-        { error: 'price must be a positive number' },
+        { error: 'Message must be at least 5 characters' },
         { status: 400 }
       );
     }
 
-    // Job must exist and be open
-    const job = await db.job.findUnique({ where: { id } });
+    // Verify job exists and is still open
+    const job = await db.job.findUnique({ where: { id: jobId } });
     if (!job) {
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
     if (job.status !== 'open') {
       return NextResponse.json(
@@ -110,7 +102,7 @@ export async function POST(
       );
     }
 
-    // Provider can't quote their own job
+    // Prevent providers from quoting on their own jobs
     if (job.clientId === providerId) {
       return NextResponse.json(
         { error: 'You cannot quote on your own job' },
@@ -118,20 +110,19 @@ export async function POST(
       );
     }
 
-    // No duplicate quotes from the same provider
+    // Check if provider already quoted (no duplicates)
     const existingQuote = await db.jobQuote.findFirst({
-      where: { jobId: id, providerId },
-      select: { id: true },
+      where: { jobId, providerId },
     });
     if (existingQuote) {
       return NextResponse.json(
         { error: 'You have already quoted on this job' },
-        { status: 409 }
+        { status: 400 }
       );
     }
 
-    // Max 20 quotes per job
-    const quoteCount = await db.jobQuote.count({ where: { jobId: id } });
+    // Anti-spam: max 20 quotes per job
+    const quoteCount = await db.jobQuote.count({ where: { jobId } });
     if (quoteCount >= 20) {
       return NextResponse.json(
         { error: 'This job has reached the maximum number of quotes (20)' },
@@ -139,13 +130,24 @@ export async function POST(
       );
     }
 
+    // Verify provider exists and has a provider profile
+    const provider = await db.user.findUnique({
+      where: { id: providerId },
+      select: { id: true, name: true, role: true },
+    });
+    if (!provider) {
+      return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
+    }
+
+    // Create the quote
     const quote = await db.jobQuote.create({
       data: {
-        jobId: id,
+        jobId,
         providerId,
-        price,
+        price: Number(price),
         message: message.trim(),
-        estimatedTime: estimatedTime || null,
+        estimatedTime: estimatedTime?.trim() || null,
+        status: 'pending',
       },
       include: {
         provider: {
@@ -155,27 +157,24 @@ export async function POST(
             photoUrl: true,
             location: true,
             isVerified: true,
-            isPro: true,
-            proExpiry: true,
           },
         },
       },
     });
 
-    // Notify the client that a new quote was received
+    // Notify the client that they got a new quote
     try {
       await notify({
         data: {
           userId: job.clientId,
-          title: 'New Quote on Your Job',
-          message: `You received a new quote of ₹${price} on "${job.title}".`,
+          title: '💬 New Quote Received',
+          message: `${provider.name} quoted ₹${price} for "${job.title}". Tap to view.`,
           type: 'system',
-          relatedId: job.id,
+          isRead: false,
+          relatedId: jobId,
         },
       });
-    } catch (e) {
-      console.error('[quotes POST] notify client failed:', e);
-    }
+    } catch {}
 
     return NextResponse.json({ quote }, { status: 201 });
   } catch (error) {

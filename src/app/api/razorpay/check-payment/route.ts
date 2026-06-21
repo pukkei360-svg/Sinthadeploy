@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import Razorpay from 'razorpay';
+import { notify } from '@/lib/notify';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+// Lazy-initialize Razorpay so the module doesn't crash at build time
+// when env vars aren't set. The actual Razorpay instance is created on
+// first use (runtime), not at module load (build time).
+let _razorpay: Razorpay | null = null;
+function getRazorpay(): Razorpay {
+  if (_razorpay) return _razorpay;
+  _razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || '',
+  });
+  return _razorpay;
+}
 
 /**
  * Check payment status and activate PRO if paid.
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
     if (razorpayOrderId && razorpayOrderId.startsWith('order_')) {
       try {
         // Fetch payments for this order
-        const payments = await razorpay.orders.fetchPayments(razorpayOrderId);
+        const payments = await getRazorpay().orders.fetchPayments(razorpayOrderId);
 
         // Check if any payment is captured
         const capturedPayment = payments.items?.find(
@@ -112,7 +121,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Create notification
-          await db.notification.create({
+          await notify({
             data: {
               userId,
               title: 'SINTHA PRO Activated!',
@@ -139,7 +148,7 @@ export async function POST(request: NextRequest) {
     // Try payment link fetch (for Payment Link flow)
     if (paymentLinkId && paymentLinkId.startsWith('plink_')) {
       try {
-        const paymentLink = await razorpay.paymentLink.fetch(paymentLinkId);
+        const paymentLink = await getRazorpay().paymentLink.fetch(paymentLinkId);
 
         if (paymentLink.status === 'paid') {
           const paymentId = paymentLink.payments?.[0]?.payment_id || null;
@@ -160,7 +169,7 @@ export async function POST(request: NextRequest) {
             data: { isPro: true, proExpiry },
           });
 
-          await db.notification.create({
+          await notify({
             data: {
               userId,
               title: 'SINTHA PRO Activated!',

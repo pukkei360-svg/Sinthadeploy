@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
+import { cleanError } from '@/lib/clean-error'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -45,7 +46,7 @@ export default function BookingDetailScreen() {
         const data = await apiFetch(`/bookings/${bookingId}`)
         setBooking(data.booking)
       } catch {
-        toast({ title: 'Error', description: 'Failed to load booking', variant: 'destructive' })
+        toast({ title: 'Error', description: 'Failed to load booking' })
       } finally {
         setLoading(false)
       }
@@ -64,7 +65,7 @@ export default function BookingDetailScreen() {
       updateBooking(bookingId, { status: data.booking.status })
       toast({ title: 'Updated', description: `Booking ${status.replace('_', ' ')}` })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     } finally {
       setActionLoading(false)
     }
@@ -87,7 +88,7 @@ export default function BookingDetailScreen() {
       toast({ title: 'Review Submitted!', description: 'Thank you for your feedback.' })
       setShowReview(false)
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     } finally {
       setActionLoading(false)
     }

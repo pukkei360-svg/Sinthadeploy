@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureSchemaMigrated } from '@/lib/migrate-schema';
+import { notify } from '@/lib/notify';
 
 export async function PUT(
   request: NextRequest,
@@ -74,7 +75,7 @@ export async function PUT(
     }
 
     // Create notification for the user
-    await db.notification.create({
+    await notify({
       data: {
         userId: existing.userId,
         title: status === 'verified' ? 'Verification Approved' : 'Verification Rejected',

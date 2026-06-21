@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import crypto from 'crypto';
+import { notify } from '@/lib/notify';
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create notification
-    await db.notification.create({
+    await notify({
       data: {
         userId,
         title: 'SINTHA PRO Activated! 🎉',

@@ -32,7 +32,10 @@ import ReviewsScreen from '@/components/sintha/ReviewsScreen'
 import ForgotPasswordScreen from '@/components/sintha/ForgotPasswordScreen'
 import ReportProviderScreen from '@/components/sintha/ReportProviderScreen'
 import AdminClaimsScreen from '@/components/sintha/AdminClaimsScreen'
-import AdminBroadcastScreen from '@/components/sintha/AdminBroadcastScreen'
+import PostJobScreen from '@/components/sintha/PostJobScreen'
+import MyJobsScreen from '@/components/sintha/MyJobsScreen'
+import OpenJobsScreen from '@/components/sintha/OpenJobsScreen'
+import JobDetailScreen from '@/components/sintha/JobDetailScreen'
 
 export default function Home() {
   const {
@@ -124,10 +127,15 @@ export default function Home() {
             localStorage.removeItem('sintha_token')
             localStorage.removeItem('sintha_provider_profile')
 
-            // Show the error message to the user via an alert
+            // Show a clean error message to the user via an alert
             // (toast requires the Toaster component to be mounted,
             // and at this point the app is still on the landing screen)
-            alert(err.message)
+            const banMsg = err instanceof Error && err.message.toLowerCase().includes('banned')
+              ? 'This account has been permanently banned. Please contact support.'
+              : err instanceof Error && err.message.toLowerCase().includes('suspended')
+              ? 'Your account has been temporarily suspended. Please contact support.'
+              : 'Something went wrong. Please try again.'
+            alert(banMsg)
 
             setUser(null, null)
             navigate('landing')
@@ -383,8 +391,14 @@ export default function Home() {
         return <ReportProviderScreen />
       case 'admin-claims':
         return <AdminClaimsScreen />
-      case 'admin-broadcast':
-        return <AdminBroadcastScreen />
+      case 'post-job':
+        return <PostJobScreen />
+      case 'my-jobs':
+        return <MyJobsScreen />
+      case 'open-jobs':
+        return <OpenJobsScreen />
+      case 'job-detail':
+        return <JobDetailScreen />
       default:
         return <LandingScreen />
     }

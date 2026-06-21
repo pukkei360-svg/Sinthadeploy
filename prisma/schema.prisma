@@ -44,6 +44,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   claimsFiled Claim[] @relation("ClaimReporter")
   claimsAgainst Claim[] @relation("ClaimSubject")
+  // Job marketplace relations
   jobsPosted Job[] @relation("JobClient")
   jobQuotes JobQuote[] @relation("JobQuoteProvider")
 }
@@ -294,18 +295,26 @@ model PasswordResetToken {
 }
 
 // ── Job Marketplace ──────────────────────────────────────────────
+// A client posts a Job describing what they need. Providers in the
+// matching category see it and send JobQuotes (price + message).
+// The client reviews quotes and accepts one — which auto-creates a
+// Booking with that provider.
+
 model Job {
   id            String   @id @default(cuid())
-  clientId      String
-  categoryId    String
-  title         String
-  description   String
-  location      String?
-  budget        Float?
-  preferredDate DateTime?
-  urgency       String   @default("flexible")
-  photoUrls     String?
-  status        String   @default("open")
+  clientId      String   // the user who posted the job
+  categoryId    String   // electrician, tutor, etc.
+  title         String   // short — "Fix ceiling fan"
+  description   String   // detailed — what's broken, when, where
+  location      String?  // auto-filled from client profile, editable
+  budget        Float?   // nullable = "open to quotes"
+  preferredDate DateTime? // optional — when the client wants it done
+  urgency       String   @default("flexible") // today, this_week, flexible
+  // Optional photos of the job (e.g. photo of broken fan, room layout).
+  // Stored as JSON array of Cloudinary URLs. Max 2 photos per job.
+  // Clients attach these so providers can see the problem before quoting.
+  photoUrls     String?  // JSON array: ["https://res.cloudinary.com/...", "..."]
+  status        String   @default("open") // open, awarded, closed, cancelled
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -322,11 +331,11 @@ model Job {
 model JobQuote {
   id            String   @id @default(cuid())
   jobId         String
-  providerId    String
-  price         Float
-  message       String
-  estimatedTime String?
-  status        String   @default("pending")
+  providerId    String   // the provider offering the quote
+  price         Float    // quoted price in rupees
+  message       String   // provider's pitch to the client
+  estimatedTime String?  // "2 hours", "1 day", etc.
+  status        String   @default("pending") // pending, accepted, rejected
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

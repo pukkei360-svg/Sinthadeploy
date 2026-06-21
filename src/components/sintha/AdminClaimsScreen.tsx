@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useToast } from '@/hooks/use-toast'
+import { cleanError } from '@/lib/clean-error'
 import {
   ArrowLeft, Flag, Search, Loader2, Ban, Pause, Play, CheckCircle, XCircle,
   ChevronDown, ChevronUp, AlertTriangle, User, Mail
@@ -91,8 +92,7 @@ export default function AdminClaimsScreen() {
     } catch (err) {
       toast({
         title: 'Failed to load claims',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'destructive',
+        description: cleanError(err),
       })
     } finally {
       setLoading(false)
@@ -127,8 +127,7 @@ export default function AdminClaimsScreen() {
     } catch (err) {
       toast({
         title: 'Failed',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'destructive',
+        description: cleanError(err),
       })
     } finally {
       setActing(null)

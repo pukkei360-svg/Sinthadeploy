@@ -86,7 +86,6 @@ export default function AuthScreen() {
       toast({
         title: 'Invalid Email',
         description: loginEmailValidation.reason || 'Please enter a valid email address',
-        variant: 'destructive',
       })
       return
     }
@@ -132,7 +131,7 @@ export default function AuthScreen() {
       } else if (message.includes('auth/network-request-failed')) {
         setFirebaseError('Network error. Please check your internet connection.')
       } else {
-        setFirebaseError(message)
+        setFirebaseError('Something went wrong. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -150,7 +149,6 @@ export default function AuthScreen() {
       toast({
         title: 'Invalid Email',
         description: regEmailValidation.reason || 'Please enter a valid email address',
-        variant: 'destructive',
       })
       return
     }
@@ -194,7 +192,7 @@ export default function AuthScreen() {
       } else if (message.includes('auth/network-request-failed')) {
         setFirebaseError('Network error. Please check your internet connection.')
       } else {
-        setFirebaseError(message)
+        setFirebaseError('Something went wrong. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -219,14 +217,14 @@ export default function AuthScreen() {
             </p>
           </CardHeader>
           <CardContent>
-            {/* Firebase Error Banner */}
+            {/* Error Banner — black/gray theme instead of red */}
             {firebaseError && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+              <div className="mb-4 bg-gray-100 border border-gray-300 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-gray-700 mt-0.5 shrink-0" />
                 <div className="flex-1">
-                  <p className="text-sm text-red-700">{firebaseError}</p>
+                  <p className="text-sm text-gray-800">{firebaseError}</p>
                 </div>
-                <button onClick={() => setFirebaseError(null)} className="text-red-400 hover:text-red-600 text-sm">&times;</button>
+                <button onClick={() => setFirebaseError(null)} className="text-gray-500 hover:text-gray-700 text-sm">&times;</button>
               </div>
             )}
 

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Plus, Trash2, Edit, GripVertical, Tag } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { cleanError } from '@/lib/clean-error'
 
 export default function AdminCategoriesScreen() {
   const { navigate, categories, setCategories } = useAppStore()
@@ -38,7 +39,7 @@ export default function AdminCategoriesScreen() {
 
   const createCategory = async () => {
     if (!newName.trim()) {
-      toast({ title: 'Error', description: 'Name is required', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Name is required' })
       return
     }
     setCreating(true)
@@ -59,7 +60,7 @@ export default function AdminCategoriesScreen() {
       setShowForm(false)
       toast({ title: 'Created', description: 'Category created successfully' })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     } finally {
       setCreating(false)
     }
@@ -72,7 +73,7 @@ export default function AdminCategoriesScreen() {
       setCategories(categories.filter((c) => c.id !== id))
       toast({ title: 'Deleted', description: 'Category deleted' })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     }
   }
 

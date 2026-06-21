@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users, Camera, ImagePlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { uploadPhoto } from '@/lib/cloudinary'
+import { cleanError } from '@/lib/clean-error'
 
 export default function RoleSelectScreen() {
   const { user, setUser, navigate, token } = useAppStore()
@@ -30,7 +31,7 @@ export default function RoleSelectScreen() {
       setPhotoUrl(result.url)
       toast({ title: 'Photo Added!', description: 'Looking great! Now choose your role' })
     } catch (err: unknown) {
-      toast({ title: 'Upload Failed', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Upload Failed', description: cleanError(err) })
     } finally { setUploadingPhoto(false) }
   }
 
@@ -76,7 +77,7 @@ export default function RoleSelectScreen() {
       }
     } catch (err: unknown) {
       const message = (err as Error).message || 'Something went wrong'
-      toast({ title: 'Error', description: message, variant: 'destructive' })
+      toast({ title: 'Error', description: message })
       // Still navigate on client side even if API fails
       if (role === 'client') {
         const updatedUser = { ...user, role: 'client', photoUrl: photoUrl || user.photoUrl }

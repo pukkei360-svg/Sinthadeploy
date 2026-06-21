@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import Razorpay from 'razorpay';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+// Lazy-initialize Razorpay so the module doesn't crash at build time
+// when env vars aren't set. The actual Razorpay instance is created on
+// first use (runtime), not at module load (build time).
+let _razorpay: Razorpay | null = null;
+function getRazorpay(): Razorpay {
+  if (_razorpay) return _razorpay;
+  _razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || '',
+  });
+  return _razorpay;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +47,7 @@ export async function POST(request: NextRequest) {
     const amount = 19900; // ₹199 in paise
 
     // Create Razorpay order
-    const order = await razorpay.orders.create({
+    const order = await getRazorpay().orders.create({
       amount,
       currency: 'INR',
       receipt: `sintha_pro_${Date.now()}`,

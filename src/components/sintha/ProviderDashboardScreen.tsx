@@ -421,7 +421,14 @@ export default function ProviderDashboardScreen() {
         {/* Quick Actions */}
         <div>
           <h3 className="font-bold text-gray-800 mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
+            <button
+              onClick={() => navigate('open-jobs')}
+              className="bg-white rounded-xl p-3 text-center shadow-sm relative"
+            >
+              <Briefcase className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+              <span className="text-[9px] text-gray-600">Open Jobs</span>
+            </button>
             <button
               onClick={() => navigate('provider-onboarding')}
               className="bg-white rounded-xl p-3 text-center shadow-sm"

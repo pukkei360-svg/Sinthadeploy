@@ -12,7 +12,7 @@ import BottomNav from './BottomNav'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot
+  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -167,27 +167,34 @@ export default function HomeScreen() {
 
       {/* Quick Stats for Client */}
       <div className="px-4 pt-4">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => navigate('post-job')}
+            className="bg-white rounded-xl p-3 text-center shadow-sm sintha-card-hover"
+          >
+            <Briefcase className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">Post Job</span>
+          </button>
+          <button
+            onClick={() => navigate('my-jobs')}
+            className="bg-white rounded-xl p-3 text-center shadow-sm sintha-card-hover"
+          >
+            <Calendar className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">My Jobs</span>
+          </button>
           <button
             onClick={() => navigate('my-bookings')}
-            className="bg-white rounded-xl p-3 text-center shadow-sm"
+            className="bg-white rounded-xl p-3 text-center shadow-sm sintha-card-hover"
           >
-            <Calendar className="h-5 w-5 text-blue-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">My Bookings</span>
+            <Calendar className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">Bookings</span>
           </button>
           <button
             onClick={() => navigate('chat-list')}
-            className="bg-white rounded-xl p-3 text-center shadow-sm"
+            className="bg-white rounded-xl p-3 text-center shadow-sm sintha-card-hover"
           >
-            <MessageCircle className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <MessageCircle className="h-5 w-5 text-purple-600 mx-auto mb-1" />
             <span className="text-[10px] font-medium text-gray-600">Messages</span>
-          </button>
-          <button
-            onClick={() => navigate('ai-assistant')}
-            className="bg-white rounded-xl p-3 text-center shadow-sm"
-          >
-            <Bot className="h-5 w-5 text-purple-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-gray-600">AI Assistant</span>
           </button>
         </div>
       </div>
@@ -198,26 +205,26 @@ export default function HomeScreen() {
           <h2 className="text-lg font-bold text-gray-800">Categories</h2>
         </div>
         {categories.length === 0 ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-28 rounded-xl" />
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2">
             {categories.map((cat: ServiceCategory) => {
               const IconComp = categoryIcons[cat.icon || ''] || Home
               return (
                 <button
                   key={cat.id}
                   onClick={() => navigate('category', { categoryId: cat.id, categoryName: cat.name })}
-                  className="bg-white rounded-2xl p-4 text-center sintha-card-hover shadow-sm border border-[#E2E8F0]"
+                  className="bg-white rounded-xl p-2.5 text-center sintha-card-hover shadow-sm border border-[#E2E8F0]"
                 >
-                  <div className="w-16 h-16 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-2">
-                    <IconComp className="h-8 w-8 text-[#0F4C81]" />
+                  <div className="w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center mx-auto mb-1.5">
+                    <IconComp className="h-5 w-5 text-[#0F4C81]" />
                   </div>
-                  <p className="text-sm font-bold text-[#1E293B] line-clamp-1">{cat.name}</p>
-                  <p className="text-[10px] text-[#64748B] mt-0.5">{cat._count?.providers || 0} providers</p>
+                  <p className="text-xs font-bold text-[#1E293B] line-clamp-1">{cat.name}</p>
+                  <p className="text-[9px] text-[#64748B] mt-0.5">{cat._count?.providers || 0} providers</p>
                 </button>
               )
             })}

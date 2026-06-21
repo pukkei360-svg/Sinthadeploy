@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { notify } from '@/lib/notify';
 
 export async function GET(
   _request: NextRequest,
@@ -117,7 +118,7 @@ export async function PUT(
 
     // Create notification for the relevant party
     if (status === 'accepted') {
-      await db.notification.create({
+      await notify({
         data: {
           userId: existing.clientId,
           title: 'Booking Accepted',
@@ -127,7 +128,7 @@ export async function PUT(
         },
       });
     } else if (status === 'completed') {
-      await db.notification.create({
+      await notify({
         data: {
           userId: existing.clientId,
           title: 'Booking Completed',
@@ -142,7 +143,7 @@ export async function PUT(
         data: { totalBookings: { increment: 1 } },
       });
     } else if (status === 'cancelled') {
-      await db.notification.create({
+      await notify({
         data: {
           userId: existing.providerId,
           title: 'Booking Cancelled',

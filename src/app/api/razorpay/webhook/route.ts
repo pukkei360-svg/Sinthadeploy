@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import crypto from 'crypto';
+import { notify } from '@/lib/notify';
 
 /**
  * Razorpay Webhook Handler
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create notification
-      await db.notification.create({
+      await notify({
         data: {
           userId,
           title: 'SINTHA PRO Activated!',
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
           data: { isPro: true, proExpiry },
         });
 
-        await db.notification.create({
+        await notify({
           data: {
             userId: subscription.userId,
             title: 'SINTHA PRO Activated!',

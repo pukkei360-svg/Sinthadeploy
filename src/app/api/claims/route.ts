@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureSchemaMigrated } from '@/lib/migrate-schema';
+import { notifyMany } from '@/lib/notify';
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/claims
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
     if (admins.length > 0) {
-      await db.notification.createMany({
+      await notifyMany({
         data: admins.map((admin) => ({
           userId: admin.id,
           title: `🚩 New Claim: ${claim.title}`,

@@ -5,15 +5,13 @@ import { notifyMany } from '@/lib/notify';
 
 /**
  * GET /api/jobs
+ *   ?clientId=xxx           — list jobs posted by a client (for "My Jobs")
+ *   ?providerId=xxx         — list open jobs matching the provider's category
+ *   ?status=open            — filter by status (optional)
  *
- * Query params (mutually exclusive — first match wins):
- *   ?clientId=xxx     → list ALL jobs posted by this client (any status)
- *   ?providerId=xxx   → list OPEN jobs in this provider's category, each
- *                       annotated with `hasQuoted` (true if the provider
- *                       has already submitted a quote on that job)
- *   (none)            → list ALL open jobs
- *
- * Each job includes: client info, category info, _count.quotes
+ * POST /api/jobs
+ *   Body: { clientId, categoryId, title, description, location?, budget?, preferredDate?, urgency? }
+ *   Creates a new job posting.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,71 +20,90 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('clientId');
     const providerId = searchParams.get('providerId');
+    const status = searchParams.get('status');
 
-    const baseInclude = {
-      client: {
-        select: {
-          id: true,
-          name: true,
-          photoUrl: true,
-          location: true,
-          phone: true,
-        },
-      },
-      category: true,
-      _count: { select: { quotes: true } },
-    };
-
-    let jobs;
-
-    if (clientId) {
-      // List this client's jobs (all statuses)
-      jobs = await db.job.findMany({
-        where: { clientId },
-        include: baseInclude,
-        orderBy: { createdAt: 'desc' },
-      });
-    } else if (providerId) {
-      // Find the provider's category via their ProviderProfile
+    // ── Provider: list open jobs in their category ──
+    if (providerId) {
       const providerProfile = await db.providerProfile.findUnique({
         where: { userId: providerId },
         select: { categoryId: true },
       });
-
       if (!providerProfile) {
-        // No provider profile → no matching jobs
         return NextResponse.json({ jobs: [] });
       }
 
-      const openJobs = await db.job.findMany({
-        where: {
-          categoryId: providerProfile.categoryId,
-          status: 'open',
+      const where: Record<string, unknown> = {
+        categoryId: providerProfile.categoryId,
+        status: 'open',
+      };
+      // Don't show the provider their own jobs (if they're also a client)
+      where.NOT = { clientId: providerId };
+
+      const jobs = await db.job.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+        include: {
+          client: {
+            select: { id: true, name: true, photoUrl: true, location: true },
+          },
+          category: { select: { id: true, name: true, icon: true } },
+          _count: { select: { quotes: true } },
         },
-        include: baseInclude,
-        orderBy: { createdAt: 'desc' },
       });
 
-      // Check which of these jobs the provider has already quoted on
-      const jobIds = openJobs.map((j) => j.id);
-      const alreadyQuoted = await db.jobQuote.findMany({
-        where: { jobId: { in: jobIds }, providerId },
-        select: { jobId: true },
-      });
-      const quotedSet = new Set(alreadyQuoted.map((q) => q.jobId));
+      // Also mark which jobs this provider has already quoted on
+      const jobsWithQuoteFlag = await Promise.all(
+        jobs.map(async (job) => {
+          const existingQuote = await db.jobQuote.findFirst({
+            where: { jobId: job.id, providerId },
+            select: { id: true, status: true },
+          });
+          return {
+            ...job,
+            hasQuoted: !!existingQuote,
+            myQuoteStatus: existingQuote?.status || null,
+          };
+        })
+      );
 
-      jobs = openJobs.map((j) => ({
-        ...j,
-        hasQuoted: quotedSet.has(j.id),
-      }));
-    } else {
-      // No params → all open jobs
-      jobs = await db.job.findMany({
-        where: { status: 'open' },
-        include: baseInclude,
-        orderBy: { createdAt: 'desc' },
-      });
+      return NextResponse.json({ jobs: jobsWithQuoteFlag });
     }
+
+    // ── Client: list their own posted jobs ──
+    if (clientId) {
+      const where: Record<string, unknown> = { clientId };
+      if (status) where.status = status;
+
+      const jobs = await db.job.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          category: { select: { id: true, name: true, icon: true } },
+          _count: { select: { quotes: true } },
+        },
+      });
+
+      return NextResponse.json({ jobs });
+    }
+
+    // ── No filter: return all open jobs (for admin / browse) ──
+    const where: Record<string, unknown> = {};
+    if (status) where.status = status;
+    else where.status = 'open'; // default to open only
+
+    const jobs = await db.job.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: {
+        client: {
+          select: { id: true, name: true, photoUrl: true, location: true },
+        },
+        category: { select: { id: true, name: true, icon: true } },
+        _count: { select: { quotes: true } },
+      },
+    });
 
     return NextResponse.json({ jobs });
   } catch (error) {
@@ -98,27 +115,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/jobs
- *
- * Create a new job posting.
- *
- * Body:
- *   {
- *     clientId,      // required
- *     categoryId,    // required
- *     title,         // required, min 3 chars
- *     description,   // required, min 10 chars
- *     location?,     // string
- *     budget?,       // number
- *     preferredDate?,// ISO date string
- *     urgency?,      // 'flexible' | 'soon' | 'urgent' (default 'flexible')
- *     photoUrls?     // string[] — max 2, must be http(s) URLs
- *   }
- *
- * On success, notifies ALL providers in the category via notifyMany.
- * Returns the created job with client + category info.
- */
 export async function POST(request: NextRequest) {
   try {
     await ensureSchemaMigrated();
@@ -134,104 +130,113 @@ export async function POST(request: NextRequest) {
       preferredDate,
       urgency,
       photoUrls,
-    } = body;
+    } = body as {
+      clientId: string;
+      categoryId: string;
+      title: string;
+      description: string;
+      location?: string;
+      budget?: number;
+      preferredDate?: string;
+      urgency?: string;
+      photoUrls?: string[];
+    };
 
-    // Required fields
     if (!clientId || !categoryId || !title || !description) {
       return NextResponse.json(
-        { error: 'clientId, categoryId, title, and description are required' },
+        { error: 'Client ID, category, title, and description are required' },
         { status: 400 }
       );
     }
 
-    // Title length
-    if (typeof title !== 'string' || title.trim().length < 3) {
+    if (title.trim().length < 3) {
       return NextResponse.json(
         { error: 'Title must be at least 3 characters' },
         { status: 400 }
       );
     }
 
-    // Description length
-    if (typeof description !== 'string' || description.trim().length < 10) {
+    if (description.trim().length < 10) {
       return NextResponse.json(
         { error: 'Description must be at least 10 characters' },
         { status: 400 }
       );
     }
 
-    // Validate photoUrls (max 2, must be http(s) URLs)
+    // Validate photoUrls — max 2 photos, must be valid URLs
     let photoUrlsJson: string | null = null;
-    if (photoUrls !== undefined && photoUrls !== null) {
-      if (!Array.isArray(photoUrls)) {
-        return NextResponse.json(
-          { error: 'photoUrls must be an array' },
-          { status: 400 }
-        );
-      }
+    if (photoUrls && Array.isArray(photoUrls)) {
       if (photoUrls.length > 2) {
         return NextResponse.json(
-          { error: 'A maximum of 2 photos is allowed' },
+          { error: 'Maximum 2 photos allowed per job' },
           { status: 400 }
         );
       }
-      const isHttpUrl = (u: unknown) =>
-        typeof u === 'string' && /^https?:\/\//i.test(u);
-      if (!photoUrls.every(isHttpUrl)) {
-        return NextResponse.json(
-          { error: 'All photoUrls must be valid http(s) URLs' },
-          { status: 400 }
-        );
+      // Filter to valid-looking URLs (basic check)
+      const validUrls = photoUrls.filter(
+        (url) => typeof url === 'string' && url.startsWith('http')
+      );
+      if (validUrls.length > 0) {
+        photoUrlsJson = JSON.stringify(validUrls);
       }
-      photoUrlsJson = JSON.stringify(photoUrls);
     }
 
+    // Verify client exists
+    const client = await db.user.findUnique({ where: { id: clientId } });
+    if (!client) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 });
+    }
+
+    // Verify category exists
+    const category = await db.serviceCategory.findUnique({ where: { id: categoryId } });
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    // Validate urgency
+    const validUrgency = ['today', 'this_week', 'flexible'].includes(urgency || '')
+      ? urgency
+      : 'flexible';
+
+    // Create the job
     const job = await db.job.create({
       data: {
         clientId,
         categoryId,
         title: title.trim(),
         description: description.trim(),
-        location: location || null,
-        budget: budget != null && budget !== '' ? Number(budget) : null,
+        location: location?.trim() || client.location || null,
+        budget: budget && budget > 0 ? Number(budget) : null,
         preferredDate: preferredDate ? new Date(preferredDate) : null,
-        urgency: urgency || 'flexible',
+        urgency: validUrgency as string,
         photoUrls: photoUrlsJson,
+        status: 'open',
       },
       include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-            photoUrl: true,
-            location: true,
-            phone: true,
-          },
-        },
-        category: true,
+        category: { select: { id: true, name: true, icon: true } },
       },
     });
 
-    // Notify every provider in this category about the new job
+    // Notify all providers in this category about the new job
     try {
-      const providers = await db.providerProfile.findMany({
+      const providersInCategory = await db.providerProfile.findMany({
         where: { categoryId },
         select: { userId: true },
       });
-
-      if (providers.length > 0) {
+      if (providersInCategory.length > 0) {
         await notifyMany({
-          data: providers.map((p) => ({
+          data: providersInCategory.map((p) => ({
             userId: p.userId,
-            title: 'New Job in Your Category',
-            message: `A new job "${job.title}" has been posted in your category.`,
+            title: '🆕 New Job Posted',
+            message: `"${title.trim()}" in ${category.name}. Tap to view and send a quote.`,
             type: 'system',
+            isRead: false,
             relatedId: job.id,
           })),
         });
       }
-    } catch (notifyErr) {
-      console.error('[jobs POST] notifyMany failed:', notifyErr);
+    } catch {
+      // Notification failure shouldn't block job creation
     }
 
     return NextResponse.json({ job }, { status: 201 });

@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import Razorpay from 'razorpay';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
-});
+// Lazy-initialize Razorpay so the module doesn't crash at build time
+// when env vars aren't set. The actual Razorpay instance is created on
+// first use (runtime), not at module load (build time).
+let _razorpay: Razorpay | null = null;
+function getRazorpay(): Razorpay {
+  if (_razorpay) return _razorpay;
+  _razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || '',
+  });
+  return _razorpay;
+}
 
 /**
  * Create a Razorpay Payment Link for SINTHA PRO subscription.
@@ -39,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a Razorpay Payment Link
-    const paymentLink = await razorpay.paymentLink.create({
+    const paymentLink = await getRazorpay().paymentLink.create({
       amount: 19900, // ₹199 in paise
       currency: 'INR',
       description: 'SINTHA PRO - Monthly Subscription',

@@ -13,6 +13,7 @@ import {
   ShieldX, ShieldCheck, Flag, MoreVertical, X
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { cleanError } from '@/lib/clean-error'
 
 interface AdminUser {
   id: string
@@ -57,7 +58,7 @@ export default function AdminUsersScreen() {
         const data = await apiFetch('/admin/users')
         setUsers(data.users || [])
       } catch {
-        toast({ title: 'Error', description: 'Failed to load users', variant: 'destructive' })
+        toast({ title: 'Error', description: 'Failed to load users' })
       } finally {
         setLoading(false)
       }
@@ -156,8 +157,7 @@ export default function AdminUsersScreen() {
     } catch (err: unknown) {
       toast({
         title: 'Action failed',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'destructive',
+        description: cleanError(err),
       })
     } finally {
       setActing(null)
@@ -176,18 +176,18 @@ export default function AdminUsersScreen() {
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isPro: !isPro } : u)))
       toast({ title: isPro ? 'PRO Deactivated' : 'PRO Activated' })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     }
   }
 
   const deleteUser = async (userId: string) => {
-    if (!confirm('Delete this user permanently? Their data will be removed but they CAN re-register. Use "Reject" to also ban their email.')) return
+    if (!confirm('Delete? User can re-register. Use "Reject" to ban email.')) return
     try {
       await apiFetch(`/admin/users/${userId}`, { method: 'DELETE' })
       setUsers((prev) => prev.filter((u) => u.id !== userId))
       toast({ title: 'Deleted' })
     } catch (err: unknown) {
-      toast({ title: 'Error', description: (err as Error).message, variant: 'destructive' })
+      toast({ title: 'Error', description: cleanError(err) })
     }
   }
 
@@ -410,7 +410,7 @@ export default function AdminUsersScreen() {
                           className="h-7 text-xs flex-1"
                           onClick={() => {
                             if (!banReasonText.trim()) {
-                              toast({ title: 'Reason required', variant: 'destructive' })
+                              toast({ title: 'Reason required' })
                               return
                             }
                             if (!confirm(`Permanently BAN ${u.name}?\n\nThey will NEVER be able to log in again with this email.`)) return

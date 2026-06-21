@@ -3,6 +3,7 @@
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import { Sparkles, Shield, Bot, Languages, ArrowRight, Briefcase, Home, Zap, MapPin, Star, Wrench, GraduationCap, Car, Camera } from 'lucide-react'
+import HighlightCarousel from './HighlightCarousel'
 
 export default function LandingScreen() {
   const { navigate } = useAppStore()
@@ -81,6 +82,16 @@ export default function LandingScreen() {
             <p className="text-2xl font-bold flex items-center gap-1"><MapPin className="h-5 w-5" /> Manipur</p>
             <p className="text-[10px] opacity-60">Focused</p>
           </div>
+        </div>
+      </div>
+
+      {/* Highlight Carousel — AI-generated slides explaining SINTHA's benefits */}
+      <div className="py-6 px-4 bg-white">
+        <div className="max-w-lg mx-auto">
+          <h2 className="text-center text-lg font-bold text-[#1E293B] mb-3">
+            How SINTHA Helps Manipur
+          </h2>
+          <HighlightCarousel />
         </div>
       </div>
 

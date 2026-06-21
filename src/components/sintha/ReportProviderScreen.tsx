@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, Flag, Loader2, AlertTriangle } from 'lucide-react'
+import { cleanError } from '@/lib/clean-error'
 
 // Must match the backend valid types/severities
 const CLAIM_TYPES = [
@@ -42,26 +43,25 @@ export default function ReportProviderScreen() {
 
   const handleSubmit = async () => {
     if (!user) {
-      toast({ title: 'Please log in', description: 'You must be logged in to file a report', variant: 'destructive' })
+      toast({ title: 'Please log in', description: 'You must be logged in to file a report' })
       return
     }
     if (!subjectId) {
-      toast({ title: 'Error', description: 'No provider selected to report', variant: 'destructive' })
+      toast({ title: 'Error', description: 'No provider selected to report' })
       return
     }
     if (!type) {
-      toast({ title: 'Select a type', description: 'Please choose what kind of issue this is', variant: 'destructive' })
+      toast({ title: 'Select a type', description: 'Please choose what kind of issue this is' })
       return
     }
     if (!title.trim()) {
-      toast({ title: 'Title required', description: 'Please add a short title for your report', variant: 'destructive' })
+      toast({ title: 'Title required', description: 'Please add a short title for your report' })
       return
     }
     if (description.trim().length < 20) {
       toast({
         title: 'More detail needed',
         description: 'Please describe what happened in at least 20 characters',
-        variant: 'destructive',
       })
       return
     }
@@ -88,8 +88,7 @@ export default function ReportProviderScreen() {
     } catch (err) {
       toast({
         title: 'Failed to submit',
-        description: err instanceof Error ? err.message : 'Please try again',
-        variant: 'destructive',
+        description: cleanError(err),
       })
     } finally {
       setSubmitting(false)
