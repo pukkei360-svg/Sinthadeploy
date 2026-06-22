@@ -18,7 +18,7 @@ const statusColors: Record<string, string> = {
 }
 
 export default function MyBookingsScreen() {
-  const { navigate, user, bookings, setBookings } = useAppStore()
+  const { navigate, goBack, user, bookings, setBookings } = useAppStore()
   const [loading, setLoading] = useState(false)
   // Always default to 'all' so users see their bookings immediately (fixes "No bookings found")
   const [activeTab, setActiveTab] = useState('all')
@@ -49,7 +49,23 @@ export default function MyBookingsScreen() {
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-white sticky top-0 z-40 px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => navigate('home')} className="text-gray-600">
+        <button
+          onClick={() => {
+            // Role-aware back button: providers land on their dashboard, clients on home.
+            // Prefer goBack() when the user came from a meaningful screen (preserves scroll
+            // position and tab state); fall back to the role-appropriate home screen when
+            // the user deep-linked in (e.g. via a push notification).
+            const { previousViews } = useAppStore.getState()
+            const lastView = previousViews[previousViews.length - 1]
+            const validBackTargets = ['home', 'provider-dashboard', 'chat-list', 'chat-room', 'notifications', 'profile']
+            if (lastView && validBackTargets.includes(lastView)) {
+              goBack()
+            } else {
+              navigate(user?.role === 'provider' ? 'provider-dashboard' : 'home')
+            }
+          }}
+          className="text-gray-600"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-bold text-gray-800">My Bookings</h1>

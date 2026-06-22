@@ -28,7 +28,7 @@ const statusColors: Record<string, string> = {
 const statusSteps = ['accepted', 'in_progress', 'completed']
 
 export default function BookingDetailScreen() {
-  const { navigate, viewParams, user, updateBooking } = useAppStore()
+  const { navigate, goBack, viewParams, user, updateBooking } = useAppStore()
   const { toast } = useToast()
   const [booking, setBooking] = useState<Booking | null>(null)
   const [loading, setLoading] = useState(true)
@@ -121,7 +121,23 @@ export default function BookingDetailScreen() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white sticky top-0 z-40 px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => navigate('my-bookings')} className="text-gray-600">
+        <button
+          onClick={() => {
+            // Role-aware back button: providers may have arrived from the dashboard
+            // (where bookings are listed under "Ready to Complete" / "Start When Ready"),
+            // so we prefer goBack() to preserve that context. If they deep-linked in
+            // (push notification), send them to their role-appropriate home.
+            const { previousViews } = useAppStore.getState()
+            const lastView = previousViews[previousViews.length - 1]
+            const validBackTargets = ['my-bookings', 'provider-dashboard', 'home', 'notifications', 'chat-list', 'chat-room']
+            if (lastView && validBackTargets.includes(lastView)) {
+              goBack()
+            } else {
+              navigate(user?.role === 'provider' ? 'provider-dashboard' : 'my-bookings')
+            }
+          }}
+          className="text-gray-600"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-bold text-gray-800">Booking Details</h1>
