@@ -58,3 +58,26 @@ Stage Summary:
 - Permanent fix: code is now committed (fb1931e), pushed to origin/main, AND baked into the new repo.tar. No matter how the container restarts (fresh boot, crash, manual restart), the new code will be present.
 - The auto-restart wrapper at /home/z/start-sintha.sh should be run after each code change to ensure Next.js stays up. (Ideally this would be added to /start.sh itself, but that file is root-owned.)
 - Both issues are now permanently resolved: calendar removal (533a6ce) + provider back button (fb1931e). Server is running, HTTP 200, new code live.
+
+---
+Task ID: push-notifications-1
+Agent: main (super-z)
+Task: Enable push notifications end-to-end. Backend was already built; needed (1) FIREBASE_SERVICE_ACCOUNT env var, (2) web-side FCM registration, (3) APK-side native FCM (separate codebase).
+
+Work Log:
+- Verified backend was already complete: notify.ts wraps sendPushNotification, /api/user/fcm-token endpoint exists, firebase-admin.ts handles init.
+- Discovered FIREBASE_SERVICE_ACCOUNT env var was NOT set — confirmed via `curl /api/push-test` returning {"error":"FIREBASE_SERVICE_ACCOUNT not set"}.
+- User generated a Firebase service account key and set FIREBASE_SERVICE_ACCOUNT on Vercel.
+- Verified backend now works: `curl https://sinthadeploy.vercel.app/api/push-test` returns {"ready": true, "initSuccess": true, ...}.
+- Built Step 3 (web-side FCM registration):
+  - Created src/hooks/use-push-registration.ts — detects web push support (returns false for APK WebView via userAgent check, Safari < 16.4, etc.), asks for permission via Notification.requestPermission(), gets FCM token via Firebase JS SDK getToken(), POSTs to /api/user/fcm-token, listens for foreground messages via onMessage().
+  - Created src/components/sintha/PushNotificationPrompt.tsx — dismissible blue banner shown on Home + ProviderDashboard when user is logged in, web push is supported, AND not in APK WebView. Three buttons: Enable / Not now / Never (persisted in localStorage).
+  - Mounted the prompt on HomeScreen.tsx (below the welcome section) and ProviderDashboardScreen.tsx (after the verification nudge, before the action-needed banner).
+- VAPID key is currently a PLACEHOLDER in use-push-registration.ts. The user needs to generate the real one from Firebase Console → Project Settings → Cloud Messaging → Web Configuration → Web Push certificates, then update the VAPID_KEY constant.
+- Committed (c234b8b), pushed to origin/main, updated repo.tar.
+
+Stage Summary:
+- Backend: ✅ Live on Vercel (FIREBASE_SERVICE_ACCOUNT env var set, /api/push-test returns ready=true).
+- Web client: ✅ Code deployed. Will work as soon as user replaces the placeholder VAPID_KEY with the real one from Firebase Console.
+- APK client: ❌ Still needs native Kotlin FirebaseMessagingService code (provided earlier in chat). That code is in a separate Android repo I can't access from here.
+- The auto-restart wrapper at /home/z/start-sintha.sh should be re-run if the container restarts (script is in repo.tar).
