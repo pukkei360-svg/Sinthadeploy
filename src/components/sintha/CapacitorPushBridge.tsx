@@ -40,6 +40,10 @@ interface CapacitorPlugin {
   requestPermissions?: () => Promise<{ receive: string }>
   addListener?: (eventName: string, callback: (data: unknown) => void) => Promise<{ remove: () => void }>
   removeAllListeners?: () => Promise<void>
+  // LocalNotifications methods (used for foreground display)
+  create?: (opts: unknown) => Promise<unknown>
+  schedule?: (opts: unknown) => Promise<unknown>
+  createChannel?: (opts: unknown) => Promise<unknown>
 }
 
 declare global {
@@ -71,6 +75,78 @@ function getPushPlugin(): CapacitorPlugin | null {
   }
 
   return null
+}
+
+/**
+ * Get the LocalNotifications plugin (for displaying foreground notifications).
+ * Returns null if not available.
+ */
+function getLocalNotificationsPlugin(): CapacitorPlugin | null {
+  if (typeof window === 'undefined') return null
+  if (window.Capacitor?.Plugins?.LocalNotifications) {
+    return window.Capacitor.Plugins.LocalNotifications
+  }
+  if (window.Plugins?.LocalNotifications) {
+    return window.Plugins.LocalNotifications
+  }
+  return null
+}
+
+/**
+ * Display a local notification in the system tray when a push arrives
+ * while the app is in the foreground. Without this, foreground pushes are
+ * silently delivered to JavaScript and the user sees nothing — leading to
+ * "I sent a broadcast but nothing arrived on my phone" even though the
+ * backend and FCM are working correctly.
+ *
+ * Capacitor v3+ uses `create()`, v2 uses `schedule()`. We try both.
+ */
+async function showForegroundNotification(title: string, body: string, data?: Record<string, unknown>): Promise<void> {
+  const plugin = getLocalNotificationsPlugin()
+  if (!plugin) {
+    // LocalNotifications not available — fall back to in-app toast.
+    console.warn('[Capacitor-Push] LocalNotifications plugin not found — foreground notification will not be displayed in system tray')
+    return
+  }
+
+  // Use a unique ID per notification so they stack rather than overwrite.
+  const notificationsId = Math.floor(Math.random() * 1000000) + 1
+
+  // Build the notification payload. Capacitor v2/v3 use slightly different
+  // field names, so we include both for compatibility.
+  const payload = {
+    notifications: [{
+      id: notificationsId,
+      title,
+      body,
+      // Schedule for "now" (1 second delay ensures it shows in the tray)
+      schedule: { at: new Date(Date.now() + 1000) },
+      // Pass through any extra data so the tap handler can deep-link
+      extra: data || {},
+      // Use the same channel as the native FCM notifications
+      channelId: 'sintha_notifications',
+      smallIcon: 'ic_launcher',
+      largeIcon: 'ic_launcher',
+    }],
+  }
+
+  try {
+    // Capacitor v3+: create()
+    if (plugin.create) {
+      await plugin.create(payload)
+      console.log('[Capacitor-Push] Foreground notification displayed (create):', title)
+      return
+    }
+    // Capacitor v2: schedule()
+    if (plugin.schedule) {
+      await plugin.schedule(payload)
+      console.log('[Capacitor-Push] Foreground notification displayed (schedule):', title)
+      return
+    }
+    console.warn('[Capacitor-Push] LocalNotifications plugin has neither create() nor schedule()')
+  } catch (err) {
+    console.error('[Capacitor-Push] Failed to display foreground notification:', err)
+  }
 }
 
 /**
@@ -152,8 +228,28 @@ export default function CapacitorPushBridge() {
         listeners.push(errListener)
 
         // 4. Listen for incoming push notifications (foreground)
+        //    When the app is open, FCM delivers the push to JavaScript instead
+        //    of the system tray. We display a local notification so the user
+        //    actually SEES it (otherwise foreground pushes are invisible).
         const recvListener = await plugin.addListener('pushNotificationReceived', (notification: unknown) => {
           console.log('[Capacitor-Push] Notification received (foreground):', notification)
+
+          // The notification payload structure varies between Capacitor versions:
+          //   v3+: { title, body, data }
+          //   v2:  { title, body, ... }
+          //   data-only pushes: { data: { title, message, ... } }
+          const n = notification as {
+            title?: string
+            body?: string
+            data?: Record<string, unknown>
+          }
+
+          const title = n.title || (n.data?.title as string) || 'SINTHA'
+          const body = n.body || (n.data?.message as string) || (n.data?.body as string) || ''
+
+          if (title || body) {
+            showForegroundNotification(title, body, n.data)
+          }
         })
         listeners.push(recvListener)
 
