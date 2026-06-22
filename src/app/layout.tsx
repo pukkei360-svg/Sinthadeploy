@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import WebViewInterceptor from "@/components/WebViewInterceptor";
 import OfflineBootstrap from "@/components/sintha/OfflineBootstrap";
+import CapacitorPushBridge from "@/components/sintha/CapacitorPushBridge";
 
 // Inter — premium sans-serif used by Amazon, Vercel, Stripe, GitHub
 const inter = Inter({
@@ -101,6 +102,7 @@ export default function RootLayout({
       >
         <WebViewInterceptor />
         <OfflineBootstrap />
+        <CapacitorPushBridge />
         {children}
         <Toaster />
       </body>
