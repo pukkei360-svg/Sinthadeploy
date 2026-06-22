@@ -52,16 +52,21 @@ export default function MyBookingsScreen() {
         <button
           onClick={() => {
             // Role-aware back button: providers land on their dashboard, clients on home.
-            // Prefer goBack() when the user came from a meaningful screen (preserves scroll
-            // position and tab state); fall back to the role-appropriate home screen when
-            // the user deep-linked in (e.g. via a push notification).
+            // The valid back-targets list is ROLE-SPECIFIC so a provider never gets
+            // sent back to the client 'home' screen (and vice versa). This was the
+            // bug in the previous version: 'home' was in the shared valid list, so
+            // providers whose previous view was 'home' (e.g. they navigated Home →
+            // some screen → My Bookings) would land on the client home on back.
             const { previousViews } = useAppStore.getState()
             const lastView = previousViews[previousViews.length - 1]
-            const validBackTargets = ['home', 'provider-dashboard', 'chat-list', 'chat-room', 'notifications', 'profile']
+            const isProvider = user?.role === 'provider'
+            const providerBackTargets = ['provider-dashboard', 'chat-list', 'chat-room', 'notifications', 'profile', 'my-bookings', 'booking-detail']
+            const clientBackTargets = ['home', 'chat-list', 'chat-room', 'notifications', 'profile', 'my-bookings', 'booking-detail']
+            const validBackTargets = isProvider ? providerBackTargets : clientBackTargets
             if (lastView && validBackTargets.includes(lastView)) {
               goBack()
             } else {
-              navigate(user?.role === 'provider' ? 'provider-dashboard' : 'home')
+              navigate(isProvider ? 'provider-dashboard' : 'home')
             }
           }}
           className="text-gray-600"
