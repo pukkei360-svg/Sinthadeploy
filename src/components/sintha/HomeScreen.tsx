@@ -38,10 +38,6 @@ export default function HomeScreen() {
   // Toggle between featured (default) and nearby (distance) sorting.
   const [sortBy, setSortBy] = useState<'featured' | 'nearby'>('featured')
 
-  // Feature 4: Same-day service filter
-  // 'all' (default) | 'today' (available now) | 'verified'
-  const [providerFilter, setProviderFilter] = useState<'all' | 'today' | 'verified'>('all')
-
   // The User interface in the store doesn't yet declare lat/lng, but the
   // Prisma `User` model has `latitude` / `longitude` and the API already
   // returns them. Extend the type locally so we can use them safely.
@@ -99,21 +95,25 @@ export default function HomeScreen() {
   )
 
   // Base list shown when the user isn't searching.
-  // Apply Feature 4 (filter) and Feature 2 (sort) in sequence so the
-  // "Nearby Providers" section reflects both the active filter pills and
-  // the Featured/Nearby sort toggle.
+  // Auto-sorted: PRO → Verified → High rated → Others (default)
+  // Or sorted by distance if user taps "Nearby"
   const baseProviders = (() => {
     let list = providers.slice(0, 8)
 
-    // Feature 4: filter pills
-    if (providerFilter === 'today') {
-      list = list.filter((p) => p.availability === 'available')
-    } else if (providerFilter === 'verified') {
-      list = list.filter((p) => p.isVerified === true)
+    // Auto-sort: PRO first, then Verified, then by rating
+    if (sortBy === 'featured') {
+      list.sort((a, b) => {
+        const aPro = a.user?.isPro && (!a.user?.proExpiry || new Date(a.user.proExpiry) > new Date()) ? 1 : 0
+        const bPro = b.user?.isPro && (!b.user?.proExpiry || new Date(b.user.proExpiry) > new Date()) ? 1 : 0
+        if (aPro !== bPro) return bPro - aPro // PRO first
+        const aVerified = a.isVerified ? 1 : 0
+        const bVerified = b.isVerified ? 1 : 0
+        if (aVerified !== bVerified) return bVerified - aVerified // Verified next
+        return b.rating - a.rating // Then by rating
+      })
     }
 
-    // Feature 2: distance sort (only when the user has lat/lng and
-    // explicitly opts into the Nearby toggle)
+    // Distance sort (only when user has lat/lng and opts into Nearby)
     if (sortBy === 'nearby' && hasUserLocation) {
       list = sortByDistance(list, userLat as number, userLng as number)
     }
@@ -290,58 +290,32 @@ export default function HomeScreen() {
           )}
         </div>
 
-        {/* Feature 2 & 4: Sort + filter toggles (only shown when not searching) */}
+        {/* Sort toggle: Featured (default) | Nearby (only if user has lat/lng) */}
         {!searchQuery && providers.length > 0 && (
-          <div className="px-4 mb-3 flex flex-col gap-2">
-            {/* Sort row: Featured (default) | Nearby (only if user has lat/lng) */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Sort</span>
+          <div className="px-4 mb-3 flex items-center gap-2">
+            <button
+              onClick={() => setSortBy('featured')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                sortBy === 'featured'
+                  ? 'sintha-gradient text-white shadow-sm'
+                  : 'bg-white text-gray-600 border border-gray-200'
+              }`}
+            >
+              Featured
+            </button>
+            {hasUserLocation && (
               <button
-                onClick={() => setSortBy('featured')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                  sortBy === 'featured'
+                onClick={() => setSortBy('nearby')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1 ${
+                  sortBy === 'nearby'
                     ? 'sintha-gradient text-white shadow-sm'
                     : 'bg-white text-gray-600 border border-gray-200'
                 }`}
               >
-                Featured
+                <MapPin className="h-3 w-3" />
+                Nearby
               </button>
-              {hasUserLocation && (
-                <button
-                  onClick={() => setSortBy('nearby')}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors flex items-center gap-1 ${
-                    sortBy === 'nearby'
-                      ? 'sintha-gradient text-white shadow-sm'
-                      : 'bg-white text-gray-600 border border-gray-200'
-                  }`}
-                >
-                  <MapPin className="h-3 w-3" />
-                  Nearby
-                </button>
-              )}
-            </div>
-
-            {/* Filter row: All | Available Today | Verified */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mr-1">Filter</span>
-              {([
-                { key: 'all', label: 'All' },
-                { key: 'today', label: 'Available Today' },
-                { key: 'verified', label: 'Verified' },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={() => setProviderFilter(opt.key)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                    providerFilter === opt.key
-                      ? 'sintha-gradient text-white shadow-sm'
-                      : 'bg-white text-gray-600 border border-gray-200'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            )}
           </div>
         )}
         {filteredProviders.length === 0 ? (
@@ -399,18 +373,24 @@ export default function HomeScreen() {
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="bg-white rounded-2xl p-4 shadow-sm min-w-[160px] shrink-0 sintha-card-hover text-left border border-[#E2E8F0]"
+                className="bg-white rounded-2xl p-4 shadow-sm min-w-[160px] shrink-0 sintha-card-hover text-left border border-[#E2E8F0] relative"
               >
+                {/* Available Now badge */}
+                {p.availability === 'available' && (
+                  <span className="absolute top-2 right-2 bg-green-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                    Available Now
+                  </span>
+                )}
                 <Avatar className="h-20 w-20 mx-auto mb-2 border-2 border-[#E2E8F0]">
                   <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
                   <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <p className="text-sm font-bold text-[#1E293B] text-center truncate">{p.user?.name}</p>
+                <p className="text-sm font-bold text-[#0F1111] text-center truncate">{p.user?.name}</p>
                 <p className="text-xs text-[#0F4C81] font-medium text-center truncate mt-0.5">{p.category?.name}</p>
                 <div className="flex items-center justify-center gap-1.5 mt-2">
                   <div className="flex items-center gap-0.5">
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-bold text-[#1E293B]">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
+                    <span className="text-xs font-bold text-[#0F1111]">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
                   </div>
                   {p.isVerified && <CheckCircle className="h-4 w-4 text-[#10B981]" />}
                   {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
