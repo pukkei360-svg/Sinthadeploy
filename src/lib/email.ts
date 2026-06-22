@@ -66,8 +66,19 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
   }
 
   // Validate recipient email
-  if (!to || !to.includes('@') || to.endsWith('@phone.sintha.app') || to === 'undefined') {
-    console.warn(`[SMTP] Skipping send — invalid recipient: ${to}`)
+  // Skip:
+  //   - empty / undefined / "undefined" string
+  //   - phone-registered users (e.g. +91...@phone.sintha.app) — no real inbox
+  //   - admin accounts (e.g. sintha37@sintha.app) — sintha.app has no MX records,
+  //     so sending there always bounces. Admin sees everything in the dashboard.
+  if (
+    !to ||
+    !to.includes('@') ||
+    to === 'undefined' ||
+    to.endsWith('@phone.sintha.app') ||
+    to.endsWith('@sintha.app')
+  ) {
+    console.warn(`[SMTP] Skipping send — invalid/non-deliverable recipient: ${to}`)
     return false
   }
 
