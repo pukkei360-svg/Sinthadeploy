@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import BottomNav from './BottomNav'
+import PushNotificationPrompt from './PushNotificationPrompt'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
@@ -165,6 +166,11 @@ export default function HomeScreen() {
       <div className="px-4 py-3 bg-white border-b border-gray-50">
         <p className="text-sm text-gray-500">Hello, <span className="font-semibold text-gray-800">{user?.name?.split(' ')[0]}</span></p>
         <p className="text-xs text-gray-400">What service are you looking for today?</p>
+      </div>
+
+      {/* Push notification opt-in prompt (web only — hidden in APK WebView). */}
+      <div className="px-4 pt-3">
+        <PushNotificationPrompt />
       </div>
 
       {/* Search Bar */}

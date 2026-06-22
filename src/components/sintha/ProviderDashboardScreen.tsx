@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import BottomNav from './BottomNav'
+import PushNotificationPrompt from './PushNotificationPrompt'
 import WhatsAppIcon from './WhatsAppIcon'
 import {
   Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
@@ -208,6 +209,11 @@ export default function ProviderDashboardScreen() {
             <ChevronRight className="h-4 w-4 text-green-600 shrink-0" />
           </div>
         )}
+
+        {/* Push notification opt-in prompt (web only — hidden in APK WebView).
+            Providers especially benefit from push: new booking requests,
+            client messages, and booking status changes all arrive as pushes. */}
+        <PushNotificationPrompt />
 
         {/* ACTION-NEEDED ALERT BANNER — the most important UX addition.
             After a provider accepts a booking, they often forget to come back and Start / Mark Complete.
