@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { uploadVerificationPhoto } from '@/lib/cloudinary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon, Sparkles } from 'lucide-react'
+import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { cleanError } from '@/lib/clean-error'
 
@@ -36,11 +36,6 @@ export default function PostJobScreen() {
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
-
-  // AI photo analysis state
-  const [aiAnalyzing, setAiAnalyzing] = useState(false)
-  const [aiResult, setAiResult] = useState<{ description?: string; suggestedCategory?: string; suggestedTitle?: string } | null>(null)
-  const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([])
 
   // Pre-fill location from user profile
   useEffect(() => {
@@ -291,91 +286,6 @@ export default function PostJobScreen() {
               <p className="text-[10px] text-gray-400">
                 {photoFiles.length} of {MAX_PHOTOS} photos attached
               </p>
-
-              {/* AI analyze button — appears after at least 1 photo is selected */}
-              {photoPreviews.length > 0 && !aiAnalyzing && !aiResult && (
-                <button
-                  onClick={async () => {
-                    setAiAnalyzing(true)
-                    try {
-                      // Upload the first photo to get a URL for AI analysis
-                      const uploadResult = await uploadVerificationPhoto(photoFiles[0], 'jobs/ai-analysis')
-                      if (!uploadResult.success || !uploadResult.url) throw new Error('Upload failed')
-                      setUploadedPhotoUrls([uploadResult.url])
-
-                      const result = await apiFetch('/ai/analyze-photo', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                          photoUrl: uploadResult.url,
-                          categories: categories.map((c: ServiceCategory) => ({ id: c.id, name: c.name })),
-                        }),
-                      })
-                      if (result.success) {
-                        setAiResult({
-                          description: result.description,
-                          suggestedCategory: result.suggestedCategory,
-                          suggestedTitle: result.suggestedTitle,
-                        })
-                        // Auto-fill title if empty
-                        if (result.suggestedTitle && !title) {
-                          setTitle(result.suggestedTitle)
-                        }
-                        // Auto-fill description if empty
-                        if (result.description && !description) {
-                          setDescription(result.description)
-                        }
-                        // Auto-select category if matched
-                        if (result.matchedCategoryId) {
-                          setCategoryId(result.matchedCategoryId)
-                        }
-                        toast({ title: 'AI analysis complete!', description: 'We filled in the details for you.' })
-                      }
-                    } catch (err) {
-                      toast({ title: 'AI analysis failed', description: cleanError(err) })
-                    } finally {
-                      setAiAnalyzing(false)
-                    }
-                  }}
-                  className="flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 mt-1"
-                >
-                  <Sparkles className="h-3.5 w-3.5" /> Analyze photo with AI
-                </button>
-              )}
-
-              {/* AI analyzing state */}
-              {aiAnalyzing && (
-                <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 rounded-lg p-2 mt-1">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  AI is analyzing your photo...
-                </div>
-              )}
-
-              {/* AI result */}
-              {aiResult && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 mt-1 space-y-1">
-                  <p className="text-[10px] font-semibold text-purple-700 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" /> AI Suggests:
-                  </p>
-                  {aiResult.description && (
-                    <p className="text-xs text-purple-600">{aiResult.description}</p>
-                  )}
-                  <div className="flex gap-2 flex-wrap">
-                    {aiResult.suggestedCategory && (
-                      <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                        Category: {aiResult.suggestedCategory}
-                      </span>
-                    )}
-                    {aiResult.suggestedTitle && (
-                      <button
-                        onClick={() => setTitle(aiResult.suggestedTitle || '')}
-                        className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-200"
-                      >
-                        Use title: "{aiResult.suggestedTitle}"
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
