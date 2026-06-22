@@ -10,13 +10,12 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   ArrowLeft, Calendar, Clock, MapPin, FileText, MessageCircle, Phone,
-  CheckCircle, XCircle, Play, Star, Copy
+  CheckCircle, XCircle, Play, Star, Copy, RotateCcw, Share2, AlertCircle
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
 import { cleanError } from '@/lib/clean-error'
-import { generateICSFile } from '@/lib/calendar'
 
 const statusColors: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-700',
@@ -132,7 +131,57 @@ export default function BookingDetailScreen() {
         </Badge>
       </div>
 
-      <div className="px-4 py-4 space-y-4 max-w-lg mx-auto">
+      <div className="px-4 py-4 space-y-4 max-w-lg mx-auto pb-32">
+        {/* Provider Alert Banner — prompts the provider about the very next action they must take.
+            This is critical because ratings depend on the booking being marked complete.
+            Placed at the TOP so the provider sees it before scrolling. */}
+        {!isClient && booking.status !== 'cancelled' && booking.status !== 'completed' && (
+          <div className={`rounded-xl p-3 flex items-start gap-3 shadow-sm border ${
+            booking.status === 'pending'
+              ? 'bg-amber-50 border-amber-200'
+              : booking.status === 'accepted'
+              ? 'bg-blue-50 border-blue-200'
+              : 'bg-green-50 border-green-200'
+          }`}>
+            <AlertCircle className={`h-5 w-5 mt-0.5 shrink-0 ${
+              booking.status === 'pending' ? 'text-amber-600' :
+              booking.status === 'accepted' ? 'text-blue-600' :
+              'text-green-600'
+            }`} />
+            <div className="flex-1 min-w-0">
+              <p className={`text-sm font-bold ${
+                booking.status === 'pending' ? 'text-amber-800' :
+                booking.status === 'accepted' ? 'text-blue-800' :
+                'text-green-800'
+              }`}>
+                {booking.status === 'pending' && 'New booking request — respond now'}
+                {booking.status === 'accepted' && 'Accept ✓ done — Start the service'}
+                {booking.status === 'in_progress' && 'Service in progress — Mark complete to get rated'}
+              </p>
+              <p className={`text-xs mt-0.5 ${
+                booking.status === 'pending' ? 'text-amber-700' :
+                booking.status === 'accepted' ? 'text-blue-700' :
+                'text-green-700'
+              }`}>
+                {booking.status === 'pending' && 'Tap Accept or Reject below to respond to the client.'}
+                {booking.status === 'accepted' && 'Tap “Start Service” below when you begin the work.'}
+                {booking.status === 'in_progress' && 'Tap “Mark Complete” below when done — the client can then rate you.'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Completed-without-review nudge for provider — ratings are important for them too */}
+        {!isClient && booking.status === 'completed' && !booking.review && (
+          <div className="rounded-xl p-3 flex items-start gap-3 shadow-sm border bg-amber-50 border-amber-200">
+            <Star className="h-5 w-5 mt-0.5 shrink-0 text-amber-600" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-amber-800">Rate this client</p>
+              <p className="text-xs mt-0.5 text-amber-700">Help other providers — tap “Rate Client” below to leave a quick review.</p>
+            </div>
+          </div>
+        )}
+
         {/* Service Info */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h2 className="text-lg font-bold text-gray-800">{booking.service}</h2>
@@ -161,30 +210,77 @@ export default function BookingDetailScreen() {
             )}
           </div>
 
-          {/* Feature 5: Add to Calendar — generates an .ics file the user
-              can import into Google / Apple / Outlook Calendar. */}
-          <button
-            onClick={() => {
-              try {
-                generateICSFile({
-                  title: booking.service,
-                  date: booking.date,
-                  location: booking.address,
-                  description: booking.description,
-                })
-                toast({
-                  title: 'Calendar event ready',
-                  description: 'sintha-booking.ics downloaded — import it into your calendar.',
-                })
-              } catch (err: unknown) {
-                toast({ title: 'Could not create calendar event', description: cleanError(err) })
-              }
-            }}
-            className="mt-4 w-full flex items-center justify-center gap-2 sintha-gradient text-white rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm"
-          >
-            <Calendar className="h-4 w-4" />
-            Add to Calendar
-          </button>
+          {/* Replaced 'Add to Calendar' with two higher-value actions:
+              - Book Again: one-tap re-booking of the same provider+service (drives repeat business)
+              - Share Provider: Web Share API to recommend the provider via WhatsApp/SMS (drives growth) */}
+          {isClient && booking.status !== 'cancelled' && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {/* Book Again — only show after completion (repeat-business moment) */}
+              {booking.status === 'completed' && (
+                <button
+                  onClick={() =>
+                    navigate('booking-form', {
+                      providerId: booking.providerId,
+                      providerName: booking.provider?.name || 'Provider',
+                      service: booking.service,
+                    })
+                  }
+                  className="flex items-center justify-center gap-2 sintha-gradient text-white rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Book Again
+                </button>
+              )}
+              {/* Share Provider — always available for clients (recommend good providers) */}
+              <button
+                onClick={async () => {
+                  const providerName = booking.provider?.name || 'this provider'
+                  const shareText = `I booked ${providerName} on SINTHA for ${booking.service} — check them out!`
+                  const shareUrl = typeof window !== 'undefined' ? window.location.origin : ''
+                  try {
+                    if (navigator.share) {
+                      await navigator.share({
+                        title: 'Recommended on SINTHA',
+                        text: shareText,
+                        url: shareUrl,
+                      })
+                    } else {
+                      // Fallback: copy to clipboard
+                      const fullText = `${shareText} ${shareUrl}`
+                      try {
+                        if (navigator.clipboard?.writeText) {
+                          await navigator.clipboard.writeText(fullText)
+                        } else {
+                          const ta = document.createElement('textarea')
+                          ta.value = fullText
+                          ta.style.position = 'fixed'
+                          ta.style.opacity = '0'
+                          document.body.appendChild(ta)
+                          ta.select()
+                          document.execCommand('copy')
+                          document.body.removeChild(ta)
+                        }
+                        toast({ title: 'Copied!', description: 'Share message copied — paste it anywhere' })
+                      } catch {
+                        toast({ title: 'Share', description: fullText })
+                      }
+                    }
+                  } catch (err: unknown) {
+                    // user cancelled share — silent
+                    if (err instanceof Error && err.name !== 'AbortError') {
+                      toast({ title: 'Could not share', description: cleanError(err) })
+                    }
+                  }
+                }}
+                className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 ${
+                  booking.status === 'completed' ? '' : 'col-span-2 sintha-gradient text-white border-0'
+                }`}
+              >
+                <Share2 className="h-4 w-4" />
+                Share Provider
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Status Timeline */}
@@ -334,43 +430,6 @@ export default function BookingDetailScreen() {
           </div>
         )}
 
-        {/* Actions */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
-          <h3 className="font-semibold text-gray-800 mb-3">Actions</h3>
-          <div className="flex flex-wrap gap-2">
-            {isClient && (booking.status === 'accepted') && (
-              <Button variant="destructive" size="sm" onClick={() => updateStatus('cancelled')} disabled={actionLoading}>
-                <XCircle className="h-4 w-4 mr-1" /> Cancel
-              </Button>
-            )}
-            {!isClient && booking.status === 'pending' && (
-              <>
-                <Button size="sm" className="sintha-gradient text-white" onClick={() => updateStatus('accepted')} disabled={actionLoading}>
-                  <CheckCircle className="h-4 w-4 mr-1" /> Accept
-                </Button>
-                <Button variant="destructive" size="sm" onClick={() => updateStatus('cancelled')} disabled={actionLoading}>
-                  <XCircle className="h-4 w-4 mr-1" /> Reject
-                </Button>
-              </>
-            )}
-            {!isClient && booking.status === 'accepted' && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => updateStatus('in_progress')} disabled={actionLoading}>
-                <Play className="h-4 w-4 mr-1" /> Start
-              </Button>
-            )}
-            {!isClient && booking.status === 'in_progress' && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => updateStatus('completed')} disabled={actionLoading}>
-                <CheckCircle className="h-4 w-4 mr-1" /> Mark Complete
-              </Button>
-            )}
-            {booking.status === 'completed' && !booking.review && isClient && (
-              <Button size="sm" className="sintha-gradient text-white" onClick={() => setShowReview(true)}>
-                <Star className="h-4 w-4 mr-1" /> Leave Review
-              </Button>
-            )}
-          </div>
-        </div>
-
         {/* Review Form */}
         {showReview && (
           <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -411,6 +470,95 @@ export default function BookingDetailScreen() {
           </div>
         )}
       </div>
+
+      {/* Sticky bottom action bar — provider never needs to scroll to take the next action.
+          This is the most important UX change: Accept / Start / Mark Complete / Rate are all reachable
+          from a persistent bar pinned to the bottom of the viewport.
+          Ratings depend on the booking being marked complete, so “Mark Complete” is the highest-stakes button. */}
+      {(() => {
+        // Determine which (if any) primary action the current viewer should be able to take.
+        const showProviderPending = !isClient && booking.status === 'pending'
+        const showProviderStart = !isClient && booking.status === 'accepted'
+        const showProviderComplete = !isClient && booking.status === 'in_progress'
+        const showClientCancel = isClient && booking.status === 'accepted'
+        const showClientReview = isClient && booking.status === 'completed' && !booking.review
+        const showProviderReview = !isClient && booking.status === 'completed' && !booking.review
+
+        if (!showProviderPending && !showProviderStart && !showProviderComplete && !showClientCancel && !showClientReview && !showProviderReview) {
+          return null
+        }
+
+        return (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] safe-area-bottom">
+            <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-2">
+              {/* Provider: pending → Accept + Reject */}
+              {showProviderPending && (
+                <>
+                  <Button
+                    className="flex-1 sintha-gradient text-white"
+                    onClick={() => updateStatus('accepted')}
+                    disabled={actionLoading}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1.5" /> Accept
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => updateStatus('cancelled')}
+                    disabled={actionLoading}
+                  >
+                    <XCircle className="h-4 w-4 mr-1.5" /> Reject
+                  </Button>
+                </>
+              )}
+
+              {/* Provider: accepted → Start Service */}
+              {showProviderStart && (
+                <Button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => updateStatus('in_progress')}
+                  disabled={actionLoading}
+                >
+                  <Play className="h-4 w-4 mr-1.5" /> Start Service
+                </Button>
+              )}
+
+              {/* Provider: in_progress → Mark Complete (rating trigger — emphasized) */}
+              {showProviderComplete && (
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => updateStatus('completed')}
+                  disabled={actionLoading}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1.5" /> Mark Complete & Get Rated
+                </Button>
+              )}
+
+              {/* Client: accepted → Cancel */}
+              {showClientCancel && (
+                <Button
+                  variant="outline"
+                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                  onClick={() => updateStatus('cancelled')}
+                  disabled={actionLoading}
+                >
+                  <XCircle className="h-4 w-4 mr-1.5" /> Cancel Booking
+                </Button>
+              )}
+
+              {/* Completed + no review → Rate (both roles) */}
+              {(showClientReview || showProviderReview) && (
+                <Button
+                  className="flex-1 sintha-gradient text-white"
+                  onClick={() => setShowReview(true)}
+                >
+                  <Star className="h-4 w-4 mr-1.5" /> {isClient ? 'Rate Provider' : 'Rate Client'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -15,7 +15,7 @@ import {
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
   MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
   QrCode, Share2, Package, Tag, BarChart3, Copy,
-  ShieldCheck, ChevronRight
+  ShieldCheck, ChevronRight, Play, AlertCircle
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -67,7 +67,12 @@ export default function ProviderDashboardScreen() {
   const pendingBookings = bookings.filter((b) => b.status === 'pending')
   const unreadNotifs = notifications.filter((n) => !n.isRead).length
   const completedBookings = bookings.filter((b) => b.status === 'completed')
-  const activeBookings = bookings.filter((b) => b.status === 'accepted' || b.status === 'in_progress')
+  // Bookings the provider has accepted but not yet started — they need to tap "Start Service".
+  const acceptedToStart = bookings.filter((b) => b.status === 'accepted')
+  // Bookings the provider has started but not yet completed — they need to tap "Mark Complete" to get rated.
+  const inProgressToComplete = bookings.filter((b) => b.status === 'in_progress')
+  // Total count of bookings waiting on the provider's next action — drives the top alert banner.
+  const actionNeededCount = acceptedToStart.length + inProgressToComplete.length
 
   // Calculate estimated earnings (from completed bookings)
   const estimatedEarnings = completedBookings.length * (myProviderProfile?.hourlyRate || 0)
@@ -204,6 +209,43 @@ export default function ProviderDashboardScreen() {
           </div>
         )}
 
+        {/* ACTION-NEEDED ALERT BANNER — the most important UX addition.
+            After a provider accepts a booking, they often forget to come back and Start / Mark Complete.
+            Without “Mark Complete”, the client can't rate them — and ratings drive future bookings.
+            This banner is placed high on the dashboard and links straight to the booking detail
+            where the sticky action bar now lives. */}
+        {actionNeededCount > 0 && (
+          <button
+            onClick={() => {
+              // Jump to the most actionable booking (in-progress first, otherwise accepted).
+              const target = inProgressToComplete[0] || acceptedToStart[0]
+              if (target) navigate('booking-detail', { bookingId: target.id })
+            }}
+            className="w-full text-left bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0 text-white">
+                <p className="text-sm font-bold">
+                  {actionNeededCount} booking{actionNeededCount > 1 ? 's' : ''} need{actionNeededCount === 1 ? 's' : ''} your action
+                </p>
+                <p className="text-xs opacity-90 mt-0.5">
+                  {inProgressToComplete.length > 0 && (
+                    <>{inProgressToComplete.length} to mark complete · </>
+                  )}
+                  {acceptedToStart.length > 0 && (
+                    <>{acceptedToStart.length} to start</>
+                  )}
+                  {' — tap to continue & get rated ⭐'}
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 text-white shrink-0" />
+            </div>
+          </button>
+        )}
+
         {/* Availability Toggle */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
@@ -328,21 +370,25 @@ export default function ProviderDashboardScreen() {
           </div>
         )}
 
-        {/* Active Bookings */}
-        {activeBookings.length > 0 && (
+        {/* READY-TO-COMPLETE BOOKINGS — highest priority for ratings.
+            These are bookings the provider has started but not finished. Marking them complete
+            is what unlocks the rating flow, so we surface them as their own section above the
+            general “Active” list, with a clear “Mark Complete” CTA. */}
+        {inProgressToComplete.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Zap className="h-5 w-5 text-blue-500" />
-              <h3 className="font-bold text-gray-800">Active ({activeBookings.length})</h3>
+              <Star className="h-5 w-5 text-amber-500" />
+              <h3 className="font-bold text-gray-800">Ready to Complete ({inProgressToComplete.length})</h3>
+              <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-semibold">Get Rated</span>
             </div>
             <div className="space-y-2">
-              {activeBookings.map((booking: Booking) => (
+              {inProgressToComplete.map((booking: Booking) => (
                 <button
                   key={booking.id}
                   onClick={() => navigate('booking-detail', { bookingId: booking.id })}
-                  className="w-full bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 text-left"
+                  className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-10 w-10">
                     <AvatarImage src={booking.client?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.client?.name || 'C')}&background=10b981&color=fff`} />
                     <AvatarFallback>{booking.client?.name?.[0]}</AvatarFallback>
                   </Avatar>
@@ -350,19 +396,51 @@ export default function ProviderDashboardScreen() {
                     <p className="text-sm font-medium text-gray-800 truncate">{booking.service}</p>
                     <p className="text-xs text-gray-500">{booking.client?.name}</p>
                   </div>
-                  <Badge
-                    className={`text-[9px] border-0 ${
-                      booking.status === 'in_progress' ? 'bg-green-100 text-green-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}
-                  >
-                    {booking.status === 'in_progress' ? 'In Progress' : 'Accepted'}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0">
+                    <CheckCircle className="h-3 w-3" />
+                    Mark Complete
+                  </div>
                 </button>
               ))}
             </div>
           </div>
         )}
+
+        {/* ACCEPTED — NOT YET STARTED — provider needs to tap “Start Service” when they begin work */}
+        {acceptedToStart.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Play className="h-5 w-5 text-blue-500" />
+              <h3 className="font-bold text-gray-800">Start When Ready ({acceptedToStart.length})</h3>
+            </div>
+            <div className="space-y-2">
+              {acceptedToStart.map((booking: Booking) => (
+                <button
+                  key={booking.id}
+                  onClick={() => navigate('booking-detail', { bookingId: booking.id })}
+                  className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={booking.client?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.client?.name || 'C')}&background=3b82f6&color=fff`} />
+                    <AvatarFallback>{booking.client?.name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{booking.service}</p>
+                    <p className="text-xs text-gray-500">{booking.client?.name}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0">
+                    <Play className="h-3 w-3" />
+                    Start Service
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Active Bookings section removed — replaced by the more actionable
+            "Ready to Complete" and "Start When Ready" sections above, which
+            show the same bookings but with explicit next-action CTAs. */}
 
         {/* All Recent Bookings */}
         <div>
