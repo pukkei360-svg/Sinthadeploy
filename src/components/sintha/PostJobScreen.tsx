@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input'
 import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { cleanError } from '@/lib/clean-error'
-import { analyzeJobPhoto, matchCategory } from '@/lib/ai-photo-analysis'
 
 const URGENCY_OPTIONS = [
   { id: 'today', label: 'Today', desc: 'Need it done today' },
@@ -304,7 +303,13 @@ export default function PostJobScreen() {
                       if (!uploadResult.success || !uploadResult.url) throw new Error('Upload failed')
                       setUploadedPhotoUrls([uploadResult.url])
 
-                      const result = await analyzeJobPhoto(uploadResult.url)
+                      const result = await apiFetch('/ai/analyze-photo', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                          photoUrl: uploadResult.url,
+                          categories: categories.map((c: ServiceCategory) => ({ id: c.id, name: c.name })),
+                        }),
+                      })
                       if (result.success) {
                         setAiResult({
                           description: result.description,
@@ -319,10 +324,9 @@ export default function PostJobScreen() {
                         if (result.description && !description) {
                           setDescription(result.description)
                         }
-                        // Auto-select category if suggested
-                        if (result.suggestedCategory) {
-                          const matchedId = matchCategory(result.suggestedCategory, categories.map((c: ServiceCategory) => ({ id: c.id, name: c.name })))
-                          if (matchedId) setCategoryId(matchedId)
+                        // Auto-select category if matched
+                        if (result.matchedCategoryId) {
+                          setCategoryId(result.matchedCategoryId)
                         }
                         toast({ title: 'AI analysis complete!', description: 'We filled in the details for you.' })
                       }
