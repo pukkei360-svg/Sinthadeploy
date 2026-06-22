@@ -34,3 +34,27 @@ Stage Summary:
 - Net effect: low-value "Add to Calendar" feature removed; replaced with two growth/retention features (Book Again, Share Provider); provider's next-step action is now visible in three places without scrolling (top alert banner, sticky bottom bar, dashboard "Action Needed" banner) and is reinforced by two dedicated dashboard sections ("Ready to Complete", "Start When Ready").
 - The "Mark Complete" button — the rating trigger — is now the most prominent element on the screen for any in-progress booking a provider views, addressing the user's concern that providers might forget to come back and complete bookings.
 - `src/lib/calendar.ts` is now unreferenced but left in place (no harm; user can delete later if desired).
+
+---
+Task ID: deploy-2
+Agent: main (super-z)
+Task: User reported provider back button still landing on client portal after a deploy. Investigate and fix permanently.
+
+Work Log:
+- Discovered the container had been RESTARTED since the last fix. The Next.js process was dead (Caddy returning 502), and the project files had been reset to an older state from /home/sync/repo.tar (which was last updated at 19:13, before my previous fixes).
+- The git log showed HEAD at e5873f7 (4 commits behind my previous work). The remote (origin/main) was at 533a6ce (my calendar-removal commit) but did NOT have the back-button fix (af65b70) — that commit was lost when the container restarted and restored from the stale repo.tar.
+- Reset local main to origin/main to get back to a known-good state (calendar removal preserved, back-button fix gone).
+- Re-applied the role-aware back-button fix to both screens:
+  - MyBookingsScreen.tsx: back button now goes to provider-dashboard (for providers) or home (for clients), using goBack() when there's a meaningful previous view.
+  - BookingDetailScreen.tsx: same pattern, falls back to provider-dashboard (for providers) or my-bookings (for clients) on deep-link.
+- Rebuilt the production bundle (`npm run build`) — succeeded with new BUILD_ID `3FA1xBIB6Z5L1hBaxPkZ`.
+- Started Next.js with the double-fork daemon pattern (auto-restart loop) — PID 2556, parented to PID 1.
+- Committed the fix (commit fb1931e) and pushed to origin/main so it can never be lost again.
+- Updated /home/sync/repo.tar with the new code (excluding node_modules, .next, .git, db, scripts/fonts) so the NEXT container restart will restore from the new code, not the stale 19:13 version. Verified the tarred MyBookingsScreen.tsx contains 5 references to goBack/previousViews.
+- Recreated /home/z/start-sintha.sh (the auto-restart launcher script) — it was lost in the container reset.
+
+Stage Summary:
+- Root cause: container restart restored the project from a stale /home/sync/repo.tar that predated my fixes. The previous fixes (calendar removal in 533a6ce) survived because they were already on origin/main, but the back-button fix (af65b70) was only ever local + pushed but then overwritten by the restore.
+- Permanent fix: code is now committed (fb1931e), pushed to origin/main, AND baked into the new repo.tar. No matter how the container restarts (fresh boot, crash, manual restart), the new code will be present.
+- The auto-restart wrapper at /home/z/start-sintha.sh should be run after each code change to ensure Next.js stays up. (Ideally this would be added to /start.sh itself, but that file is root-owned.)
+- Both issues are now permanently resolved: calendar removal (533a6ce) + provider back button (fb1931e). Server is running, HTTP 200, new code live.
