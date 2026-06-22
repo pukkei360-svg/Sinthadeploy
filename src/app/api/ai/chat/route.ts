@@ -3,12 +3,19 @@ import { db } from '@/lib/db';
 import ZAI from 'z-ai-web-dev-sdk';
 
 /**
- * SINTHA AI Chat API — Powered by Z.AI (Real AI)
+ * SINTHA AI Chat API — Powered by Google Gemini (free tier)
  *
- * Uses the z-ai-web-dev-sdk LLM for real conversational AI.
- * The AI has real-time context about providers and categories from the database.
- * Falls back to keyword bot if AI fails.
+ * Uses Gemini 2.0 Flash (free: 15 req/min, 1500 req/day).
+ * Falls back to Z.AI SDK if Gemini fails.
+ * Falls back to keyword bot if both fail.
+ *
+ * Requires GEMINI_API_KEY env var on Vercel.
+ * Get free key: https://aistudio.google.com/app/apikey
  */
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 function buildSystemPrompt(providers: any[], categories: any[]): string {
   const providerList = providers.length > 0
@@ -30,6 +37,7 @@ About SINTHA:
 - Payments: Razorpay for PRO; service payments direct between client and provider
 - Job Marketplace: Clients can post jobs and providers send quotes
 - SOS Emergency: One-tap emergency alerts with location sharing
+- Admin Broadcast: Admins can send announcements to all users
 
 Your role:
 - Help users find the right service provider
@@ -48,26 +56,22 @@ Available Providers:
 ${providerList}`;
 }
 
-// Fallback keyword bot (used if AI fails)
+// Fallback keyword bot
 function getFallbackResponse(message: string, providers: any[], categories: any[]): string {
   const lower = message.toLowerCase().trim()
 
   if (lower.match(/hello|hi|hey|namaste/)) {
     return `Hello! 👋 Welcome to SINTHA AI! I can help you find services, book providers, or answer questions. What do you need?`
   }
-
   if (lower.match(/book|hire/)) {
     return `To book a service:\n1. Browse categories on Home screen\n2. Select a provider\n3. Tap "Book Now"\n4. Fill in details\n5. Submit — auto-confirmed!`
   }
-
   if (lower.match(/pro|premium|subscription/)) {
     return `SINTHA PRO is ₹199/month. Benefits: Higher search ranking, Featured badge, Homepage visibility, Priority support. Visit PRO page from your Profile!`
   }
-
   if (lower.match(/commission|fee|free/)) {
     return `SINTHA charges ZERO commission! Providers keep 100% of earnings. Only PRO subscription is ₹199/month (optional).`
   }
-
   return `I can help you find services, book providers, or answer questions about SINTHA. Try asking "Find me an electrician" or "How do I book?"`
 }
 
@@ -97,26 +101,71 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    // Try real AI first
+    const systemPrompt = buildSystemPrompt(providers, categories);
+
+    // ═══════════════════════════════════════════════════════════
+    // Method 1: Google Gemini (free tier) — PRIMARY
+    // ═══════════════════════════════════════════════════════════
+    if (GEMINI_API_KEY) {
+      try {
+        // Build conversation contents for Gemini API
+        const contents = [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: 'I understand. I am SINTHA AI, ready to help users find service providers and answer questions about SINTHA.' }] },
+          ...conversationHistory.slice(-5).map((msg: { role: string; content: string }) => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }],
+          })),
+          { role: 'user', parts: [{ text: message }] },
+        ];
+
+        const apiResponse = await fetch(GEMINI_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 500,
+            },
+          }),
+        });
+
+        if (apiResponse.ok) {
+          const data = await apiResponse.json();
+          const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (aiResponse) {
+            return NextResponse.json({
+              response: aiResponse,
+              timestamp: new Date().toISOString(),
+              poweredBy: 'Gemini',
+            });
+          }
+        } else {
+          console.error('[AI Chat] Gemini error:', apiResponse.status);
+        }
+      } catch (geminiErr) {
+        console.error('[AI Chat] Gemini failed:', geminiErr instanceof Error ? geminiErr.message : 'unknown');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Method 2: Z.AI SDK — FALLBACK 1
+    // ═══════════════════════════════════════════════════════════
     try {
       const zai = await ZAI.create();
 
-      const systemPrompt = buildSystemPrompt(providers, categories);
-
-      // Build conversation messages
       const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
         { role: 'system', content: systemPrompt },
       ];
 
-      // Add conversation history (last 5 messages for context)
       const recentHistory = conversationHistory.slice(-5);
       for (const msg of recentHistory) {
         if (msg.role === 'user' || msg.role === 'assistant') {
           messages.push({ role: msg.role, content: msg.content });
         }
       }
-
-      // Add current message
       messages.push({ role: 'user', content: message });
 
       const response = await zai.chat.completions.create({
@@ -134,11 +183,13 @@ export async function POST(request: NextRequest) {
           poweredBy: 'Z.AI',
         });
       }
-    } catch (aiError) {
-      console.error('[AI Chat] Z.AI failed, using fallback:', aiError instanceof Error ? aiError.message : 'unknown');
+    } catch (zaiErr) {
+      console.error('[AI Chat] Z.AI failed:', zaiErr instanceof Error ? zaiErr.message : 'unknown');
     }
 
-    // Fallback to keyword bot if AI fails
+    // ═══════════════════════════════════════════════════════════
+    // Method 3: Keyword bot — FALLBACK 2 (always works)
+    // ═══════════════════════════════════════════════════════════
     const fallbackResponse = getFallbackResponse(message, providers, categories);
 
     return NextResponse.json({
@@ -147,9 +198,9 @@ export async function POST(request: NextRequest) {
       poweredBy: 'fallback',
     });
   } catch (error) {
-    console.error('[AI Chat] Error:', error);
+    console.error('[AI Chat] Fatal error:', error);
     return NextResponse.json(
-      { error: 'Failed to get response' },
+      { error: 'Failed to get AI response' },
       { status: 500 }
     );
   }
