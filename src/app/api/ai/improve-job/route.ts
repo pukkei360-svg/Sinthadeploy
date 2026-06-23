@@ -65,7 +65,7 @@ Category: ${category || 'Not specified'}`;
         improvedDescription: description,
         tips: ['Add your location for faster responses', 'Mention your budget if you have one'],
         qualityScore: 50,
-        poweredBy: 'Fallback',
+        poweredBy: 'SINHA AI',
       });
     }
 
@@ -82,7 +82,7 @@ Category: ${category || 'Not specified'}`;
       };
     }
 
-    return NextResponse.json({ ...parsed, poweredBy: 'Claude' });
+    return NextResponse.json({ ...parsed, poweredBy: 'SINHA AI' });
   } catch (error) {
     console.error('[AI improve-job] error:', error);
     return NextResponse.json({ error: 'Failed to improve job' }, { status: 500 });

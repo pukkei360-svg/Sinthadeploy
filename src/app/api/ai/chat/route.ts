@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
               response: aiResponse,
               timestamp: new Date().toISOString(),
-              poweredBy: 'Claude',
+              poweredBy: 'SINHA AI',
             });
           }
         } else {
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
               response: aiResponse,
               timestamp: new Date().toISOString(),
-              poweredBy: 'Gemini',
+              poweredBy: 'SINHA AI',
             });
           }
         } else {
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           response: aiResponse,
           timestamp: new Date().toISOString(),
-          poweredBy: 'Z.AI',
+          poweredBy: 'SINHA AI',
         });
       }
     } catch (zaiErr) {
@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       response: fallbackResponse,
       timestamp: new Date().toISOString(),
-      poweredBy: 'Fallback Bot',
+      poweredBy: 'SINHA AI',
     });
   } catch (error) {
     console.error('AI Chat error:', error);

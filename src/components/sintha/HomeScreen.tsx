@@ -35,7 +35,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoaded, setDataLoaded] = useState(false)
 
-  // AI Smart Search — natural language provider matching powered by Claude.
+  // AI Smart Search — natural language provider matching powered by SINHA AI.
   // Users type what they need (e.g. "fix my leaking tap") and AI finds matches.
   const [aiSearchQuery, setAiSearchQuery] = useState('')
   const [aiSearching, setAiSearching] = useState(false)
@@ -69,7 +69,7 @@ export default function HomeScreen() {
 
   const unreadNotifs = notifications.filter((n) => !n.isRead).length
 
-  // AI Smart Search handler — calls /api/ai/smart-search which uses Claude
+  // AI Smart Search handler — calls /api/ai/smart-search which uses SINHA AI
   // to match the user's natural language query to real providers.
   const handleAiSearch = async () => {
     if (!aiSearchQuery.trim() || aiSearching) return
@@ -211,7 +211,7 @@ export default function HomeScreen() {
         <PushNotificationPrompt />
       </div>
 
-      {/* AI Smart Search — natural language search powered by Claude.
+      {/* AI Smart Search — natural language search powered by SINHA AI.
           Users type what they need (e.g. "fix my leaking tap") and AI
           matches them to real providers from the database. */}
       <div className="px-4 pt-3 bg-white">
@@ -219,7 +219,7 @@ export default function HomeScreen() {
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-purple-600" />
             <span className="text-xs font-bold text-purple-700">AI Smart Search</span>
-            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">Claude AI</span>
+            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">SINHA AI</span>
           </div>
           <div className="flex gap-2">
             <input

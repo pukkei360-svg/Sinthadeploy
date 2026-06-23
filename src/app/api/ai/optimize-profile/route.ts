@@ -111,7 +111,7 @@ Be encouraging but honest. Prioritize high-impact improvements (photo, descripti
         suggestedDescription: '',
         suggestedRate: { current: provider.hourlyRate, suggested: null, reason: '' },
         tips: ['Complete your profile to get more bookings', 'Get verified for the ✓ badge'],
-        poweredBy: 'Rule-based Fallback',
+        poweredBy: 'SINHA AI',
       });
     }
 
@@ -123,7 +123,7 @@ Be encouraging but honest. Prioritize high-impact improvements (photo, descripti
       parsed = { score: 50, strengths: [], improvements: [], suggestedDescription: '', suggestedRate: {}, tips: [] };
     }
 
-    return NextResponse.json({ ...parsed, poweredBy: 'Claude' });
+    return NextResponse.json({ ...parsed, poweredBy: 'SINHA AI' });
   } catch (error) {
     console.error('[AI optimize-profile] error:', error);
     return NextResponse.json({ error: 'Failed to analyze profile' }, { status: 500 });

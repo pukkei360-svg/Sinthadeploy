@@ -107,7 +107,7 @@ export default function ProviderDashboardScreen() {
   // Calculate estimated earnings (from completed bookings)
   const estimatedEarnings = completedBookings.length * (myProviderProfile?.hourlyRate || 0)
 
-  // AI Profile Optimizer — calls /api/ai/optimize-profile which uses Claude
+  // AI Profile Optimizer — calls /api/ai/optimize-profile which uses SINHA AI
   // to analyze the provider's profile and suggest improvements for more bookings.
   const optimizeProfile = async () => {
     if (!user || aiOptimizing) return
@@ -593,13 +593,13 @@ export default function ProviderDashboardScreen() {
           </div>
         </div>
 
-        {/* AI Profile Optimizer — uses Claude to analyze the provider's profile
+        {/* AI Profile Optimizer — uses SINHA AI to analyze the provider's profile
             and suggest improvements for getting more bookings. */}
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4 mt-3">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-purple-600" />
             <h3 className="font-semibold text-gray-800 text-sm">AI Profile Optimizer</h3>
-            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">Claude AI</span>
+            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">SINHA AI</span>
           </div>
           <p className="text-xs text-gray-600 mb-3">
             Get AI-powered suggestions to improve your profile and attract more bookings.

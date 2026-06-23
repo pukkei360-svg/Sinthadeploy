@@ -130,7 +130,7 @@ ${JSON.stringify(providerList, null, 2)}`;
           ? `I found ${keywordMatches.length} provider(s) that might help. Tap any to view their profile and book.`
           : "I couldn't find an exact match. Try posting a job — providers will come to you with quotes!",
         suggestions: "Tip: Post a job if you don't find the right provider.",
-        poweredBy: 'Keyword Fallback',
+        poweredBy: 'SINHA AI',
       });
     }
 
@@ -145,7 +145,7 @@ ${JSON.stringify(providerList, null, 2)}`;
         matches: [],
         summary: result.text,
         suggestions: '',
-        poweredBy: 'Claude',
+        poweredBy: 'SINHA AI',
       });
     }
 
@@ -172,7 +172,7 @@ ${JSON.stringify(providerList, null, 2)}`;
       matches,
       summary: parsed.summary || '',
       suggestions: parsed.suggestions || '',
-      poweredBy: 'Claude',
+      poweredBy: 'SINHA AI',
     });
   } catch (error) {
     console.error('[AI smart-search] error:', error);

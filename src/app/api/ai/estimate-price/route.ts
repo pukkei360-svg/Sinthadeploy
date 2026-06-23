@@ -110,7 +110,7 @@ Estimate the total cost for this job.`;
         factors: ['Provider experience', 'Job complexity', 'Materials needed'],
         tips: 'Get quotes from 2-3 providers for the best price. Post a job on SINTHA to receive competitive quotes!',
         currency: 'INR',
-        poweredBy: 'Rate-based Fallback',
+        poweredBy: 'SINHA AI',
       });
     }
 
@@ -129,7 +129,7 @@ Estimate the total cost for this job.`;
       };
     }
 
-    return NextResponse.json({ ...parsed, currency: 'INR', poweredBy: 'Claude' });
+    return NextResponse.json({ ...parsed, currency: 'INR', poweredBy: 'SINHA AI' });
   } catch (error) {
     console.error('[AI estimate-price] error:', error);
     return NextResponse.json({ error: 'Failed to estimate price' }, { status: 500 });

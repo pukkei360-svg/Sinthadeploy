@@ -13,7 +13,7 @@ interface AIChatMessage {
   content: string
   isBot: boolean
   timestamp: Date
-  poweredBy?: string  // 'Claude' | 'Gemini' | 'Z.AI' | 'Fallback Bot'
+  poweredBy?: string  // always 'SINHA AI'
 }
 
 export default function AIAssistantScreen() {
@@ -21,10 +21,10 @@ export default function AIAssistantScreen() {
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([
     {
       id: 'welcome',
-      content: "Hi! 👋 I'm SINTHA AI, powered by Claude. I can help you:\n\n✨ Find and compare providers\n💰 Estimate service prices\n📅 Guide you through booking\n🏆 Explain PRO, referrals & verification\n🛠️ Help providers optimize their profile\n\nWhat can I help you with today?",
+      content: "Hi! 👋 I'm SINTHA AI, your smart assistant. I can help you:\n\n✨ Find and compare providers\n💰 Estimate service prices\n📅 Guide you through booking\n🏆 Explain PRO, referrals & verification\n🛠️ Help providers optimize their profile\n\nWhat can I help you with today?",
       isBot: true,
       timestamp: new Date(),
-      poweredBy: 'Claude',
+      poweredBy: 'SINHA AI',
     },
   ])
   const [input, setInput] = useState('')
@@ -117,7 +117,7 @@ export default function AIAssistantScreen() {
           <h1 className="text-sm font-bold text-[#1E293B]">SINTHA AI</h1>
           <p className="text-[10px] text-[#10B981] flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-            Online · Powered by Claude
+            Online · Powered by SINHA AI
           </p>
         </div>
       </div>
