@@ -14,7 +14,7 @@ import PushNotificationPrompt from './PushNotificationPrompt'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase, Loader2
+  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -35,24 +35,6 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoaded, setDataLoaded] = useState(false)
 
-  // AI Smart Search — natural language provider matching powered by SINTHA AI.
-  // Users type what they need (e.g. "fix my leaking tap") and AI finds matches.
-  const [aiSearchQuery, setAiSearchQuery] = useState('')
-  const [aiSearching, setAiSearching] = useState(false)
-  const [aiResults, setAiResults] = useState<Array<{
-    providerId: string
-    name: string
-    photoUrl?: string
-    category?: string
-    rating: number
-    hourlyRate?: number
-    verified?: boolean
-    pro?: boolean
-    reason: string
-    matchScore: number
-  }> | null>(null)
-  const [aiSummary, setAiSummary] = useState('')
-
   // Feature 2: Location-based provider sorting
   // Toggle between featured (default) and nearby (distance) sorting.
   const [sortBy, setSortBy] = useState<'featured' | 'nearby'>('featured')
@@ -68,26 +50,6 @@ export default function HomeScreen() {
     !Number.isNaN(userLat) && !Number.isNaN(userLng)
 
   const unreadNotifs = notifications.filter((n) => !n.isRead).length
-
-  // AI Smart Search handler — calls /api/ai/smart-search which uses SINTHA AI
-  // to match the user's natural language query to real providers.
-  const handleAiSearch = async () => {
-    if (!aiSearchQuery.trim() || aiSearching) return
-    setAiSearching(true)
-    setAiResults(null)
-    try {
-      const data = await apiFetch('/ai/smart-search', {
-        method: 'POST',
-        body: JSON.stringify({ query: aiSearchQuery.trim() }),
-      })
-      setAiResults(data.matches || [])
-      setAiSummary(data.summary || '')
-    } catch {
-      setAiSummary('Could not search right now. Try browsing categories below.')
-    } finally {
-      setAiSearching(false)
-    }
-  }
 
   useEffect(() => {
     if (dataLoaded) return
@@ -211,96 +173,6 @@ export default function HomeScreen() {
         <PushNotificationPrompt />
       </div>
 
-      {/* AI Smart Search — natural language search powered by SINTHA AI.
-          Users type what they need (e.g. "fix my leaking tap") and AI
-          matches them to real providers from the database. */}
-      <div className="px-4 pt-3 bg-white">
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-purple-600" />
-            <span className="text-xs font-bold text-purple-700">AI Smart Search</span>
-            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">SINTHA AI</span>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={aiSearchQuery}
-              onChange={(e) => setAiSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAiSearch()}
-              placeholder="Describe what you need... e.g. 'fix leaking tap'"
-              className="flex-1 bg-white border border-purple-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              disabled={aiSearching}
-            />
-            <button
-              onClick={handleAiSearch}
-              disabled={aiSearching || !aiSearchQuery.trim()}
-              className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-1 shrink-0"
-            >
-              {aiSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-          {/* AI search results */}
-          {aiSummary && (
-            <p className="text-xs text-gray-600 mt-2 leading-relaxed">{aiSummary}</p>
-          )}
-          {aiResults && aiResults.length > 0 && (
-            <div className="mt-2 space-y-2">
-              {aiResults.map((match, i) => (
-                <button
-                  key={i}
-                  onClick={() => navigate('provider-profile', { providerId: match.providerId })}
-                  className="w-full bg-white rounded-xl p-2.5 flex items-center gap-2 text-left shadow-sm hover:shadow-md transition-shadow border border-purple-100"
-                >
-                  <img
-                    src={match.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(match.name)}&background=7c3aed&color=fff`}
-                    alt={match.name}
-                    className="w-10 h-10 rounded-full shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <p className="text-sm font-medium text-gray-800 truncate">{match.name}</p>
-                      {match.verified && <span className="text-[10px] text-green-600">✓</span>}
-                      {match.pro && <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">PRO</span>}
-                    </div>
-                    <p className="text-[10px] text-gray-500">{match.category} · ⭐{match.rating}</p>
-                    <p className="text-[10px] text-purple-600 mt-0.5 line-clamp-1">{match.reason}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    {match.hourlyRate && (
-                      <p className="text-xs font-bold text-gray-700">₹{match.hourlyRate}/hr</p>
-                    )}
-                    <div className="flex items-center gap-0.5 justify-end">
-                      <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-500 rounded-full"
-                          style={{ width: `${match.matchScore}%` }}
-                        />
-                      </div>
-                      <span className="text-[9px] text-gray-500">{match.matchScore}%</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          {aiResults && aiResults.length === 0 && !aiSearching && (
-            <div className="mt-2 text-center py-3">
-              <p className="text-xs text-gray-500 mb-2">No AI matches found</p>
-              <button
-                onClick={() => navigate('post-job')}
-                className="text-xs text-purple-600 font-medium"
-              >
-                Post a job instead →
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Search Bar */}
       <div className="px-4 py-3 bg-white">
         <div className={`relative transition-all ${searchFocused ? 'ring-2 ring-blue-300' : ''} rounded-xl`}>
@@ -352,11 +224,11 @@ export default function HomeScreen() {
             <span className="text-[10px] font-medium text-gray-600">Post Job</span>
           </button>
           <button
-            onClick={() => navigate('price-estimator')}
-            className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-3 text-center shadow-sm sintha-card-hover border border-purple-100"
+            onClick={() => navigate('my-jobs')}
+            className="bg-white rounded-xl p-3 text-center shadow-sm sintha-card-hover"
           >
-            <Sparkles className="h-5 w-5 text-purple-600 mx-auto mb-1" />
-            <span className="text-[10px] font-medium text-purple-700">AI Price</span>
+            <Calendar className="h-5 w-5 text-amber-600 mx-auto mb-1" />
+            <span className="text-[10px] font-medium text-gray-600">My Jobs</span>
           </button>
           <button
             onClick={() => navigate('my-bookings')}

@@ -16,7 +16,7 @@ import {
   ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
   MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
   QrCode, Share2, Package, Tag, BarChart3, Copy,
-  ShieldCheck, ChevronRight, Play, AlertCircle, Sparkles, Loader2
+  ShieldCheck, ChevronRight, Play, AlertCircle
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -32,16 +32,6 @@ export default function ProviderDashboardScreen() {
   const [newPackage, setNewPackage] = useState({ name: '', price: '', description: '' })
   const [newOffer, setNewOffer] = useState({ title: '', discount: '', description: '', validDays: '7' })
   const [availability, setAvailability] = useState('available')
-  // AI Profile Optimizer — shows AI suggestions for improving the provider's profile.
-  const [aiOptimizing, setAiOptimizing] = useState(false)
-  const [aiSuggestions, setAiSuggestions] = useState<{
-    score: number
-    strengths: string[]
-    improvements: Array<{ area: string; suggestion: string; priority: string }>
-    suggestedDescription?: string
-    tips?: string[]
-    poweredBy: string
-  } | null>(null)
   // Earnings summary — fetched from /api/provider/earnings. Shows total ₹ earned
   // from completed bookings (where the provider set a price on completion).
   const [earnings, setEarnings] = useState<{
@@ -106,25 +96,6 @@ export default function ProviderDashboardScreen() {
 
   // Calculate estimated earnings (from completed bookings)
   const estimatedEarnings = completedBookings.length * (myProviderProfile?.hourlyRate || 0)
-
-  // AI Profile Optimizer — calls /api/ai/optimize-profile which uses SINTHA AI
-  // to analyze the provider's profile and suggest improvements for more bookings.
-  const optimizeProfile = async () => {
-    if (!user || aiOptimizing) return
-    setAiOptimizing(true)
-    setAiSuggestions(null)
-    try {
-      const data = await apiFetch('/ai/optimize-profile', {
-        method: 'POST',
-        body: JSON.stringify({ providerId: user.id }),
-      })
-      setAiSuggestions(data)
-    } catch {
-      // Silent — the UI shows a fallback message
-    } finally {
-      setAiOptimizing(false)
-    }
-  }
 
   const toggleAvailability = async () => {
     const states = ['available', 'busy', 'offline']
@@ -591,114 +562,6 @@ export default function ProviderDashboardScreen() {
               <span className="text-[9px] text-gray-600">AI Help</span>
             </button>
           </div>
-        </div>
-
-        {/* AI Profile Optimizer — uses SINTHA AI to analyze the provider's profile
-            and suggest improvements for getting more bookings. */}
-        <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4 mt-3">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="h-4 w-4 text-purple-600" />
-            <h3 className="font-semibold text-gray-800 text-sm">AI Profile Optimizer</h3>
-            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">SINTHA AI</span>
-          </div>
-          <p className="text-xs text-gray-600 mb-3">
-            Get AI-powered suggestions to improve your profile and attract more bookings.
-          </p>
-          <button
-            onClick={optimizeProfile}
-            disabled={aiOptimizing}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {aiOptimizing ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing your profile...</>
-            ) : (
-              <><Sparkles className="h-4 w-4" /> Optimize My Profile</>
-            )}
-          </button>
-
-          {/* AI suggestions result */}
-          {aiSuggestions && (
-            <div className="mt-3 space-y-3">
-              {/* Score */}
-              <div className="bg-white rounded-lg p-3 flex items-center gap-3">
-                <div className="relative w-14 h-14 shrink-0">
-                  <svg className="w-14 h-14 transform -rotate-90" viewBox="0 0 56 56">
-                    <circle cx="28" cy="28" r="24" fill="none" stroke="#e5e7eb" strokeWidth="4" />
-                    <circle
-                      cx="28" cy="28" r="24" fill="none" stroke={aiSuggestions.score >= 70 ? '#10b981' : aiSuggestions.score >= 50 ? '#f59e0b' : '#ef4444'}
-                      strokeWidth="4" strokeLinecap="round"
-                      strokeDasharray={`${(aiSuggestions.score / 100) * 150.8} 150.8`}
-                    />
-                  </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-800">
-                    {aiSuggestions.score}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">Profile Score</p>
-                  <p className="text-[10px] text-gray-500">
-                    {aiSuggestions.score >= 70 ? 'Great profile!' : aiSuggestions.score >= 50 ? 'Good, but can improve' : 'Needs work'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Strengths */}
-              {aiSuggestions.strengths && aiSuggestions.strengths.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-green-700 mb-1">✓ Strengths</p>
-                  <ul className="space-y-0.5">
-                    {aiSuggestions.strengths.map((s, i) => (
-                      <li key={i} className="text-[11px] text-gray-600 pl-3">{s}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Improvements */}
-              {aiSuggestions.improvements && aiSuggestions.improvements.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-amber-700 mb-1">💡 Improvements</p>
-                  <div className="space-y-2">
-                    {aiSuggestions.improvements.map((imp, i) => (
-                      <div key={i} className="bg-white rounded-lg p-2 border border-amber-100">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
-                            imp.priority === 'high' ? 'bg-red-100 text-red-600' :
-                            imp.priority === 'medium' ? 'bg-amber-100 text-amber-600' :
-                            'bg-gray-100 text-gray-500'
-                          }`}>{imp.priority}</span>
-                          <span className="text-xs font-medium text-gray-700">{imp.area}</span>
-                        </div>
-                        <p className="text-[11px] text-gray-600">{imp.suggestion}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Suggested description */}
-              {aiSuggestions.suggestedDescription && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-                  <p className="text-[10px] font-semibold text-blue-700 mb-1">✨ Suggested Description</p>
-                  <p className="text-[11px] text-blue-800">{aiSuggestions.suggestedDescription}</p>
-                </div>
-              )}
-
-              {/* Tips */}
-              {aiSuggestions.tips && aiSuggestions.tips.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-purple-700 mb-1">📋 Tips</p>
-                  <ul className="space-y-0.5">
-                    {aiSuggestions.tips.map((tip, i) => (
-                      <li key={i} className="text-[11px] text-gray-600 pl-3">{tip}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <p className="text-[9px] text-gray-400 text-center">Powered by {aiSuggestions.poweredBy}</p>
-            </div>
-          )}
         </div>
 
         {/* Earnings Summary — shows real ₹ totals from completed bookings with prices */}
