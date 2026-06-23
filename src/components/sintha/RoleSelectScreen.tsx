@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,7 +21,18 @@ export default function RoleSelectScreen() {
   // Referral code — optional. If the user was referred by someone, they
   // enter the code here. We store it on the user record so when they
   // buy PRO later, the referrer gets 30% commission.
+  // On mount, check if there's a pending referral code in localStorage
+  // (set by the /r/<code> redirect handler in page.tsx). If so, pre-fill it.
   const [referralCode, setReferralCode] = useState<string>('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const pending = localStorage.getItem('sintha_pending_referral')
+    if (pending) {
+      setReferralCode(pending)
+      // Don't remove it yet — it gets cleared after the user completes role selection
+    }
+  }, [])
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -69,6 +80,10 @@ export default function RoleSelectScreen() {
         } catch {
           // Referral save failed — continue anyway (not critical)
           console.warn('Failed to save referral code')
+        }
+        // Clear the pending referral from localStorage regardless of success
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('sintha_pending_referral')
         }
       }
 

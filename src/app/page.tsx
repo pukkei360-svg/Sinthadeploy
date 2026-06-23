@@ -100,6 +100,26 @@ export default function Home() {
     return () => { cancelled = true }
   }, [])
 
+  // ─────────────────────────────────────────────────────────────
+  // Referral code pre-fill from /r/<code> redirect
+  // ─────────────────────────────────────────────────────────────
+  // When someone clicks a shared referral link (sintha.app/r/IRABOT7K),
+  // the /r/[code] route redirects to /?ref=IRABOT7K. We read that query
+  // param here and store it in localStorage so the RoleSelectScreen can
+  // pre-fill the referral code input.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const urlParams = new URLSearchParams(window.location.search)
+    const refCode = urlParams.get('ref')
+    if (refCode) {
+      // Store the referral code for the RoleSelectScreen to pick up
+      localStorage.setItem('sintha_pending_referral', refCode.toUpperCase())
+      // Clean the URL so the query param doesn't persist on refresh/reload
+      const cleanUrl = window.location.pathname + window.location.hash
+      window.history.replaceState(null, '', cleanUrl)
+    }
+  }, [])
+
   // Listen to Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
