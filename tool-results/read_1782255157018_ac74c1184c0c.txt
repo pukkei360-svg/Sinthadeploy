@@ -1,0 +1,662 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useEffect, useState } from 'react'
+     4→     4→import { useAppStore, type Booking, type ProviderProfile } from '@/lib/store'
+     5→     5→import { apiFetch } from '@/lib/api'
+     6→     6→import { Card, CardContent } from '@/components/ui/card'
+     7→     7→import { Badge } from '@/components/ui/badge'
+     8→     8→import { Button } from '@/components/ui/button'
+     9→     9→import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+    10→    10→import { Skeleton } from '@/components/ui/skeleton'
+    11→    11→import BottomNav from './BottomNav'
+    12→    12→import PushNotificationPrompt from './PushNotificationPrompt'
+    13→    13→import WhatsAppIcon from './WhatsAppIcon'
+    14→    14→import {
+    15→    15→  Bell, Calendar, CheckCircle, Clock, Star, Crown, User,
+    16→    16→  ToggleLeft, ToggleRight, Briefcase, TrendingUp, PenLine, Shield,
+    17→    17→  MapPin, MessageCircle, Bot, Zap, Eye, IndianRupee, Users,
+    18→    18→  QrCode, Share2, Package, Tag, BarChart3, Copy,
+    19→    19→  ShieldCheck, ChevronRight, Play, AlertCircle
+    20→    20→} from 'lucide-react'
+    21→    21→import { useToast } from '@/hooks/use-toast'
+    22→    22→
+    23→    23→export default function ProviderDashboardScreen() {
+    24→    24→  const { navigate, user, bookings, setBookings, setMyProviderProfile, myProviderProfile, notifications } = useAppStore()
+    25→    25→  const { toast } = useToast()
+    26→    26→  const [loading, setLoading] = useState(true)
+    27→    27→  const [showQR, setShowQR] = useState(false)
+    28→    28→  const [packages, setPackages] = useState<any[]>([])
+    29→    29→  const [offers, setOffers] = useState<any[]>([])
+    30→    30→  const [showPackageForm, setShowPackageForm] = useState(false)
+    31→    31→  const [showOfferForm, setShowOfferForm] = useState(false)
+    32→    32→  const [newPackage, setNewPackage] = useState({ name: '', price: '', description: '' })
+    33→    33→  const [newOffer, setNewOffer] = useState({ title: '', discount: '', description: '', validDays: '7' })
+    34→    34→  const [availability, setAvailability] = useState('available')
+    35→    35→  // Earnings summary — fetched from /api/provider/earnings. Shows total ₹ earned
+    36→    36→  // from completed bookings (where the provider set a price on completion).
+    37→    37→  const [earnings, setEarnings] = useState<{
+    38→    38→    totalEarnings: number
+    39→    39→    totalBookings: number
+    40→    40→    paidBookings: number
+    41→    41→    thisMonthEarnings: number
+    42→    42→    thisMonthBookings: number
+    43→    43→    avgRating: number
+    44→    44→    totalReviews: number
+    45→    45→  } | null>(null)
+    46→    46→
+    47→    47→  useEffect(() => {
+    48→    48→    const loadData = async () => {
+    49→    49→      if (!user) return
+    50→    50→      setLoading(true)
+    51→    51→      try {
+    52→    52→        // Load provider profile
+    53→    53→        const provData = await apiFetch(`/providers?userId=${user.id}`)
+    54→    54→        const providers = provData.providers || []
+    55→    55→        if (providers.length > 0) {
+    56→    56→          setMyProviderProfile(providers[0])
+    57→    57→          setAvailability(providers[0].availability || 'available')
+    58→    58→          // Load existing packages and offers
+    59→    59→          if (providers[0].packages) {
+    60→    60→            try { setPackages(JSON.parse(providers[0].packages)) } catch {}
+    61→    61→          }
+    62→    62→          if (providers[0].offers) {
+    63→    63→            try { setOffers(JSON.parse(providers[0].offers)) } catch {}
+    64→    64→          }
+    65→    65→        }
+    66→    66→
+    67→    67→        // Load bookings
+    68→    68→        const bookingData = await apiFetch(`/bookings?providerId=${user.id}`)
+    69→    69→        setBookings(bookingData.bookings || [])
+    70→    70→
+    71→    71→        // Load earnings summary (total ₹ earned, this month, etc.)
+    72→    72→        try {
+    73→    73→          const earningsData = await apiFetch(`/provider/earnings?providerId=${user.id}`)
+    74→    74→          setEarnings(earningsData)
+    75→    75→        } catch {
+    76→    76→          // Earnings endpoint might fail if migration hasn't run — silent
+    77→    77→        }
+    78→    78→      } catch {
+    79→    79→        // Use existing data
+    80→    80→      } finally {
+    81→    81→        setLoading(false)
+    82→    82→      }
+    83→    83→    }
+    84→    84→    loadData()
+    85→    85→  }, [user, setBookings, setMyProviderProfile])
+    86→    86→
+    87→    87→  const pendingBookings = bookings.filter((b) => b.status === 'pending')
+    88→    88→  const unreadNotifs = notifications.filter((n) => !n.isRead).length
+    89→    89→  const completedBookings = bookings.filter((b) => b.status === 'completed')
+    90→    90→  // Bookings the provider has accepted but not yet started — they need to tap "Start Service".
+    91→    91→  const acceptedToStart = bookings.filter((b) => b.status === 'accepted')
+    92→    92→  // Bookings the provider has started but not yet completed — they need to tap "Mark Complete" to get rated.
+    93→    93→  const inProgressToComplete = bookings.filter((b) => b.status === 'in_progress')
+    94→    94→  // Total count of bookings waiting on the provider's next action — drives the top alert banner.
+    95→    95→  const actionNeededCount = acceptedToStart.length + inProgressToComplete.length
+    96→    96→
+    97→    97→  // Calculate estimated earnings (from completed bookings)
+    98→    98→  const estimatedEarnings = completedBookings.length * (myProviderProfile?.hourlyRate || 0)
+    99→    99→
+   100→   100→  const toggleAvailability = async () => {
+   101→   101→    const states = ['available', 'busy', 'offline']
+   102→   102→    const currentIdx = states.indexOf(availability)
+   103→   103→    const nextIdx = (currentIdx + 1) % states.length
+   104→   104→    const newAvailability = states[nextIdx]
+   105→   105→    setAvailability(newAvailability)
+   106→   106→
+   107→   107→    // Update on backend
+   108→   108→    if (myProviderProfile) {
+   109→   109→      try {
+   110→   110→        await apiFetch(`/providers/${myProviderProfile.id}`, {
+   111→   111→          method: 'PATCH',
+   112→   112→          body: JSON.stringify({ availability: newAvailability }),
+   113→   113→        })
+   114→   114→      } catch {
+   115→   115→        // Silent fail
+   116→   116→      }
+   117→   117→    }
+   118→   118→  }
+   119→   119→
+   120→   120→  const handleBookingAction = async (bookingId: string, action: 'accepted' | 'rejected') => {
+   121→   121→    try {
+   122→   122→      await apiFetch(`/bookings/${bookingId}`, {
+   123→   123→        method: 'PATCH',
+   124→   124→        body: JSON.stringify({ status: action }),
+   125→   125→      })
+   126→   126→      setBookings(bookings.map((b) => b.id === bookingId ? { ...b, status: action } : b))
+   127→   127→    } catch {
+   128→   128→      // Handle error silently
+   129→   129→    }
+   130→   130→  }
+   131→   131→
+   132→   132→  if (loading) {
+   133→   133→    return (
+   134→   134→      <div className="min-h-screen bg-gray-50 pb-20">
+   135→   135→        <div className="p-4 space-y-4">
+   136→   136→          <Skeleton className="h-8 w-48" />
+   137→   137→          <div className="grid grid-cols-2 gap-3">
+   138→   138→            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+   139→   139→          </div>
+   140→   140→        </div>
+   141→   141→        <BottomNav />
+   142→   142→      </div>
+   143→   143→    )
+   144→   144→  }
+   145→   145→
+   146→   146→  return (
+   147→   147→    <div className="min-h-screen bg-gray-50 pb-20">
+   148→   148→      {/* Top Bar */}
+   149→   149→      <div className="bg-white sticky top-0 z-40 px-4 py-3 flex items-center gap-3 border-b border-gray-100">
+   150→   150→        <h1 className="text-xl font-extrabold sintha-gradient-text">SINTHA</h1>
+   151→   151→        <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">Provider</Badge>
+   152→   152→        <div className="flex-1" />
+   153→   153→        <button
+   154→   154→          onClick={() => navigate('notifications')}
+   155→   155→          className="relative p-2 text-gray-500 hover:text-gray-700"
+   156→   156→          aria-label={`Notifications${(pendingBookings.length + unreadNotifs) > 0 ? ` (${pendingBookings.length + unreadNotifs} unread)` : ''}`}
+   157→   157→        >
+   158→   158→          <Bell className="h-5 w-5" />
+   159→   159→          {(pendingBookings.length > 0 || unreadNotifs > 0) && (
+   160→   160→            <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold leading-none">
+   161→   161→              {(pendingBookings.length + unreadNotifs) > 9 ? '9+' : (pendingBookings.length + unreadNotifs)}
+   162→   162→            </span>
+   163→   163→          )}
+   164→   164→        </button>
+   165→   165→        <button onClick={() => navigate('profile')}>
+   166→   166→          <Avatar className="h-8 w-8">
+   167→   167→            <AvatarImage src={user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=10b981&color=fff`} />
+   168→   168→            <AvatarFallback>{user?.name?.[0] || 'U'}</AvatarFallback>
+   169→   169→          </Avatar>
+   170→   170→        </button>
+   171→   171→      </div>
+   172→   172→
+   173→   173→      <div className="px-4 py-4 space-y-4">
+   174→   174→        {/* Welcome Card */}
+   175→   175→        <div className="sintha-gradient rounded-2xl p-5 text-white relative overflow-hidden">
+   176→   176→          <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
+   177→   177→          <div className="absolute right-12 -bottom-6 w-20 h-20 bg-white/5 rounded-full" />
+   178→   178→          <div className="relative z-10">
+   179→   179→            <div className="flex items-center justify-between">
+   180→   180→              <div>
+   181→   181→                <h2 className="text-lg font-bold">Welcome, {user?.name?.split(' ')[0]}!</h2>
+   182→   182→                <p className="text-sm opacity-80 mt-1">Manage your services and bookings</p>
+   183→   183→              </div>
+   184→   184→              {myProviderProfile && (
+   185→   185→                <Badge className={`border-0 text-xs ${
+   186→   186→                  availability === 'available' ? 'bg-green-500/30 text-green-100' :
+   187→   187→                  availability === 'busy' ? 'bg-amber-500/30 text-amber-100' :
+   188→   188→                  'bg-gray-500/30 text-gray-200'
+   189→   189→                }`}>
+   190→   190→                  {availability}
+   191→   191→                </Badge>
+   192→   192→              )}
+   193→   193→            </div>
+   194→   194→            <div className="mt-3 flex items-center gap-4">
+   195→   195→              <div className="flex items-center gap-1.5">
+   196→   196→                <IndianRupee className="h-4 w-4" />
+   197→   197→                <span className="text-xs font-medium">100% earnings</span>
+   198→   198→              </div>
+   199→   199→              <div className="flex items-center gap-1.5">
+   200→   200→                <Zap className="h-4 w-4" />
+   201→   201→                <span className="text-xs font-medium">Zero commission</span>
+   202→   202→              </div>
+   203→   203→            </div>
+   204→   204→          </div>
+   205→   205→        </div>
+   206→   206→
+   207→   207→        {/* Verification nudge — shows if the provider is PRO but not yet verified,
+   208→   208→            OR if they're not verified at all (regardless of PRO status). Encourages
+   209→   209→            them to complete identity verification to earn the green ✓ badge. */}
+   210→   210→        {user && !user.isVerified && (
+   211→   211→          <div
+   212→   212→            className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-green-100 transition-colors"
+   213→   213→            onClick={() => navigate('verification')}
+   214→   214→          >
+   215→   215→            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+   216→   216→              <ShieldCheck className="h-5 w-5 text-green-600" />
+   217→   217→            </div>
+   218→   218→            <div className="flex-1 min-w-0">
+   219→   219→              <p className="text-sm font-semibold text-green-800">
+   220→   220→                {user.isPro ? 'Complete your verification' : 'Get the Verified badge'}
+   221→   221→              </p>
+   222→   222→              <p className="text-xs text-green-600 truncate">
+   223→   223→                {user.isPro
+   224→   224→                  ? 'You\'re PRO! Now verify your identity to earn the ✓ badge and get more bookings.'
+   225→   225→                  : 'Verify your identity with Aadhaar + passport photo. Takes 2 minutes.'}
+   226→   226→              </p>
+   227→   227→            </div>
+   228→   228→            <ChevronRight className="h-4 w-4 text-green-600 shrink-0" />
+   229→   229→          </div>
+   230→   230→        )}
+   231→   231→
+   232→   232→        {/* Push notification opt-in prompt (web only — hidden in APK WebView).
+   233→   233→            Providers especially benefit from push: new booking requests,
+   234→   234→            client messages, and booking status changes all arrive as pushes. */}
+   235→   235→        <PushNotificationPrompt />
+   236→   236→
+   237→   237→        {/* ACTION-NEEDED ALERT BANNER — the most important UX addition.
+   238→   238→            After a provider accepts a booking, they often forget to come back and Start / Mark Complete.
+   239→   239→            Without “Mark Complete”, the client can't rate them — and ratings drive future bookings.
+   240→   240→            This banner is placed high on the dashboard and links straight to the booking detail
+   241→   241→            where the sticky action bar now lives. */}
+   242→   242→        {actionNeededCount > 0 && (
+   243→   243→          <button
+   244→   244→            onClick={() => {
+   245→   245→              // Jump to the most actionable booking (in-progress first, otherwise accepted).
+   246→   246→              const target = inProgressToComplete[0] || acceptedToStart[0]
+   247→   247→              if (target) navigate('booking-detail', { bookingId: target.id })
+   248→   248→            }}
+   249→   249→            className="w-full text-left bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 shadow-sm active:scale-[0.99] transition-transform"
+   250→   250→          >
+   251→   251→            <div className="flex items-center gap-3">
+   252→   252→              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+   253→   253→                <AlertCircle className="h-5 w-5 text-white" />
+   254→   254→              </div>
+   255→   255→              <div className="flex-1 min-w-0 text-white">
+   256→   256→                <p className="text-sm font-bold">
+   257→   257→                  {actionNeededCount} booking{actionNeededCount > 1 ? 's' : ''} need{actionNeededCount === 1 ? 's' : ''} your action
+   258→   258→                </p>
+   259→   259→                <p className="text-xs opacity-90 mt-0.5">
+   260→   260→                  {inProgressToComplete.length > 0 && (
+   261→   261→                    <>{inProgressToComplete.length} to mark complete · </>
+   262→   262→                  )}
+   263→   263→                  {acceptedToStart.length > 0 && (
+   264→   264→                    <>{acceptedToStart.length} to start</>
+   265→   265→                  )}
+   266→   266→                  {' — tap to continue & get rated ⭐'}
+   267→   267→                </p>
+   268→   268→              </div>
+   269→   269→              <ChevronRight className="h-5 w-5 text-white shrink-0" />
+   270→   270→            </div>
+   271→   271→          </button>
+   272→   272→        )}
+   273→   273→
+   274→   274→        {/* Availability Toggle */}
+   275→   275→        <Card className="border-0 shadow-sm">
+   276→   276→          <CardContent className="p-4">
+   277→   277→            <div className="flex items-center justify-between">
+   278→   278→              <div>
+   279→   279→                <p className="font-semibold text-gray-800 text-sm">Your Availability</p>
+   280→   280→                <p className="text-xs text-gray-500">Clients can only book when you're available</p>
+   281→   281→              </div>
+   282→   282→              <button onClick={toggleAvailability} className="flex items-center gap-2">
+   283→   283→                {availability === 'available' ? (
+   284→   284→                  <ToggleRight className="h-8 w-8 text-green-500" />
+   285→   285→                ) : (
+   286→   286→                  <ToggleLeft className="h-8 w-8 text-gray-400" />
+   287→   287→                )}
+   288→   288→                <Badge
+   289→   289→                  variant={availability === 'available' ? 'default' : 'secondary'}
+   290→   290→                  className={`border-0 ${
+   291→   291→                    availability === 'available' ? 'bg-green-100 text-green-700' :
+   292→   292→                    availability === 'busy' ? 'bg-amber-100 text-amber-700' :
+   293→   293→                    'bg-gray-100 text-gray-600'
+   294→   294→                  }`}
+   295→   295→                >
+   296→   296→                  {availability}
+   297→   297→                </Badge>
+   298→   298→              </button>
+   299→   299→            </div>
+   300→   300→          </CardContent>
+   301→   301→        </Card>
+   302→   302→
+   303→   303→        {/* Stats Grid */}
+   304→   304→        <div className="grid grid-cols-2 gap-3">
+   305→   305→          <Card className="border-0 shadow-sm">
+   306→   306→            <CardContent className="p-4 text-center">
+   307→   307→              <Calendar className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+   308→   308→              <p className="text-2xl font-bold text-gray-800">{bookings.length}</p>
+   309→   309→              <p className="text-xs text-gray-500">Total Bookings</p>
+   310→   310→            </CardContent>
+   311→   311→          </Card>
+   312→   312→          <Card className="border-0 shadow-sm">
+   313→   313→            <CardContent className="p-4 text-center">
+   314→   314→              <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-1" />
+   315→   315→              <p className="text-2xl font-bold text-gray-800">{completedBookings.length}</p>
+   316→   316→              <p className="text-xs text-gray-500">Completed</p>
+   317→   317→            </CardContent>
+   318→   318→          </Card>
+   319→   319→          <Card className="border-0 shadow-sm">
+   320→   320→            <CardContent className="p-4 text-center">
+   321→   321→              <Clock className="h-6 w-6 text-amber-600 mx-auto mb-1" />
+   322→   322→              <p className="text-2xl font-bold text-gray-800">{pendingBookings.length}</p>
+   323→   323→              <p className="text-xs text-gray-500">Pending</p>
+   324→   324→            </CardContent>
+   325→   325→          </Card>
+   326→   326→          <Card className="border-0 shadow-sm">
+   327→   327→            <CardContent className="p-4 text-center">
+   328→   328→              <Star className="h-6 w-6 text-amber-500 mx-auto mb-1" />
+   329→   329→              <p className="text-2xl font-bold text-gray-800">{myProviderProfile?.rating || '0'}</p>
+   330→   330→              <p className="text-xs text-gray-500">Rating</p>
+   331→   331→            </CardContent>
+   332→   332→          </Card>
+   333→   333→        </div>
+   334→   334→
+   335→   335→        {/* No profile warning */}
+   336→   336→        {!myProviderProfile && (
+   337→   337→          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+   338→   338→            <div className="flex items-center gap-3">
+   339→   339→              <Shield className="h-5 w-5 text-amber-600 shrink-0" />
+   340→   340→              <div className="flex-1">
+   341→   341→                <p className="text-sm font-semibold text-amber-800">Complete your profile</p>
+   342→   342→                <p className="text-xs text-amber-600 mt-0.5">Fill in your provider details to start receiving bookings</p>
+   343→   343→              </div>
+   344→   344→              <Button
+   345→   345→                size="sm"
+   346→   346→                className="bg-amber-500 hover:bg-amber-600 text-white text-xs"
+   347→   347→                onClick={() => navigate('provider-onboarding')}
+   348→   348→              >
+   349→   349→                Setup
+   350→   350→              </Button>
+   351→   351→            </div>
+   352→   352→          </div>
+   353→   353→        )}
+   354→   354→
+   355→   355→        {/* Pending Bookings - Action Required */}
+   356→   356→        {pendingBookings.length > 0 && (
+   357→   357→          <div>
+   358→   358→            <div className="flex items-center gap-2 mb-3">
+   359→   359→              <Clock className="h-5 w-5 text-amber-500" />
+   360→   360→              <h3 className="font-bold text-gray-800">Action Required ({pendingBookings.length})</h3>
+   361→   361→            </div>
+   362→   362→            <div className="space-y-2">
+   363→   363→              {pendingBookings.map((booking: Booking) => (
+   364→   364→                <div key={booking.id} className="bg-white rounded-xl p-4 shadow-sm">
+   365→   365→                  <div className="flex items-center gap-3 mb-3">
+   366→   366→                    <Avatar className="h-10 w-10">
+   367→   367→                      <AvatarImage src={booking.client?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.client?.name || 'C')}&background=2563eb&color=fff`} />
+   368→   368→                      <AvatarFallback>{booking.client?.name?.[0]}</AvatarFallback>
+   369→   369→                    </Avatar>
+   370→   370→                    <div className="flex-1 min-w-0">
+   371→   371→                      <p className="text-sm font-medium text-gray-800 truncate">{booking.service}</p>
+   372→   372→                      <p className="text-xs text-gray-500">{booking.client?.name} &bull; {booking.date ? new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}</p>
+   373→   373→                    </div>
+   374→   374→                  </div>
+   375→   375→                  <div className="flex gap-2">
+   376→   376→                    <Button
+   377→   377→                      size="sm"
+   378→   378→                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
+   379→   379→                      onClick={() => handleBookingAction(booking.id, 'accepted')}
+   380→   380→                    >
+   381→   381→                      <CheckCircle className="h-3.5 w-3.5 mr-1" /> Accept
+   382→   382→                    </Button>
+   383→   383→                    <Button
+   384→   384→                      size="sm"
+   385→   385→                      variant="outline"
+   386→   386→                      className="flex-1 text-xs text-red-600 border-red-200 hover:bg-red-50"
+   387→   387→                      onClick={() => handleBookingAction(booking.id, 'rejected')}
+   388→   388→                    >
+   389→   389→                      Reject
+   390→   390→                    </Button>
+   391→   391→                  </div>
+   392→   392→                </div>
+   393→   393→              ))}
+   394→   394→            </div>
+   395→   395→          </div>
+   396→   396→        )}
+   397→   397→
+   398→   398→        {/* READY-TO-COMPLETE BOOKINGS — highest priority for ratings.
+   399→   399→            These are bookings the provider has started but not finished. Marking them complete
+   400→   400→            is what unlocks the rating flow, so we surface them as their own section above the
+   401→   401→            general “Active” list, with a clear “Mark Complete” CTA. */}
+   402→   402→        {inProgressToComplete.length > 0 && (
+   403→   403→          <div>
+   404→   404→            <div className="flex items-center gap-2 mb-3">
+   405→   405→              <Star className="h-5 w-5 text-amber-500" />
+   406→   406→              <h3 className="font-bold text-gray-800">Ready to Complete ({inProgressToComplete.length})</h3>
+   407→   407→              <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-semibold">Get Rated</span>
+   408→   408→            </div>
+   409→   409→            <div className="space-y-2">
+   410→   410→              {inProgressToComplete.map((booking: Booking) => (
+   411→   411→                <button
+   412→   412→                  key={booking.id}
+   413→   413→                  onClick={() => navigate('booking-detail', { bookingId: booking.id })}
+   414→   414→                  className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+   415→   415→                >
+   416→   416→                  <Avatar className="h-10 w-10">
+   417→   417→                    <AvatarImage src={booking.client?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.client?.name || 'C')}&background=10b981&color=fff`} />
+   418→   418→                    <AvatarFallback>{booking.client?.name?.[0]}</AvatarFallback>
+   419→   419→                  </Avatar>
+   420→   420→                  <div className="flex-1 min-w-0">
+   421→   421→                    <p className="text-sm font-medium text-gray-800 truncate">{booking.service}</p>
+   422→   422→                    <p className="text-xs text-gray-500">{booking.client?.name}</p>
+   423→   423→                  </div>
+   424→   424→                  <div className="flex items-center gap-1.5 bg-green-100 text-green-700 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0">
+   425→   425→                    <CheckCircle className="h-3 w-3" />
+   426→   426→                    Mark Complete
+   427→   427→                  </div>
+   428→   428→                </button>
+   429→   429→              ))}
+   430→   430→            </div>
+   431→   431→          </div>
+   432→   432→        )}
+   433→   433→
+   434→   434→        {/* ACCEPTED — NOT YET STARTED — provider needs to tap “Start Service” when they begin work */}
+   435→   435→        {acceptedToStart.length > 0 && (
+   436→   436→          <div>
+   437→   437→            <div className="flex items-center gap-2 mb-3">
+   438→   438→              <Play className="h-5 w-5 text-blue-500" />
+   439→   439→              <h3 className="font-bold text-gray-800">Start When Ready ({acceptedToStart.length})</h3>
+   440→   440→            </div>
+   441→   441→            <div className="space-y-2">
+   442→   442→              {acceptedToStart.map((booking: Booking) => (
+   443→   443→                <button
+   444→   444→                  key={booking.id}
+   445→   445→                  onClick={() => navigate('booking-detail', { bookingId: booking.id })}
+   446→   446→                  className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+   447→   447→                >
+   448→   448→                  <Avatar className="h-10 w-10">
+   449→   449→                    <AvatarImage src={booking.client?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.client?.name || 'C')}&background=3b82f6&color=fff`} />
+   450→   450→                    <AvatarFallback>{booking.client?.name?.[0]}</AvatarFallback>
+   451→   451→                  </Avatar>
+   452→   452→                  <div className="flex-1 min-w-0">
+   453→   453→                    <p className="text-sm font-medium text-gray-800 truncate">{booking.service}</p>
+   454→   454→                    <p className="text-xs text-gray-500">{booking.client?.name}</p>
+   455→   455→                  </div>
+   456→   456→                  <div className="flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2.5 py-1.5 rounded-lg text-[10px] font-bold shrink-0">
+   457→   457→                    <Play className="h-3 w-3" />
+   458→   458→                    Start Service
+   459→   459→                  </div>
+   460→   460→                </button>
+   461→   461→              ))}
+   462→   462→            </div>
+   463→   463→          </div>
+   464→   464→        )}
+   465→   465→
+   466→   466→        {/* Active Bookings section removed — replaced by the more actionable
+   467→   467→            "Ready to Complete" and "Start When Ready" sections above, which
+   468→   468→            show the same bookings but with explicit next-action CTAs. */}
+   469→   469→
+   470→   470→        {/* All Recent Bookings */}
+   471→   471→        <div>
+   472→   472→          <div className="flex items-center justify-between mb-3">
+   473→   473→            <h3 className="font-bold text-gray-800">Recent Bookings</h3>
+   474→   474→            {bookings.length > 3 && (
+   475→   475→              <button
+   476→   476→                onClick={() => navigate('my-bookings')}
+   477→   477→                className="text-xs text-blue-600 font-medium"
+   478→   478→              >
+   479→   479→                View All
+   480→   480→              </button>
+   481→   481→            )}
+   482→   482→          </div>
+   483→   483→          {bookings.length === 0 ? (
+   484→   484→            <Card className="border-0 shadow-sm">
+   485→   485→              <CardContent className="p-6 text-center">
+   486→   486→                <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+   487→   487→                <p className="text-sm text-gray-400">No bookings yet</p>
+   488→   488→                <p className="text-xs text-gray-300 mt-1 mb-3">
+   489→   489→                  Bookings will appear when clients book your services
+   490→   490→                </p>
+   491→   491→                <button
+   492→   492→                  onClick={() => navigate('open-jobs')}
+   493→   493→                  className="text-blue-600 text-xs font-medium"
+   494→   494→                >
+   495→   495→                  Browse open jobs →
+   496→   496→                </button>
+   497→   497→              </CardContent>
+   498→   498→            </Card>
+   499→   499→          ) : (
+   500→   500→            <div className="space-y-2">
+   501→   501→              {bookings.slice(0, 5).map((booking: Booking) => (
+   502→   502→                <button
+   503→   503→                  key={booking.id}
+   504→   504→                  onClick={() => navigate('booking-detail', { bookingId: booking.id })}
+   505→   505→                  className="w-full bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 text-left"
+   506→   506→                >
+   507→   507→                  <Avatar className="h-8 w-8">
+   508→   508→                    <AvatarImage src={booking.client?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(booking.client?.name || 'C')}&background=10b981&color=fff`} />
+   509→   509→                    <AvatarFallback>{booking.client?.name?.[0]}</AvatarFallback>
+   510→   510→                  </Avatar>
+   511→   511→                  <div className="flex-1 min-w-0">
+   512→   512→                    <p className="text-sm font-medium text-gray-800 truncate">{booking.service}</p>
+   513→   513→                    <p className="text-xs text-gray-500">{booking.client?.name}</p>
+   514→   514→                  </div>
+   515→   515→                  <Badge
+   516→   516→                    className={`text-[9px] border-0 ${
+   517→   517→                      booking.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+   518→   518→                      booking.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
+   519→   519→                      booking.status === 'in_progress' ? 'bg-green-100 text-green-700' :
+   520→   520→                      booking.status === 'completed' ? 'bg-gray-100 text-gray-600' :
+   521→   521→                      'bg-red-100 text-red-700'
+   522→   522→                    }`}
+   523→   523→                  >
+   524→   524→                    {booking.status}
+   525→   525→                  </Badge>
+   526→   526→                </button>
+   527→   527→              ))}
+   528→   528→            </div>
+   529→   529→          )}
+   530→   530→        </div>
+   531→   531→
+   532→   532→        {/* Quick Actions */}
+   533→   533→        <div>
+   534→   534→          <h3 className="font-bold text-gray-800 mb-3">Quick Actions</h3>
+   535→   535→          <div className="grid grid-cols-4 gap-2">
+   536→   536→            <button
+   537→   537→              onClick={() => navigate('open-jobs')}
+   538→   538→              className="bg-white rounded-xl p-3 text-center shadow-sm relative"
+   539→   539→            >
+   540→   540→              <Briefcase className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+   541→   541→              <span className="text-[9px] text-gray-600">Open Jobs</span>
+   542→   542→            </button>
+   543→   543→            <button
+   544→   544→              onClick={() => navigate('provider-onboarding')}
+   545→   545→              className="bg-white rounded-xl p-3 text-center shadow-sm"
+   546→   546→            >
+   547→   547→              <PenLine className="h-5 w-5 text-blue-600 mx-auto mb-1" />
+   548→   548→              <span className="text-[9px] text-gray-600">Edit Profile</span>
+   549→   549→            </button>
+   550→   550→            <button
+   551→   551→              onClick={() => navigate('sintha-pro')}
+   552→   552→              className="bg-white rounded-xl p-3 text-center shadow-sm"
+   553→   553→            >
+   554→   554→              <Crown className="h-5 w-5 text-amber-500 mx-auto mb-1" />
+   555→   555→              <span className="text-[9px] text-gray-600">Go PRO</span>
+   556→   556→            </button>
+   557→   557→            <button
+   558→   558→              onClick={() => navigate('ai-assistant')}
+   559→   559→              className="bg-white rounded-xl p-3 text-center shadow-sm"
+   560→   560→            >
+   561→   561→              <Bot className="h-5 w-5 text-purple-600 mx-auto mb-1" />
+   562→   562→              <span className="text-[9px] text-gray-600">AI Help</span>
+   563→   563→            </button>
+   564→   564→          </div>
+   565→   565→        </div>
+   566→   566→
+   567→   567→        {/* Earnings Summary — shows real ₹ totals from completed bookings with prices */}
+   568→   568→        <Card className="border-0 shadow-sm bg-gradient-to-r from-green-50 to-emerald-50">
+   569→   569→          <CardContent className="p-4">
+   570→   570→            <div className="flex items-center gap-2 mb-3">
+   571→   571→              <IndianRupee className="h-5 w-5 text-green-600" />
+   572→   572→              <h3 className="font-semibold text-gray-800 text-sm">Earnings Overview</h3>
+   573→   573→            </div>
+   574→   574→            <div className="grid grid-cols-2 gap-3">
+   575→   575→              <div>
+   576→   576→                <p className="text-2xl font-bold text-green-700">
+   577→   577→                  ₹{earnings?.totalEarnings?.toLocaleString('en-IN') || 0}
+   578→   578→                </p>
+   579→   579→                <p className="text-[10px] text-gray-500">Total Earned</p>
+   580→   580→              </div>
+   581→   581→              <div>
+   582→   582→                <p className="text-2xl font-bold text-green-700">
+   583→   583→                  ₹{earnings?.thisMonthEarnings?.toLocaleString('en-IN') || 0}
+   584→   584→                </p>
+   585→   585→                <p className="text-[10px] text-gray-500">This Month</p>
+   586→   586→              </div>
+   587→   587→            </div>
+   588→   588→            <div className="mt-3 pt-3 border-t border-green-100 grid grid-cols-3 gap-2 text-center">
+   589→   589→              <div>
+   590→   590→                <p className="text-sm font-bold text-gray-800">{earnings?.totalBookings || completedBookings.length}</p>
+   591→   591→                <p className="text-[9px] text-gray-500">Completed</p>
+   592→   592→              </div>
+   593→   593→              <div>
+   594→   594→                <p className="text-sm font-bold text-gray-800">{earnings?.paidBookings || 0}</p>
+   595→   595→                <p className="text-[9px] text-gray-500">With ₹ Amount</p>
+   596→   596→              </div>
+   597→   597→              <div>
+   598→   598→                <p className="text-sm font-bold text-gray-800">{earnings?.avgRating?.toFixed(1) || myProviderProfile?.rating || '0'}</p>
+   599→   599→                <p className="text-[9px] text-gray-500">Avg Rating</p>
+   600→   600→              </div>
+   601→   601→            </div>
+   602→   602→            <div className="mt-3 pt-3 border-t border-green-100 flex items-center justify-between">
+   603→   603→              <div className="flex items-center gap-1.5">
+   604→   604→                <Zap className="h-4 w-4 text-green-500" />
+   605→   605→                <span className="text-xs text-green-700 font-medium">Zero Commission - You keep 100%!</span>
+   606→   606→              </div>
+   607→   607→            </div>
+   608→   608→            {earnings && earnings.totalBookings > 0 && earnings.paidBookings === 0 && (
+   609→   609→              <p className="text-[10px] text-amber-600 mt-2">
+   610→   610→                💡 Tip: When marking a booking complete, enter the final amount to track your earnings here.
+   611→   611→              </p>
+   612→   612→            )}
+   613→   613→          </CardContent>
+   614→   614→        </Card>
+   615→   615→
+   616→   616→        {/* Profile Completeness */}
+   617→   617→        {myProviderProfile && (
+   618→   618→          <Card className="border-0 shadow-sm">
+   619→   619→            <CardContent className="p-4">
+   620→   620→              <div className="flex items-center justify-between mb-2">
+   621→   621→                <p className="text-sm font-semibold text-gray-800">Profile Strength</p>
+   622→   622→                <span className="text-xs text-blue-600 font-medium">
+   623→   623→                  {[
+   624→   624→                    myProviderProfile.categoryId,
+   625→   625→                    myProviderProfile.experience,
+   626→   626→                    myProviderProfile.skills,
+   627→   627→                    myProviderProfile.description,
+   628→   628→                    myProviderProfile.hourlyRate,
+   629→   629→                    user?.phone,
+   630→   630→                    user?.location,
+   631→   631→                    user?.isVerified,
+   632→   632→                  ].filter(Boolean).length}/8
+   633→   633→                </span>
+   634→   634→              </div>
+   635→   635→              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+   636→   636→                <div
+   637→   637→                  className="h-full sintha-gradient rounded-full transition-all"
+   638→   638→                  style={{
+   639→   639→                    width: `${([
+   640→   640→                      myProviderProfile.categoryId,
+   641→   641→                      myProviderProfile.experience,
+   642→   642→                      myProviderProfile.skills,
+   643→   643→                      myProviderProfile.description,
+   644→   644→                      myProviderProfile.hourlyRate,
+   645→   645→                      user?.phone,
+   646→   646→                      user?.location,
+   647→   647→                      user?.isVerified,
+   648→   648→                    ].filter(Boolean).length / 8) * 100}%`
+   649→   649→                  }}
+   650→   650→                />
+   651→   651→              </div>
+   652→   652→              <p className="text-[10px] text-gray-400 mt-1">Complete your profile to get more bookings</p>
+   653→   653→            </CardContent>
+   654→   654→          </Card>
+   655→   655→        )}
+   656→   656→      </div>
+   657→   657→
+   658→   658→      <BottomNav />
+   659→   659→    </div>
+   660→   660→  )
+   661→   661→}
+   662→   662→

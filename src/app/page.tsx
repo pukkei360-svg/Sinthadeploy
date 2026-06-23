@@ -42,6 +42,7 @@ import HelpScreen from '@/components/sintha/HelpScreen'
 import SavedProvidersScreen from '@/components/sintha/SavedProvidersScreen'
 import SavedAddressesScreen from '@/components/sintha/SavedAddressesScreen'
 import ReferralsScreen from '@/components/sintha/ReferralsScreen'
+import PriceEstimatorScreen from '@/components/sintha/PriceEstimatorScreen'
 
 export default function Home() {
   const {
@@ -507,6 +508,8 @@ export default function Home() {
         return <SavedAddressesScreen />
       case 'referrals':
         return <ReferralsScreen />
+      case 'price-estimator':
+        return <PriceEstimatorScreen />
       default:
         return <LandingScreen />
     }

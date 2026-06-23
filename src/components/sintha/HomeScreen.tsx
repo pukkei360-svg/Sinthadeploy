@@ -11,11 +11,27 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import BottomNav from './BottomNav'
 import PushNotificationPrompt from './PushNotificationPrompt'
+import { useToast } from '@/hooks/use-toast'
+import { cleanError } from '@/lib/clean-error'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase
+  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase, Loader2, Send, X
 } from 'lucide-react'
+
+// Shape of a single AI smart-search match returned by /api/ai/smart-search.
+interface AiSearchMatch {
+  providerId: string
+  name?: string
+  photoUrl?: string
+  category?: string
+  rating?: number
+  hourlyRate?: number
+  verified?: boolean
+  pro?: boolean
+  reason?: string
+  matchScore?: number
+}
 
 const categoryIcons: Record<string, typeof Home> = {
   home: Home,
@@ -31,9 +47,54 @@ export default function HomeScreen() {
     navigate, user, categories, setCategories, providers, setProviders, setIsLoading,
     notifications,
   } = useAppStore()
+  const { toast } = useToast()
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoaded, setDataLoaded] = useState(false)
+
+  // ── AI Smart Search ──────────────────────────────────────────
+  // Natural-language provider matching powered by SINTHA AI.
+  // State: aiSearchQuery (input), aiSearching (loading), aiResults (matches),
+  //        aiSummary (AI-generated summary of the matches).
+  const [aiSearchQuery, setAiSearchQuery] = useState('')
+  const [aiSearching, setAiSearching] = useState(false)
+  const [aiResults, setAiResults] = useState<AiSearchMatch[]>([])
+  const [aiSummary, setAiSummary] = useState('')
+
+  const handleAiSearch = async () => {
+    const q = aiSearchQuery.trim()
+    if (!q || aiSearching) return
+    setAiSearching(true)
+    setAiResults([])
+    setAiSummary('')
+    try {
+      const data = await apiFetch<{
+        matches?: AiSearchMatch[]
+        summary?: string
+        suggestions?: string
+        poweredBy?: string
+      }>('/ai/smart-search', {
+        method: 'POST',
+        body: JSON.stringify({ query: q }),
+      })
+      setAiResults(data.matches || [])
+      setAiSummary(data.summary || '')
+      if ((data.matches || []).length === 0 && data.summary) {
+        // No matches but AI gave a helpful summary (e.g. "post a job instead")
+        toast({ title: 'No AI matches', description: data.summary.slice(0, 80) })
+      }
+    } catch (err) {
+      toast({ title: 'AI search failed', description: cleanError(err) })
+    } finally {
+      setAiSearching(false)
+    }
+  }
+
+  const clearAiSearch = () => {
+    setAiSearchQuery('')
+    setAiResults([])
+    setAiSummary('')
+  }
 
   // Feature 2: Location-based provider sorting
   // Toggle between featured (default) and nearby (distance) sorting.
@@ -171,6 +232,137 @@ export default function HomeScreen() {
       {/* Push notification opt-in prompt (web only — hidden in APK WebView). */}
       <div className="px-4 pt-3">
         <PushNotificationPrompt />
+      </div>
+
+      {/* AI Smart Search — natural-language provider matching.
+          Purple gradient bar distinguishes it from the regular search below.
+          Tapping the badge / Send button calls POST /api/ai/smart-search and
+          renders provider cards with match scores inline. */}
+      <div className="px-4 pt-3">
+        <div className="bg-gradient-to-r from-purple-600 to-violet-600 rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-white leading-tight">AI Smart Search</p>
+              <p className="text-[10px] text-white/70 leading-tight">Describe what you need in your own words</p>
+            </div>
+            <span className="text-[9px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full tracking-wider">
+              SINTHA AI
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="e.g. 'tutor for class 10 maths near Imphal'"
+              value={aiSearchQuery}
+              onChange={(e) => setAiSearchQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAiSearch() }}
+              disabled={aiSearching}
+              className="flex-1 bg-white/95 text-gray-800 placeholder:text-gray-400 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/60 disabled:opacity-60"
+            />
+            {aiSearching ? (
+              <div className="bg-white/20 rounded-xl p-2.5 shrink-0">
+                <Loader2 className="h-5 w-5 text-white animate-spin" />
+              </div>
+            ) : (
+              <button
+                onClick={handleAiSearch}
+                disabled={!aiSearchQuery.trim()}
+                className="bg-white text-purple-700 rounded-xl p-2.5 shrink-0 disabled:opacity-50 active:scale-95 transition-transform"
+                aria-label="Run AI smart search"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* AI loading shimmer */}
+          {aiSearching && (
+            <div className="mt-3 space-y-2">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="bg-white/15 rounded-xl p-3 animate-pulse h-16" />
+              ))}
+            </div>
+          )}
+
+          {/* AI summary */}
+          {!aiSearching && aiSummary && (
+            <div className="mt-3 bg-white/15 rounded-xl p-3 text-white">
+              <p className="text-xs leading-relaxed">{aiSummary}</p>
+            </div>
+          )}
+
+          {/* AI matches */}
+          {!aiSearching && aiResults.length > 0 && (
+            <div className="mt-3 space-y-2 max-h-96 overflow-y-auto sintha-scrollbar pr-1">
+              {aiResults.map((m, i) => (
+                <button
+                  key={`${m.providerId}-${i}`}
+                  onClick={() => navigate('provider-profile', { providerId: m.providerId })}
+                  className="w-full bg-white rounded-xl p-3 shadow-sm flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <Avatar className="h-11 w-11 shrink-0">
+                    <AvatarImage src={m.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.name || 'P')}&background=7c3aed&color=fff`} />
+                    <AvatarFallback>{m.name?.[0] || 'P'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{m.name}</p>
+                      {m.verified && <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />}
+                      {m.pro && <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                    </div>
+                    <p className="text-[11px] text-gray-500 truncate">{m.category}</p>
+                    {m.reason && (
+                      <p className="text-[10px] text-purple-700 mt-0.5 line-clamp-2">{m.reason}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
+                      {typeof m.rating === 'number' && m.rating > 0 && (
+                        <div className="flex items-center gap-0.5">
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                          <span className="text-[10px] font-semibold text-gray-700">{m.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {typeof m.hourlyRate === 'number' && m.hourlyRate > 0 && (
+                        <span className="text-[10px] text-gray-500">₹{m.hourlyRate}/hr</span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Match score ring */}
+                  {typeof m.matchScore === 'number' && (
+                    <div className="shrink-0 flex flex-col items-center justify-center">
+                      <div className="relative w-10 h-10">
+                        <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
+                          <circle cx="18" cy="18" r="15" fill="none" stroke="#E5E7EB" strokeWidth="3" />
+                          <circle
+                            cx="18" cy="18" r="15" fill="none" stroke="#7c3aed" strokeWidth="3"
+                            strokeDasharray={`${(m.matchScore / 100) * 94.2} 94.2`}
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-purple-700">
+                          {Math.round(m.matchScore)}
+                        </span>
+                      </div>
+                      <span className="text-[8px] text-gray-400 font-medium mt-0.5">match</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Clear AI results */}
+          {!aiSearching && (aiResults.length > 0 || aiSummary) && (
+            <button
+              onClick={clearAiSearch}
+              className="mt-2 w-full text-center text-[11px] text-white/80 hover:text-white flex items-center justify-center gap-1"
+            >
+              <X className="h-3 w-3" /> Clear AI results
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search Bar */}
