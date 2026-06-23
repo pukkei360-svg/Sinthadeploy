@@ -46,17 +46,23 @@ export async function GET(request: NextRequest) {
 
     // Auto-generate a referral code if the user doesn't have one yet.
     // This handles existing users who signed up before the referral feature.
+    // The code is based on the user's name + random chars for uniqueness.
     let referralCode = user.referralCode;
     if (!referralCode) {
-      referralCode = generateReferralCode();
+      // Fetch the user's name to generate a personalized code
+      const userWithName = await db.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      referralCode = generateReferralCode(userWithName?.name || 'USER');
       try {
         await db.user.update({
           where: { id: userId },
           data: { referralCode },
         });
       } catch {
-        // If the code collides, generate another one
-        referralCode = generateReferralCode() + generateReferralCode().slice(0, 2);
+        // If the code collides, generate another one with more random chars
+        referralCode = generateReferralCode(userWithName?.name || 'USER', 4);
         try {
           await db.user.update({
             where: { id: userId },
@@ -134,15 +140,39 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Generate a unique 8-character referral code.
- * Format: "SIN" + 5 random alphanumeric chars (uppercase).
- * Example: "SIN7K4XQ"
+ * Generate a referral code based on the user's name.
+ *
+ * Format: first part of the user's name (uppercase, alphanumeric only) +
+ * a few random chars for uniqueness.
+ *
+ * Examples:
+ *   "Irabot Laishram" → "IRABOT7K"
+ *   "Sunita"          → "SUNITA3X"
+ *   "R.K. Sharma"     → "RKSHARM2A"
+ *
+ * @param name         The user's display name
+ * @param randomChars  Number of random chars to append (default 2, more for collision retry)
  */
-function generateReferralCode(): string {
+function generateReferralCode(name: string, randomChars: number = 2): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars (0/O, 1/I)
-  let code = 'SIN';
-  for (let i = 0; i < 5; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+
+  // Clean the name: uppercase, remove non-alphanumeric, collapse spaces
+  const cleaned = (name || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .slice(0, 8);
+
+  // Ensure at least 3 chars from the name; pad with random if too short
+  let namePart = cleaned;
+  while (namePart.length < 3) {
+    namePart += chars[Math.floor(Math.random() * chars.length)];
   }
-  return code;
+
+  // Append random chars for uniqueness
+  let suffix = '';
+  for (let i = 0; i < randomChars; i++) {
+    suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return namePart + suffix;
 }

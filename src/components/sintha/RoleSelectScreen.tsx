@@ -5,7 +5,7 @@ import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users, Camera, ImagePlus } from 'lucide-react'
+import { Home, Briefcase, ArrowRight, Loader2, Shield, Zap, Users, Camera, ImagePlus, Gift } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { uploadPhoto } from '@/lib/cloudinary'
 import { cleanError } from '@/lib/clean-error'
@@ -160,6 +160,27 @@ export default function RoleSelectScreen() {
             <p className="text-xs text-green-600 mt-3 font-medium">✓ Photo added! You can continue now</p>
           )}
         </div>
+
+        {/* Referral code input — optional. If the user was referred by a friend,
+            they enter the code here. The referrer earns 30% lifetime commission
+            when this user buys PRO. */}
+        <div className="bg-white border-2 border-green-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Gift className="h-5 w-5 text-green-600" />
+            <p className="text-sm font-semibold text-gray-700">Have a referral code?</p>
+          </div>
+          <p className="text-[11px] text-gray-500 mb-3">
+            Enter a friend&apos;s code to support them. They earn 30% when you go PRO — at no cost to you.
+          </p>
+          <input
+            type="text"
+            value={referralCode}
+            onChange={(e) => setReferralCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12))}
+            placeholder="e.g. IRABOT7K"
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm uppercase tracking-wider font-mono focus:outline-none focus:ring-2 focus:ring-green-300"
+          />
+        </div>
+
         {/* Client Card */}
         <Card
           className="cursor-pointer sintha-card-hover border-2 border-transparent hover:border-blue-300"

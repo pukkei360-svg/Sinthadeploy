@@ -41,6 +41,7 @@ import OfflineBootScreen from '@/components/sintha/OfflineBootScreen'
 import HelpScreen from '@/components/sintha/HelpScreen'
 import SavedProvidersScreen from '@/components/sintha/SavedProvidersScreen'
 import SavedAddressesScreen from '@/components/sintha/SavedAddressesScreen'
+import ReferralsScreen from '@/components/sintha/ReferralsScreen'
 
 export default function Home() {
   const {
@@ -484,6 +485,8 @@ export default function Home() {
         return <SavedProvidersScreen />
       case 'saved-addresses':
         return <SavedAddressesScreen />
+      case 'referrals':
+        return <ReferralsScreen />
       default:
         return <LandingScreen />
     }

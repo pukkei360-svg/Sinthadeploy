@@ -147,14 +147,15 @@ export async function POST(request: NextRequest) {
         // them to the role-select screen to choose client or provider.
         // (Admin email detection is handled below — admins get 'admin' role.)
         // DEFENSIVE: use safe select on create too.
-        // Phase 3: auto-generate a unique referral code + store referredBy
-        // (the referral code the user entered at signup, if any).
-        const referralCode = generateReferralCode();
+        // Phase 3: auto-generate a referral code based on the user's name +
+        // store referredBy (the referral code the user entered at signup, if any).
+        const userName = name || email.split('@')[0];
+        const referralCode = generateReferralCode(userName);
         user = await db.user.create({
           data: {
             firebaseUid,
             email,
-            name: name || email.split('@')[0],
+            name: userName,
             photoUrl: photoUrl || null,
             phone: phone || null,
             role: isAdmin ? 'admin' : '',
@@ -163,18 +164,18 @@ export async function POST(request: NextRequest) {
           },
           select: SAFE_USER_SELECT,
         }).catch(async (err) => {
-          // If referralCode collides (very rare), retry with a different code.
-          // The unique constraint on referralCode might trip if we're unlucky.
+          // If referralCode collides (someone with the same name), retry
+          // with more random chars appended for uniqueness.
           console.warn('[auth/sync] referralCode collision, retrying:', err instanceof Error ? err.message : err);
           return db.user.create({
             data: {
               firebaseUid,
               email,
-              name: name || email.split('@')[0],
+              name: userName,
               photoUrl: photoUrl || null,
               phone: phone || null,
               role: isAdmin ? 'admin' : '',
-              referralCode: generateReferralCode() + generateReferralCode().slice(0, 2),
+              referralCode: generateReferralCode(userName, 4),  // 4 random chars instead of 2
               referredBy: referredBy || null,
             },
             select: SAFE_USER_SELECT,
@@ -292,18 +293,45 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Generate a unique 8-character referral code.
- * Format: "SIN" + 5 random alphanumeric chars (uppercase, no confusing chars).
- * Example: "SIN7K4XQ"
+ * Generate a referral code based on the user's name.
  *
- * Collisions are extremely rare (26^5 = ~12M combos) and handled by the
- * retry logic in the create call above.
+ * Format: first part of the user's name (uppercase, alphanumeric only) +
+ * a few random chars for uniqueness.
+ *
+ * Examples:
+ *   "Irabot Laishram" → "IRABOT7K"
+ *   "Sunita"          → "SUNITA3X"
+ *   "R.K. Sharma"     → "RKSHARM2A"
+ *
+ * If the name is too short (< 3 usable chars), we pad with random chars
+ * so the code is always at least 5 chars long.
+ *
+ * The random suffix ensures uniqueness even if two users have the same name.
+ * Collisions are handled by the retry logic in the create call above.
+ *
+ * @param name     The user's display name
+ * @param randomChars  Number of random chars to append (default 2, more for collision retry)
  */
-function generateReferralCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I
-  let code = 'SIN';
-  for (let i = 0; i < 5; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+function generateReferralCode(name: string, randomChars: number = 2): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars (0/O, 1/I)
+
+  // Clean the name: uppercase, remove non-alphanumeric, collapse spaces
+  const cleaned = (name || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')  // strip spaces, dots, hyphens, etc.
+    .slice(0, 8);                // cap at 8 chars to keep the code short
+
+  // Ensure at least 3 chars from the name; pad with random if too short
+  let namePart = cleaned;
+  while (namePart.length < 3) {
+    namePart += chars[Math.floor(Math.random() * chars.length)];
   }
-  return code;
+
+  // Append random chars for uniqueness
+  let suffix = '';
+  for (let i = 0; i < randomChars; i++) {
+    suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  return namePart + suffix;
 }

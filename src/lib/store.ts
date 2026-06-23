@@ -39,6 +39,7 @@ export type View =
   | 'help'
   | 'saved-providers'
   | 'saved-addresses'
+  | 'referrals'
 
 export interface User {
   id: string

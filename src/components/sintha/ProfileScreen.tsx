@@ -11,7 +11,7 @@ import BottomNav from './BottomNav'
 import {
   Calendar, Star, Crown, Bell, HelpCircle, LogOut, Briefcase,
   ChevronRight, PenLine, MapPin, Phone, Camera, Loader2, ImagePlus,
-  ShieldCheck, Heart, MapPinned
+  ShieldCheck, Heart, MapPinned, Gift
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { signOut as firebaseSignOut } from 'firebase/auth'
@@ -69,6 +69,8 @@ export default function ProfileScreen() {
     ...(user?.role === 'client' ? [
       { icon: MapPinned, label: 'Saved Addresses', action: () => navigate('saved-addresses') } as const,
     ] : []),
+    // Referral program — available to all users (clients can refer providers, vice versa)
+    { icon: Gift, label: 'Refer & Earn', action: () => navigate('referrals') },
     { icon: Star, label: 'My Reviews', action: () => navigate('reviews', { targetId: user?.id || '' }) },
     { icon: Crown, label: 'SINTHA PRO', action: () => navigate('sintha-pro'), badge: user?.isPro ? 'Active' : undefined },
     { icon: Bell, label: 'Notifications', action: () => navigate('notifications') },
