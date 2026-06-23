@@ -169,9 +169,10 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="bg-gray-50 rounded-lg p-4 mt-2">
               <p><strong>SINTHA</strong></p>
+              <p>Founded &amp; Developed by: Irabot Laishram</p>
+              <p>Location: Khangabok Moirang Palli Bazar, Manipur, India</p>
               <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
-              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
-              <p>Location: Manipur, India</p>
+              <p className="text-sm text-gray-500 mt-2">SINTHA is owned and managed by Irabot Laishram.</p>
             </div>
           </section>
         </div>

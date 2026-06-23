@@ -194,6 +194,28 @@ export default function HelpScreen() {
           </div>
         </div>
 
+        {/* About the Creator */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h3 className="font-semibold text-gray-800 text-sm mb-3">About the Creator</h3>
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-full sintha-gradient flex items-center justify-center shrink-0">
+              <User className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-gray-800">Irabot Laishram</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Khangabok Moirang Palli Bazar, Manipur, India
+              </p>
+              <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+                SINTHA was founded and developed by Irabot Laishram. As an AI enthusiast and passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
+              </p>
+              <p className="text-[11px] text-gray-400 mt-2">
+                Ownership: SINTHA is owned and managed by Irabot Laishram.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* App info */}
         <div className="text-center pt-2">
           <p className="text-xs text-gray-400">SINTHA · v1.6.5</p>

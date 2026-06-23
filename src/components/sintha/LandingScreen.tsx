@@ -209,6 +209,11 @@ export default function LandingScreen() {
 
         <p className="text-xs text-gray-400 mb-2">&copy; 2026 SINTHA &bull; All rights reserved</p>
 
+        {/* About the Creator — brief credit on the landing page */}
+        <p className="text-[11px] text-gray-400 mb-3 max-w-md mx-auto leading-relaxed">
+          Founded &amp; developed by <span className="font-medium text-gray-500">Irabot Laishram</span>, Khangabok Moirang Palli Bazar, Manipur. AI enthusiast &amp; web/app developer.
+        </p>
+
         <button
           onClick={() => navigate('login', { role: 'admin' })}
           className="text-[10px] text-gray-300 hover:text-[#64748B] underline"

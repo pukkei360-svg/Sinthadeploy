@@ -143,6 +143,17 @@ export default function ContactPage() {
             </ul>
           </section>
 
+          {/* About the Creator */}
+          <section className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-100">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">About the Creator</h2>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              <strong>SINTHA</strong> was founded and developed by <strong>Irabot Laishram</strong> of Khangabok Moirang Palli Bazar, Manipur, India. As an AI enthusiast and passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
+            </p>
+            <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-blue-100">
+              <strong>Ownership:</strong> SINTHA is owned and managed by Irabot Laishram.
+            </p>
+          </section>
+
           {/* Legal Links */}
           <section className="text-center text-sm text-gray-500 pt-4 border-t border-gray-200">
             <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
