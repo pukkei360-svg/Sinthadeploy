@@ -59,13 +59,15 @@ Category: ${category || 'Not specified'}`;
     });
 
     if (!result.success) {
-      // Fallback: just return the original with a generic tip
+      // No fallback — SINTHA AI (Claude) only
+      console.error('[AI improve-job] SINTHA AI failed:', result.error);
       return NextResponse.json({
-        improvedTitle: title || description.slice(0, 50),
+        improvedTitle: title || '',
         improvedDescription: description,
-        tips: ['Add your location for faster responses', 'Mention your budget if you have one'],
-        qualityScore: 50,
-        poweredBy: 'SINHA AI',
+        tips: [],
+        qualityScore: 0,
+        error: 'SINTHA AI is having trouble right now. Please try again later.',
+        poweredBy: 'SINTHA AI',
       });
     }
 
@@ -82,7 +84,7 @@ Category: ${category || 'Not specified'}`;
       };
     }
 
-    return NextResponse.json({ ...parsed, poweredBy: 'SINHA AI' });
+    return NextResponse.json({ ...parsed, poweredBy: 'SINTHA AI' });
   } catch (error) {
     console.error('[AI improve-job] error:', error);
     return NextResponse.json({ error: 'Failed to improve job' }, { status: 500 });

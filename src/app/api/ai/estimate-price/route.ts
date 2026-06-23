@@ -98,19 +98,18 @@ Estimate the total cost for this job.`;
     });
 
     if (!result.success) {
-      // Fallback: simple calculation based on average rate
-      const low = Math.round(minRate * 1);
-      const high = Math.round(maxRate * 3);
-      const median = Math.round(avgRate * 1.5);
+      // No fallback — SINTHA AI (Claude) only
+      console.error('[AI estimate-price] SINTHA AI failed:', result.error);
       return NextResponse.json({
-        lowEstimate: low,
-        highEstimate: high,
-        medianEstimate: median,
-        estimatedDuration: '1-3 hours (estimated)',
-        factors: ['Provider experience', 'Job complexity', 'Materials needed'],
-        tips: 'Get quotes from 2-3 providers for the best price. Post a job on SINTHA to receive competitive quotes!',
+        lowEstimate: 0,
+        highEstimate: 0,
+        medianEstimate: 0,
+        estimatedDuration: '',
+        factors: [],
+        tips: 'SINTHA AI is having trouble right now. Please try again later.',
+        error: 'SINTHA AI unavailable',
         currency: 'INR',
-        poweredBy: 'SINHA AI',
+        poweredBy: 'SINTHA AI',
       });
     }
 
@@ -129,7 +128,7 @@ Estimate the total cost for this job.`;
       };
     }
 
-    return NextResponse.json({ ...parsed, currency: 'INR', poweredBy: 'SINHA AI' });
+    return NextResponse.json({ ...parsed, currency: 'INR', poweredBy: 'SINTHA AI' });
   } catch (error) {
     console.error('[AI estimate-price] error:', error);
     return NextResponse.json({ error: 'Failed to estimate price' }, { status: 500 });

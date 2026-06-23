@@ -216,7 +216,7 @@ export default function PostJobScreen() {
             <label className="text-sm font-semibold text-gray-800">
               Description <span className="text-red-500">*</span>
             </label>
-            {/* AI Improve button — uses SINHA AI to improve the job description */}
+            {/* AI Improve button — uses SINTHA AI to improve the job description */}
             {description.trim().length >= 10 && (
               <button
                 onClick={async () => {

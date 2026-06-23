@@ -61,7 +61,7 @@ export default function PriceEstimatorScreen() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-bold text-gray-800">AI Price Estimator</h1>
-        <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full ml-auto">SINHA AI</span>
+        <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full ml-auto">SINTHA AI</span>
       </div>
 
       <div className="px-4 py-4 space-y-4">

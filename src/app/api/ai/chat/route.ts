@@ -1,37 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import ZAI from 'z-ai-web-dev-sdk';
+import { callClaude } from '@/lib/claude';
 
 /**
- * SINTHA AI Chat API — Powered by Anthropic Claude (primary)
+ * SINTHA AI Chat API — Powered by SINTHA AI (Claude)
  *
- * Model hierarchy (tries in order):
- *   1. Anthropic Claude (claude-3-5-sonnet) — most capable, natural conversation
- *   2. Google Gemini 2.0 Flash — free fallback
- *   3. Z.AI SDK — second fallback
- *   4. Keyword bot — last resort (always works)
+ * Uses Anthropic Claude exclusively. No fallbacks.
+ * If the Claude API is unavailable, returns an error message.
  *
- * Requires ANTHROPIC_API_KEY env var (set on Vercel + .env).
- * Get key: https://console.anthropic.com/settings/keys
- *
- * Capabilities:
- *   - Find and recommend providers by category/skill
- *   - Estimate service prices based on provider rates
- *   - Compare providers side-by-side
- *   - Guide users through booking step-by-step
- *   - Explain PRO, verification, payments, referrals
- *   - Answer in English + basic Meitei (Manipuri)
- *   - Suggest posting a job if no provider matches
- *   - Help providers with profile optimization tips
+ * Requires ANTHROPIC_API_KEY env var.
  */
-
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_MODEL = 'claude-3-5-sonnet-20241022';
-const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 function buildSystemPrompt(providers: any[], categories: any[], config: { proPrice: number }): string {
   const providerList = providers.length > 0
@@ -105,42 +83,6 @@ ${providerList}
 - If asked about something you can't do, explain what the user CAN do themselves`;
 }
 
-// Fallback keyword bot (always works, even if all AI APIs fail)
-function getFallbackResponse(message: string, providers: any[], categories: any[]): string {
-  const lower = message.toLowerCase().trim()
-
-  if (lower.match(/hello|hi|hey|namaste|khurumjari/)) {
-    return `Hello! 👋 Welcome to SINTHA AI! I can help you find services, compare providers, estimate prices, book appointments, and answer questions. What do you need today?`
-  }
-  if (lower.match(/book|hire|appointment/)) {
-    return `To book a service:\n1. Browse categories on Home screen\n2. Select a provider\n3. Tap "Book Now"\n4. Fill in date, time, address\n5. Submit — auto-confirmed!\n\nYou can also save addresses for faster booking next time.`
-  }
-  if (lower.match(/pro|premium|subscription/)) {
-    return `SINTHA PRO is a monthly subscription for providers. Benefits: Higher search ranking, Featured badge, Homepage visibility, Priority support. Visit the PRO page from your Profile!`
-  }
-  if (lower.match(/commission|fee|free/)) {
-    return `SINTHA charges ZERO commission! Providers keep 100% of earnings. Only PRO subscription is optional (₹199/month).`
-  }
-  if (lower.match(/refer|referral|earn/)) {
-    return `Refer friends to SINTHA and earn 30% lifetime commission when they buy PRO! Share your referral code from Profile → Refer & Earn. Example: 10 active referrals = ₹597/month passive income!`
-  }
-  if (lower.match(/price|cost|rate|how much/)) {
-    const avgRate = providers.length > 0
-      ? Math.round(providers.reduce((sum, p) => sum + (p.hourlyRate || 0), 0) / providers.length)
-      : 200
-    return `Service prices vary by provider. Average rate: ₹${avgRate}/hr. Check each provider's profile for their hourly rate, or ask me to compare providers in a specific category!`
-  }
-  if (lower.match(/electrician|plumber|carpenter|repair/)) {
-    const matches = providers.filter(p => (p.skills || '').toLowerCase().includes(lower) || (p.category?.name || '').toLowerCase().includes(lower))
-    if (matches.length > 0) {
-      const names = matches.slice(0, 3).map(p => `${p.user?.name} (⭐${p.rating}, ₹${p.hourlyRate}/hr)`).join(', ')
-      return `I found these providers: ${names}. Tap on any provider's profile to see their full details and book!`
-    }
-    return `No ${lower} providers found yet. Try posting a job — providers in that category will send you quotes!`
-  }
-  return `I can help you find services, compare providers, estimate prices, guide bookings, explain PRO/referrals, and more. Try asking "Find me an electrician" or "Compare top providers" or "How much does a plumber cost?"`
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -176,149 +118,37 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(providers, categories, { proPrice });
 
-    // ═══════════════════════════════════════════════════════════
-    // Method 1: Anthropic Claude — PRIMARY (most capable)
-    // ═══════════════════════════════════════════════════════════
-    if (ANTHROPIC_API_KEY) {
-      try {
-        const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
-
-        // Add conversation history (last 6 messages for context)
-        const recentHistory = conversationHistory.slice(-6);
-        for (const msg of recentHistory) {
-          if (msg.role === 'user' || msg.role === 'assistant') {
-            messages.push({ role: msg.role, content: msg.content });
-          }
-        }
-        messages.push({ role: 'user', content: message });
-
-        const apiResponse = await fetch(ANTHROPIC_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: ANTHROPIC_MODEL,
-            max_tokens: 800,
-            system: systemPrompt,
-            messages,
-          }),
-        });
-
-        if (apiResponse.ok) {
-          const data = await apiResponse.json();
-          const aiResponse = data.content?.[0]?.text;
-
-          if (aiResponse) {
-            return NextResponse.json({
-              response: aiResponse,
-              timestamp: new Date().toISOString(),
-              poweredBy: 'SINHA AI',
-            });
-          }
-        } else {
-          const errText = await apiResponse.text().catch(() => 'unknown');
-          console.error('[AI Chat] Claude error:', apiResponse.status, errText.slice(0, 200));
-        }
-      } catch (claudeErr) {
-        console.error('[AI Chat] Claude failed:', claudeErr instanceof Error ? claudeErr.message : 'unknown');
+    // Build conversation messages for Claude
+    const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    const recentHistory = conversationHistory.slice(-6);
+    for (const msg of recentHistory) {
+      if (msg.role === 'user' || msg.role === 'assistant') {
+        messages.push({ role: msg.role, content: msg.content });
       }
     }
+    messages.push({ role: 'user', content: message });
 
-    // ═══════════════════════════════════════════════════════════
-    // Method 2: Google Gemini (free tier) — FALLBACK 1
-    // ═══════════════════════════════════════════════════════════
-    if (GEMINI_API_KEY) {
-      try {
-        const contents = [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: 'I understand. I am SINTHA AI, ready to help users find service providers, compare options, estimate prices, and answer questions about SINTHA.' }] },
-          ...conversationHistory.slice(-5).map((msg: { role: string; content: string }) => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }],
-          })),
-          { role: 'user', parts: [{ text: message }] },
-        ];
+    // Call SINTHA AI (Claude) — no fallbacks, only Claude
+    const result = await callClaude({
+      systemPrompt,
+      messages,
+      maxTokens: 800,
+      temperature: 0.7,
+    });
 
-        const apiResponse = await fetch(GEMINI_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 800,
-            },
-          }),
-        });
-
-        if (apiResponse.ok) {
-          const data = await apiResponse.json();
-          const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          if (aiResponse) {
-            return NextResponse.json({
-              response: aiResponse,
-              timestamp: new Date().toISOString(),
-              poweredBy: 'SINHA AI',
-            });
-          }
-        } else {
-          console.error('[AI Chat] Gemini error:', apiResponse.status);
-        }
-      } catch (geminiErr) {
-        console.error('[AI Chat] Gemini failed:', geminiErr instanceof Error ? geminiErr.message : 'unknown');
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // Method 3: Z.AI SDK — FALLBACK 2
-    // ═══════════════════════════════════════════════════════════
-    try {
-      const zai = await ZAI.create();
-
-      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-        { role: 'system', content: systemPrompt },
-      ];
-
-      const recentHistory = conversationHistory.slice(-5);
-      for (const msg of recentHistory) {
-        if (msg.role === 'user' || msg.role === 'assistant') {
-          messages.push({ role: msg.role, content: msg.content });
-        }
-      }
-      messages.push({ role: 'user', content: message });
-
-      const response = await zai.chat.completions.create({
-        messages,
-        temperature: 0.7,
-        max_tokens: 800,
+    if (!result.success) {
+      console.error('[AI Chat] SINTHA AI (Claude) failed:', result.error);
+      return NextResponse.json({
+        response: "I'm having trouble connecting right now. Please try again in a moment.",
+        timestamp: new Date().toISOString(),
+        poweredBy: 'SINTHA AI',
       });
-
-      const aiResponse = response.choices[0]?.message?.content || '';
-
-      if (aiResponse) {
-        return NextResponse.json({
-          response: aiResponse,
-          timestamp: new Date().toISOString(),
-          poweredBy: 'SINHA AI',
-        });
-      }
-    } catch (zaiErr) {
-      console.error('[AI Chat] Z.AI failed:', zaiErr instanceof Error ? zaiErr.message : 'unknown');
     }
-
-    // ═══════════════════════════════════════════════════════════
-    // Method 4: Keyword bot — LAST RESORT (always works)
-    // ═══════════════════════════════════════════════════════════
-    const fallbackResponse = getFallbackResponse(message, providers, categories);
 
     return NextResponse.json({
-      response: fallbackResponse,
+      response: result.text,
       timestamp: new Date().toISOString(),
-      poweredBy: 'SINHA AI',
+      poweredBy: 'SINTHA AI',
     });
   } catch (error) {
     console.error('AI Chat error:', error);

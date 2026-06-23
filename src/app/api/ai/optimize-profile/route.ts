@@ -99,19 +99,17 @@ Be encouraging but honest. Prioritize high-impact improvements (photo, descripti
     });
 
     if (!result.success) {
-      // Fallback: basic rule-based analysis
-      const score = calculateBasicScore(provider);
+      // No fallback — SINTHA AI (Claude) only
+      console.error('[AI optimize-profile] SINTHA AI failed:', result.error);
       return NextResponse.json({
-        score,
-        strengths: score > 60 ? ['Good profile foundation'] : [],
-        improvements: [
-          { area: 'Description', suggestion: 'Add a detailed description of your services', priority: 'high' },
-          { area: 'Skills', suggestion: 'List specific skills to appear in more searches', priority: 'medium' },
-        ],
+        score: 0,
+        strengths: [],
+        improvements: [],
         suggestedDescription: '',
-        suggestedRate: { current: provider.hourlyRate, suggested: null, reason: '' },
-        tips: ['Complete your profile to get more bookings', 'Get verified for the ✓ badge'],
-        poweredBy: 'SINHA AI',
+        suggestedRate: {},
+        tips: [],
+        error: 'SINTHA AI is having trouble right now. Please try again later.',
+        poweredBy: 'SINTHA AI',
       });
     }
 
@@ -123,21 +121,10 @@ Be encouraging but honest. Prioritize high-impact improvements (photo, descripti
       parsed = { score: 50, strengths: [], improvements: [], suggestedDescription: '', suggestedRate: {}, tips: [] };
     }
 
-    return NextResponse.json({ ...parsed, poweredBy: 'SINHA AI' });
+    return NextResponse.json({ ...parsed, poweredBy: 'SINTHA AI' });
   } catch (error) {
     console.error('[AI optimize-profile] error:', error);
     return NextResponse.json({ error: 'Failed to analyze profile' }, { status: 500 });
   }
 }
 
-function calculateBasicScore(provider: any): number {
-  let score = 0;
-  if (provider.description) score += 20;
-  if (provider.skills) score += 15;
-  if (provider.hourlyRate) score += 15;
-  if (provider.experience) score += 10;
-  if (provider.user?.isVerified) score += 20;
-  if (provider.user?.photoUrl) score += 10;
-  if (provider.rating > 0) score += 10;
-  return Math.min(score, 100);
-}

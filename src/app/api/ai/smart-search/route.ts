@@ -104,33 +104,13 @@ ${JSON.stringify(providerList, null, 2)}`;
     });
 
     if (!result.success) {
-      // Fallback: simple keyword matching
-      const lowerQuery = query.toLowerCase();
-      const keywordMatches = providers
-        .filter(p => {
-          const text = `${p.skills} ${p.category?.name} ${p.description}`.toLowerCase();
-          return lowerQuery.split(' ').some(word => word.length > 3 && text.includes(word));
-        })
-        .slice(0, 5)
-        .map(p => ({
-          providerId: p.userId,
-          name: p.user?.name,
-          photoUrl: p.user?.photoUrl,
-          category: p.category?.name,
-          rating: p.rating,
-          hourlyRate: p.hourlyRate,
-          verified: p.user?.isVerified,
-          reason: `Matches your search for "${query}"`,
-          matchScore: 70,
-        }));
-
+      // No fallback — SINTHA AI (Claude) only
+      console.error('[AI smart-search] SINTHA AI failed:', result.error);
       return NextResponse.json({
-        matches: keywordMatches,
-        summary: keywordMatches.length > 0
-          ? `I found ${keywordMatches.length} provider(s) that might help. Tap any to view their profile and book.`
-          : "I couldn't find an exact match. Try posting a job — providers will come to you with quotes!",
-        suggestions: "Tip: Post a job if you don't find the right provider.",
-        poweredBy: 'SINHA AI',
+        matches: [],
+        summary: "SINTHA AI is having trouble right now. Please try again in a moment, or browse providers by category below.",
+        suggestions: '',
+        poweredBy: 'SINTHA AI',
       });
     }
 
@@ -145,7 +125,7 @@ ${JSON.stringify(providerList, null, 2)}`;
         matches: [],
         summary: result.text,
         suggestions: '',
-        poweredBy: 'SINHA AI',
+        poweredBy: 'SINTHA AI',
       });
     }
 
@@ -172,7 +152,7 @@ ${JSON.stringify(providerList, null, 2)}`;
       matches,
       summary: parsed.summary || '',
       suggestions: parsed.suggestions || '',
-      poweredBy: 'SINHA AI',
+      poweredBy: 'SINTHA AI',
     });
   } catch (error) {
     console.error('[AI smart-search] error:', error);
