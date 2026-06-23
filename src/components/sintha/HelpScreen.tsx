@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import BottomNav from './BottomNav'
 import {
   ArrowLeft, ChevronDown, HelpCircle, Mail,
-  Shield, CreditCard, Calendar, User, AlertCircle, Sparkles
+  Shield, CreditCard, Calendar, User, AlertCircle
 } from 'lucide-react'
 
 interface FAQItem {
