@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F4C81">
+  <title>SINTHA — Offline</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #0F4C81 0%, #1e3a8a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      color: white;
+    }
+    .container {
+      max-width: 24rem;
+      text-align: center;
+    }
+    .logo {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.25rem;
+    }
+    .logo-meetei {
+      font-size: 1.25rem;
+      opacity: 0.8;
+      margin-bottom: 1.5rem;
+      font-family: 'Noto Sans Meetei Mayek', serif;
+    }
+    .icon-wrap {
+      width: 5rem;
+      height: 5rem;
+      margin: 0 auto 1.25rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .icon-wrap svg {
+      width: 2.5rem;
+      height: 2.5rem;
+      stroke: white;
+    }
+    .title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .message {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: white;
+      color: #0F4C81;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 1rem;
+      border: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      transition: background 0.2s;
+    }
+    .retry-btn:hover { background: #f3f4f6; }
+    .retry-btn:active { transform: scale(0.98); }
+    .retry-btn svg {
+      width: 1rem;
+      height: 1rem;
+      stroke: #0F4C81;
+    }
+    .auto-retry {
+      font-size: 0.75rem;
+      opacity: 0.6;
+      margin-top: 0.75rem;
+    }
+    .footer {
+      font-size: 0.75rem;
+      opacity: 0.4;
+      margin-top: 2rem;
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="logo">SINTHA</h1>
+    <p class="logo-meetei">ꯁꯤꯟꯊꯥ</p>
+
+    <div class="icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+
+    <h2 class="title">You're offline</h2>
+    <p class="message">
+      SINTHA needs an internet connection to load your bookings, messages,
+      and provider details. Please check your Wi-Fi or mobile data and
+      we'll automatically reconnect.
+    </p>
+
+    <button class="retry-btn" onclick="retryNow()">
+      <svg id="retry-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+      </svg>
+      <span id="retry-text">Retry now</span>
+    </button>
+
+    <p class="auto-retry" id="auto-retry-text">Auto-retrying in 5 seconds...</p>
+
+    <p class="footer">Trusted Hands. Trusted Services.</p>
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────
+    // Offline fallback page for SINTHA APK
+    // ─────────────────────────────────────────────────────────────
+    // This page is bundled with the APK and shown by the WebView's
+    // onReceivedError handler when the network fails BEFORE the React
+    // app can load. Once the WebView retries and succeeds, this page
+    // is replaced by the real app.
+    //
+    // The page auto-retries every 5 seconds by reloading the original
+    // URL. If the WebView still can't reach the backend, onReceivedError
+    // fires again and we stay on this page.
+    // ─────────────────────────────────────────────────────────────
+
+    var retryCount = 0;
+    var maxRetries = 60;  // 5 minutes @ 5s intervals
+    var retryTimer = null;
+
+    // The original URL the WebView was trying to load (so we can retry it).
+    // The native side should pass this via JavaScript interface, or we
+    // default to the production URL.
+    var originalUrl = window.Android && window.Android.getOriginalUrl
+      ? window.Android.getOriginalUrl()
+      : 'https://sinthadeploy.vercel.app/';
+
+    function setRetryText(text) {
+      var el = document.getElementById('retry-text');
+      if (el) el.textContent = text;
+    }
+
+    function setAutoRetryText(text) {
+      var el = document.getElementById('auto-retry-text');
+      if (el) el.textContent = text;
+    }
+
+    function spinIcon(spinning) {
+      var icon = document.getElementById('retry-icon');
+      if (!icon) return;
+      if (spinning) {
+        icon.classList.add('spinner');
+      } else {
+        icon.classList.remove('spinner');
+      }
+    }
+
+    function reload() {
+      // Reload the original URL. If the WebView can reach it, the React
+      // app loads and replaces this page. If not, onReceivedError fires
+      // again and the WebView stays on this page.
+      setRetryText('Retrying...');
+      spinIcon(true);
+      setAutoRetryText('Checking connection...');
+
+      try {
+        window.location.href = originalUrl;
+      } catch (e) {
+        // Fallback: just reload
+        window.location.reload();
+      }
+    }
+
+    function retryNow() {
+      if (retryTimer) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+      retryCount++;
+      reload();
+    }
+
+    function scheduleAutoRetry() {
+      if (retryCount >= maxRetries) {
+        setAutoRetryText('Auto-retry stopped after 5 minutes. Tap "Retry now" to try again.');
+        return;
+      }
+
+      var secondsLeft = 5;
+      setAutoRetryText('Auto-retrying in ' + secondsLeft + ' seconds...');
+
+      retryTimer = setInterval(function() {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+          clearInterval(retryTimer);
+          retryTimer = null;
+          retryCount++;
+          reload();
+        } else {
+          setAutoRetryText('Auto-retrying in ' + secondsLeft + ' seconds...');
+        }
+      }, 1000);
+    }
+
+    // Listen for the browser's online event as a fast-path
+    window.addEventListener('online', function() {
+      if (retryTimer) {
+        clearInterval(retryTimer);
+        retryTimer = null;
+      }
+      retryCount++;
+      reload();
+    });
+
+    // Start auto-retry loop on load
+    scheduleAutoRetry();
+  </script>
+</body>
+</html>
