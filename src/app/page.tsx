@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { onAuthStateChanged } from 'firebase/auth'
@@ -37,12 +37,64 @@ import PostJobScreen from '@/components/sintha/PostJobScreen'
 import MyJobsScreen from '@/components/sintha/MyJobsScreen'
 import OpenJobsScreen from '@/components/sintha/OpenJobsScreen'
 import JobDetailScreen from '@/components/sintha/JobDetailScreen'
+import OfflineBootScreen from '@/components/sintha/OfflineBootScreen'
 
 export default function Home() {
   const {
     currentView, setUser, navigate, isAuthReady, setAuthReady,
     setMyProviderProfile, user, setNotifications,
   } = useAppStore()
+
+  // ─────────────────────────────────────────────────────────────
+  // Boot-time connectivity gate
+  // ─────────────────────────────────────────────────────────────
+  // When the app launches offline, the WebView's initial HTML load can
+  // fail (showing the ugly default error page) OR the HTML loads from
+  // cache but Firebase auth + apiFetch hang forever with no clear UX.
+  // We gate the entire app behind a connectivity check: if the backend
+  // isn't reachable at boot, show a branded "You're offline" screen
+  // with auto-retry. Once reachable, proceed with normal auth flow.
+  //
+  // This is different from OfflineBootstrap's banner (which handles
+  // mid-session offline states). OfflineBootScreen only runs ONCE at
+  // app launch — once it says "online", the rest of the app renders.
+  const [bootOnline, setBootOnline] = useState<boolean | null>(null)
+
+  // Run the boot connectivity check once on mount.
+  useEffect(() => {
+    let cancelled = false
+    const check = async () => {
+      try {
+        // Hit a lightweight endpoint with cache-busting to verify the
+        // backend is actually reachable (navigator.onLine can lie).
+        const url = `/api/push-test?_=${Date.now()}`
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 5000)
+        const res = await fetch(url, {
+          method: 'GET',
+          signal: controller.signal,
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' },
+        })
+        clearTimeout(timeout)
+        if (cancelled) return
+        if (res.ok) {
+          // Verify it's actually JSON (not a captive portal HTML page)
+          try {
+            const text = await res.text()
+            JSON.parse(text)
+            setBootOnline(true)
+            return
+          } catch {}
+        }
+        setBootOnline(false)
+      } catch {
+        if (!cancelled) setBootOnline(false)
+      }
+    }
+    check()
+    return () => { cancelled = true }
+  }, [])
 
   // Listen to Firebase auth state changes
   useEffect(() => {
@@ -332,6 +384,27 @@ export default function Home() {
       if (backPressTimer) clearTimeout(backPressTimer)
     }
   }, [currentView])
+
+  // ─────────────────────────────────────────────────────────────
+  // Boot-time connectivity gate — render AFTER all hooks.
+  // ─────────────────────────────────────────────────────────────
+  // bootOnline === null = still checking → show loading spinner
+  // bootOnline === false = offline → show branded offline screen
+  // bootOnline === true = online → proceed with normal app render
+  if (bootOnline === null) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <h1 className="text-3xl font-extrabold sintha-gradient-text mb-2">SINTHA</h1>
+          <p className="text-sm text-gray-400">Loading...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (bootOnline === false) {
+    return <OfflineBootScreen onOnline={() => setBootOnline(true)} />
+  }
 
   const renderView = () => {
     switch (currentView) {
