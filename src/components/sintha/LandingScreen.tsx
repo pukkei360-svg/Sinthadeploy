@@ -202,7 +202,7 @@ export default function LandingScreen() {
 
         {/* Contact info — email only (WhatsApp removed: personal number). */}
         <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[#64748B] mb-3">
-          <a href="mailto:pukkei365@gmail.com" className="hover:text-blue-600 hover:underline">pukkei365@gmail.com</a>
+          <a href="mailto:sinthahelp@gmail.com" className="hover:text-blue-600 hover:underline">sinthahelp@gmail.com</a>
           <span className="text-gray-300">•</span>
           <a href="/contact" className="hover:text-blue-600 hover:underline">Contact Support</a>
         </div>

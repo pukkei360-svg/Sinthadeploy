@@ -230,7 +230,7 @@ export default function TermsPage() {
               <li>Misuse the platform or other users</li>
             </ul>
             <p className="mt-2">
-              You may delete your account at any time by emailing <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a>. Upon termination, your profile will be removed, but booking records may be retained for legal compliance.
+              You may delete your account at any time by emailing <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a>. Upon termination, your profile will be removed, but booking records may be retained for legal compliance.
             </p>
           </section>
 
@@ -256,8 +256,8 @@ export default function TermsPage() {
             <p>If you have any questions about these Terms, please contact us:</p>
             <div className="bg-gray-50 rounded-lg p-4 mt-2">
               <p><strong>SINTHA</strong></p>
-              <p>Email: <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a></p>
-              <p>Email: <a href="mailto:support@sintha.app" className="text-blue-600 hover:underline">support@sintha.app</a></p>
+              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
+              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
               <p>Location: Manipur, India</p>
             </div>
           </section>

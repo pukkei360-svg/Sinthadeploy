@@ -97,7 +97,7 @@ export default function HelpScreen() {
   const { navigate, user } = useAppStore()
   const [openCategory, setOpenCategory] = useState<string | null>('Bookings')
 
-  const supportEmail = 'support@sintha.app'
+  const supportEmail = 'sinthahelp@gmail.com'
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

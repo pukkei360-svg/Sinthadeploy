@@ -35,7 +35,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       // Call OUR backend /api/auth/forgot-password — this sends a
-      // SINTHA-branded email from pukkei365@gmail.com via Gmail SMTP,
+      // SINTHA-branded email from sinthahelp@gmail.com via Gmail SMTP,
       // NOT Firebase's default email (which comes from noreply@firebaseapp.com).
       //
       // The email contains a link to our own /reset-password page with
@@ -183,8 +183,8 @@ export default function ForgotPasswordScreen() {
             <div className="mt-6 pt-4 border-t border-gray-100 text-center">
               <p className="text-xs text-gray-400">
                 Need help? Email us at{' '}
-                <a href="mailto:support@sintha.app" className="text-blue-600 font-medium hover:underline">
-                  support@sintha.app
+                <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 font-medium hover:underline">
+                  sinthahelp@gmail.com
                 </a>
               </p>
             </div>

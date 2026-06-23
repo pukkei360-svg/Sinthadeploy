@@ -57,7 +57,7 @@ export default function RefundPolicyPage() {
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>First, try to resolve the issue directly with the provider</li>
-              <li>If unresolved, contact SINTHA support at <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a></li>
+              <li>If unresolved, contact SINTHA support at <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></li>
               <li>We can mediate but cannot force a refund (we don&apos;t hold the funds)</li>
               <li>Providers with repeated complaints may be suspended from the platform</li>
             </ul>
@@ -82,7 +82,7 @@ export default function RefundPolicyPage() {
 
             <p className="font-medium text-gray-900 mt-4">3.3 How to Request a PRO Refund:</p>
             <ol className="list-decimal pl-6 mt-2 space-y-1">
-              <li>Email <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a> with subject &quot;PRO Refund Request&quot;</li>
+              <li>Email <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a> with subject &quot;PRO Refund Request&quot;</li>
               <li>Include your registered email and Razorpay payment ID</li>
               <li>We will review and process the refund within <strong>5-7 business days</strong></li>
               <li>Refund will be credited back to the original payment method (UPI/bank account/card)</li>
@@ -125,7 +125,7 @@ export default function RefundPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">5. Cancellation of Account</h2>
             <p>
-              You may cancel your SINTHA account at any time by emailing <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a>. Account cancellation will:
+              You may cancel your SINTHA account at any time by emailing <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a>. Account cancellation will:
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-1">
               <li>Remove your profile from search results</li>
@@ -164,8 +164,8 @@ export default function RefundPolicyPage() {
             <p>For any refund-related queries, please contact us:</p>
             <div className="bg-gray-50 rounded-lg p-4 mt-2">
               <p><strong>SINTHA Refund Support</strong></p>
-              <p>Email: <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a></p>
-              <p>Email: <a href="mailto:support@sintha.app" className="text-blue-600 hover:underline">support@sintha.app</a></p>
+              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
+              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
               <p>Response time: Within 24 hours (business days)</p>
               <p>Refund processing: 5-7 business days</p>
             </div>

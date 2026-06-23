@@ -488,8 +488,8 @@ export default function AuthScreen() {
               <div className="mt-6 pt-4 border-t border-gray-100 text-center">
                 <p className="text-xs text-gray-400">
                   Need help? Email us at{' '}
-                  <a href="mailto:support@sintha.app" className="text-blue-600 font-medium hover:underline">
-                    support@sintha.app
+                  <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 font-medium hover:underline">
+                    sinthahelp@gmail.com
                   </a>
                 </p>
               </div>

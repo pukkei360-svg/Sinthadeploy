@@ -46,8 +46,8 @@ export default function ContactPage() {
               <div className="flex-1">
                 <p className="font-semibold text-gray-900">Email Support</p>
                 <p className="text-sm text-gray-600">For account issues, refunds, technical problems</p>
-                <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline text-sm font-medium mt-1 inline-block">
-                  pukkei365@gmail.com
+                <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline text-sm font-medium mt-1 inline-block">
+                  sinthahelp@gmail.com
                 </a>
                 <p className="text-xs text-gray-500 mt-1">Response time: within 24 hours (business days)</p>
               </div>
@@ -63,8 +63,8 @@ export default function ContactPage() {
               <div className="flex-1">
                 <p className="font-semibold text-gray-900">Email Support</p>
                 <p className="text-sm text-gray-600">For questions and help — we respond within 24 hours</p>
-                <a href="mailto:support@sintha.app" className="text-blue-600 hover:underline text-sm font-medium mt-1 inline-block">
-                  support@sintha.app
+                <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline text-sm font-medium mt-1 inline-block">
+                  sinthahelp@gmail.com
                 </a>
                 <p className="text-xs text-gray-500 mt-1">Available: 9 AM - 8 PM (IST), Monday to Saturday</p>
               </div>

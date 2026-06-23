@@ -112,7 +112,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">6. Data Retention</h2>
             <p>
-              We retain your personal information for as long as your account is active or as needed to provide you with the Service. We also retain information to comply with legal obligations, resolve disputes, and enforce our agreements. You may request deletion of your account at any time by contacting us at <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a>.
+              We retain your personal information for as long as your account is active or as needed to provide you with the Service. We also retain information to comply with legal obligations, resolve disputes, and enforce our agreements. You may request deletion of your account at any time by contacting us at <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a>.
             </p>
             <p>
               Booking records, chat messages, and payment records are retained for 7 years as required by Indian tax and accounting laws.
@@ -130,7 +130,7 @@ export default function PrivacyPolicyPage() {
               <li><strong>Data portability:</strong> Request your data in a structured, machine-readable format</li>
             </ul>
             <p>
-              To exercise any of these rights, email us at <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a>. We will respond within 30 days.
+              To exercise any of these rights, email us at <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a>. We will respond within 30 days.
             </p>
           </section>
 
@@ -169,8 +169,8 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="bg-gray-50 rounded-lg p-4 mt-2">
               <p><strong>SINTHA</strong></p>
-              <p>Email: <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a></p>
-              <p>Email: <a href="mailto:support@sintha.app" className="text-blue-600 hover:underline">support@sintha.app</a></p>
+              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
+              <p>Email: <a href="mailto:sinthahelp@gmail.com" className="text-blue-600 hover:underline">sinthahelp@gmail.com</a></p>
               <p>Location: Manipur, India</p>
             </div>
           </section>
