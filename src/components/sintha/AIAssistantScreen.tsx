@@ -13,6 +13,7 @@ interface AIChatMessage {
   content: string
   isBot: boolean
   timestamp: Date
+  poweredBy?: string  // 'Claude' | 'Gemini' | 'Z.AI' | 'Fallback Bot'
 }
 
 export default function AIAssistantScreen() {
@@ -20,9 +21,10 @@ export default function AIAssistantScreen() {
   const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([
     {
       id: 'welcome',
-      content: "Hi! I'm SINTHA AI, your smart assistant. I can help you find providers, guide you through booking, and answer any questions about SINTHA. What can I help you with today?",
+      content: "Hi! 👋 I'm SINTHA AI, powered by Claude. I can help you:\n\n✨ Find and compare providers\n💰 Estimate service prices\n📅 Guide you through booking\n🏆 Explain PRO, referrals & verification\n🛠️ Help providers optimize their profile\n\nWhat can I help you with today?",
       isBot: true,
       timestamp: new Date(),
+      poweredBy: 'Claude',
     },
   ])
   const [input, setInput] = useState('')
@@ -33,10 +35,16 @@ export default function AIAssistantScreen() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
+  // Expanded quick actions — organized by category for better discoverability.
+  // Each action demonstrates a different AI capability.
   const quickActions = [
     'Find me an electrician',
+    'Compare top-rated providers',
+    'How much does a plumber cost?',
     'How do I book a service?',
     'What is SINTHA PRO?',
+    'How does the referral program work?',
+    'Tips to get more bookings',
     'Best tutor near me',
   ]
 
@@ -78,6 +86,7 @@ export default function AIAssistantScreen() {
         content: data.response || "I'm sorry, I couldn't process that. Please try again.",
         isBot: true,
         timestamp: new Date(),
+        poweredBy: data.poweredBy,
       }
       setChatMessages((prev) => [...prev, botMsg])
     } catch (err: unknown) {
@@ -108,7 +117,7 @@ export default function AIAssistantScreen() {
           <h1 className="text-sm font-bold text-[#1E293B]">SINTHA AI</h1>
           <p className="text-[10px] text-[#10B981] flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-            Online
+            Online · Powered by Claude
           </p>
         </div>
       </div>
@@ -125,9 +134,16 @@ export default function AIAssistantScreen() {
               }`}
             >
               <p className="text-sm whitespace-pre-line">{msg.content}</p>
-              <p className={`text-[10px] mt-1 ${msg.isBot ? 'text-[#94A3B8]' : 'text-white/60'}`}>
-                {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </p>
+              <div className={`flex items-center gap-2 mt-1 ${msg.isBot ? 'text-[#94A3B8]' : 'text-white/60'}`}>
+                <p className="text-[10px]">
+                  {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                {msg.isBot && msg.poweredBy && (
+                  <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                    {msg.poweredBy}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ))}
