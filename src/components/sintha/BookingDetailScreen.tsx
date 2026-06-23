@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   ArrowLeft, Calendar, Clock, MapPin, FileText, MessageCircle, Phone,
-  CheckCircle, XCircle, Play, Star, Copy, RotateCcw, AlertCircle
+  CheckCircle, XCircle, Play, Star, Copy, RotateCcw, AlertCircle, X
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
