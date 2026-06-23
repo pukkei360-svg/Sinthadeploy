@@ -11,8 +11,9 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import {
   ArrowLeft, Star, CheckCircle, Crown, Clock, MapPin, MessageCircle,
-  Calendar, DollarSign, Briefcase, Shield, ChevronRight, Image as ImageIcon, Flag
+  Calendar, DollarSign, Briefcase, Shield, ChevronRight, Image as ImageIcon, Flag, Heart
 } from 'lucide-react'
+import { cleanError } from '@/lib/clean-error'
 
 export default function ProviderProfileScreen() {
   const { navigate, viewParams, user, providers } = useAppStore()
@@ -20,6 +21,8 @@ export default function ProviderProfileScreen() {
   const [loading, setLoading] = useState(true)
   const [hasBooking, setHasBooking] = useState(false)
   const [checkingBooking, setCheckingBooking] = useState(true)
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [favoriteLoading, setFavoriteLoading] = useState(false)
 
   const providerId = viewParams?.providerId
 
@@ -39,6 +42,48 @@ export default function ProviderProfileScreen() {
     }
     if (providerId) loadProvider()
   }, [providerId, providers])
+
+  // Check if this provider is in the client's favorites
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!user || !providerId) return
+      // Only check for clients (providers don't favorite other providers)
+      if (user.role === 'provider') return
+      try {
+        const data = await apiFetch(`/favorites?clientId=${user.id}&providerId=${providerId}`)
+        setIsFavorited(!!data.favorited)
+      } catch {
+        // Favorites table might not exist yet — silent
+      }
+    }
+    checkFavorite()
+  }, [user, providerId])
+
+  const toggleFavorite = async () => {
+    if (!user || !provider) return
+    setFavoriteLoading(true)
+    try {
+      if (isFavorited) {
+        await apiFetch('/favorites', {
+          method: 'DELETE',
+          body: JSON.stringify({ clientId: user.id, providerId }),
+        })
+        setIsFavorited(false)
+        toast({ title: 'Removed', description: 'Provider removed from your saved list' })
+      } else {
+        await apiFetch('/favorites', {
+          method: 'POST',
+          body: JSON.stringify({ clientId: user.id, providerId }),
+        })
+        setIsFavorited(true)
+        toast({ title: 'Saved!', description: 'Provider added to your saved list' })
+      }
+    } catch (err: unknown) {
+      toast({ title: 'Error', description: cleanError(err) })
+    } finally {
+      setFavoriteLoading(false)
+    }
+  }
 
   // Check if user has booked this provider
   // IMPORTANT: Use provider.userId (User ID) — NOT providerId (ProviderProfile ID).
@@ -106,6 +151,24 @@ export default function ProviderProfileScreen() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-bold text-gray-800">Provider Profile</h1>
+        <div className="flex-1" />
+        {/* Favorite (heart) button — clients only, hidden for providers viewing other providers */}
+        {user?.role === 'client' && (
+          <button
+            onClick={toggleFavorite}
+            disabled={favoriteLoading}
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50"
+            aria-label={isFavorited ? 'Remove from saved' : 'Save provider'}
+          >
+            <Heart
+              className={`h-5 w-5 ${
+                isFavorited
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-gray-400'
+              }`}
+            />
+          </button>
+        )}
       </div>
 
       {/* Profile Header */}

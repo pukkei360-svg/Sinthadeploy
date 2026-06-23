@@ -39,6 +39,20 @@ export async function GET(
         },
         review: true,
       },
+    }).catch(async (err) => {
+      // Phase 2 columns might not exist yet — fall back to a query
+      // that doesn't reference them. The migration runs in parallel
+      // and will have them ready by the next request.
+      console.warn('[bookings/get] Fallback query (Phase 2 columns missing?):', err instanceof Error ? err.message : err);
+      return db.booking.findUnique({
+        where: { id },
+        include: {
+          client: { select: { id: true, name: true, email: true, photoUrl: true, phone: true, location: true } },
+          provider: { select: { id: true, name: true, email: true, photoUrl: true, phone: true, location: true } },
+          providerProfile: { include: { category: true } },
+          review: true,
+        },
+      });
     });
 
     if (!booking) {
@@ -65,7 +79,14 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { status } = body;
+    const {
+      status,
+      cancelReason,        // string — required when status='cancelled'
+      cancelledBy,         // 'client' | 'provider'
+      price,               // number — set when status='completed'
+      beforePhotos,        // string (JSON array of URLs) — set when status='in_progress'
+      afterPhotos,         // string (JSON array of URLs) — set when status='completed'
+    } = body;
 
     if (!status) {
       return NextResponse.json(
@@ -82,6 +103,22 @@ export async function PUT(
       );
     }
 
+    // Build the update data — only include fields relevant to this status.
+    // This keeps the booking update atomic and avoids overwriting unrelated
+    // fields when the client only wants to change the status.
+    const updateData: Record<string, unknown> = { status };
+    if (status === 'cancelled') {
+      if (cancelReason) updateData.cancelReason = cancelReason;
+      if (cancelledBy) updateData.cancelledBy = cancelledBy;
+    }
+    if (status === 'in_progress' && beforePhotos) {
+      updateData.beforePhotos = beforePhotos;
+    }
+    if (status === 'completed') {
+      if (typeof price === 'number' && price >= 0) updateData.price = price;
+      if (afterPhotos) updateData.afterPhotos = afterPhotos;
+    }
+
     const existing = await db.booking.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(
@@ -92,7 +129,7 @@ export async function PUT(
 
     const booking = await db.booking.update({
       where: { id },
-      data: { status },
+      data: updateData,
       include: {
         client: {
           select: {
@@ -158,11 +195,24 @@ export async function PUT(
         data: { totalBookings: { increment: 1 } },
       });
     } else if (status === 'cancelled') {
+      // Notify the OTHER party (not the one who cancelled).
+      // The cancelledBy field tells us who initiated; notify the other.
+      const recipientId = cancelledBy === 'client' ? existing.providerId
+                        : cancelledBy === 'provider' ? existing.clientId
+                        : existing.providerId;  // default: notify provider
+
+      const cancelledByName = cancelledBy === 'client'
+        ? booking.client?.name
+        : cancelledBy === 'provider'
+        ? booking.provider?.name
+        : 'The other party';
+
+      const reasonText = cancelReason ? ` Reason: ${cancelReason}` : '';
       await notify({
         data: {
-          userId: existing.providerId,
-          title: 'Booking Cancelled',
-          message: `Booking for ${existing.service} has been cancelled`,
+          userId: recipientId,
+          title: '❌ Booking Cancelled',
+          message: `${cancelledByName} cancelled the booking for ${existing.service}.${reasonText}`,
           type: 'booking',
           relatedId: existing.id,
         },

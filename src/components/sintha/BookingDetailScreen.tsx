@@ -37,6 +37,16 @@ export default function BookingDetailScreen() {
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
 
+  // Phase 2 marketplace enhancement state
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [showReschedule, setShowReschedule] = useState(false)
+  const [newDate, setNewDate] = useState('')
+  const [newTime, setNewTime] = useState('')
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false)
+  const [completePrice, setCompletePrice] = useState('')
+  const [showPhotos, setShowPhotos] = useState(false)
+
   const bookingId = viewParams?.bookingId
 
   useEffect(() => {
@@ -54,12 +64,12 @@ export default function BookingDetailScreen() {
     if (bookingId) loadBooking()
   }, [bookingId, toast])
 
-  const updateStatus = async (status: string) => {
+  const updateStatus = async (status: string, extra: Record<string, unknown> = {}) => {
     setActionLoading(true)
     try {
       const data = await apiFetch(`/bookings/${bookingId}`, {
         method: 'PUT',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...extra }),
       })
       setBooking(data.booking)
       updateBooking(bookingId, { status: data.booking.status })
@@ -69,6 +79,59 @@ export default function BookingDetailScreen() {
     } finally {
       setActionLoading(false)
     }
+  }
+
+  const handleCancel = async () => {
+    if (!cancelReason.trim()) {
+      toast({ title: 'Reason required', description: 'Please select a reason for cancellation' })
+      return
+    }
+    setShowCancelDialog(false)
+    await updateStatus('cancelled', {
+      cancelReason: cancelReason.trim(),
+      cancelledBy: isClient ? 'client' : 'provider',
+    })
+    setCancelReason('')
+  }
+
+  const handleReschedule = async () => {
+    if (!newDate) {
+      toast({ title: 'Date required', description: 'Please pick a new date' })
+      return
+    }
+    setActionLoading(true)
+    try {
+      const data = await apiFetch(`/bookings/${bookingId}/reschedule`, {
+        method: 'POST',
+        body: JSON.stringify({
+          newDate,
+          newTime: newTime || undefined,
+          requestedBy: isClient ? 'client' : 'provider',
+        }),
+      })
+      setBooking(data.booking)
+      toast({ title: 'Rescheduled', description: 'The other party has been notified' })
+      setShowReschedule(false)
+      setNewDate('')
+      setNewTime('')
+    } catch (err: unknown) {
+      toast({ title: 'Error', description: cleanError(err) })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleComplete = async () => {
+    const priceNum = completePrice ? parseFloat(completePrice) : undefined
+    if (completePrice && (isNaN(priceNum as number) || (priceNum as number) < 0)) {
+      toast({ title: 'Invalid price', description: 'Enter a valid amount in ₹' })
+      return
+    }
+    setShowCompleteDialog(false)
+    await updateStatus('completed', {
+      ...(priceNum ? { price: priceNum } : {}),
+    })
+    setCompletePrice('')
   }
 
   const submitReview = async () => {
@@ -303,6 +366,61 @@ export default function BookingDetailScreen() {
           )}
         </div>
 
+        {/* Cancel reason + who cancelled — shown when booking is cancelled */}
+        {booking.status === 'cancelled' && (booking.cancelReason || booking.cancelledBy) && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-800">
+                  Cancelled by {booking.cancelledBy === 'client' ? 'client' : booking.cancelledBy === 'provider' ? 'provider' : 'a party'}
+                </p>
+                {booking.cancelReason && (
+                  <p className="text-sm text-red-700 mt-1">
+                    <span className="font-medium">Reason:</span> {booking.cancelReason}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reschedule history — shown when booking has been rescheduled */}
+        {booking.rescheduledFrom && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-3">
+            <Calendar className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs font-semibold text-blue-800">Rescheduled</p>
+              {(() => {
+                try {
+                  const prev = JSON.parse(booking.rescheduledFrom)
+                  const prevDate = new Date(prev.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                  return (
+                    <p className="text-[11px] text-blue-700 mt-0.5">
+                      Previously: {prevDate}{prev.time ? ` at ${prev.time}` : ''}
+                    </p>
+                  )
+                } catch {
+                  return null
+                }
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Service price — shown when booking is completed with a price */}
+        {booking.status === 'completed' && typeof booking.price === 'number' && booking.price > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-green-700">Service amount</p>
+              <p className="text-2xl font-bold text-green-800 mt-0.5">₹{booking.price}</p>
+            </div>
+            <p className="text-[10px] text-green-600 max-w-[50%]">
+              Pay the provider directly via cash/UPI. SINTHA takes 0% commission.
+            </p>
+          </div>
+        )}
+
         {/* Status Timeline */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h3 className="font-semibold text-gray-800 mb-3">Status</h3>
@@ -511,7 +629,7 @@ export default function BookingDetailScreen() {
         return (
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] safe-area-bottom">
             <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-2">
-              {/* Provider: pending → Accept + Reject */}
+              {/* Provider: pending → Accept + Reject (with reason) */}
               {showProviderPending && (
                 <>
                   <Button
@@ -524,7 +642,7 @@ export default function BookingDetailScreen() {
                   <Button
                     variant="outline"
                     className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => updateStatus('cancelled')}
+                    onClick={() => setShowCancelDialog(true)}
                     disabled={actionLoading}
                   >
                     <XCircle className="h-4 w-4 mr-1.5" /> Reject
@@ -532,38 +650,58 @@ export default function BookingDetailScreen() {
                 </>
               )}
 
-              {/* Provider: accepted → Start Service */}
+              {/* Provider: accepted → Start Service + Reschedule */}
               {showProviderStart && (
-                <Button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => updateStatus('in_progress')}
-                  disabled={actionLoading}
-                >
-                  <Play className="h-4 w-4 mr-1.5" /> Start Service
-                </Button>
+                <>
+                  <Button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => updateStatus('in_progress')}
+                    disabled={actionLoading}
+                  >
+                    <Play className="h-4 w-4 mr-1.5" /> Start Service
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                    onClick={() => setShowReschedule(true)}
+                    disabled={actionLoading}
+                  >
+                    <Calendar className="h-4 w-4 mr-1.5" /> Reschedule
+                  </Button>
+                </>
               )}
 
-              {/* Provider: in_progress → Mark Complete (rating trigger — emphasized) */}
+              {/* Provider: in_progress → Mark Complete (with price + photos prompt) */}
               {showProviderComplete && (
                 <Button
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => updateStatus('completed')}
+                  onClick={() => setShowCompleteDialog(true)}
                   disabled={actionLoading}
                 >
                   <CheckCircle className="h-4 w-4 mr-1.5" /> Mark Complete & Get Rated
                 </Button>
               )}
 
-              {/* Client: accepted → Cancel */}
+              {/* Client: accepted → Reschedule + Cancel (with reason) */}
               {showClientCancel && (
-                <Button
-                  variant="outline"
-                  className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                  onClick={() => updateStatus('cancelled')}
-                  disabled={actionLoading}
-                >
-                  <XCircle className="h-4 w-4 mr-1.5" /> Cancel Booking
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50"
+                    onClick={() => setShowReschedule(true)}
+                    disabled={actionLoading}
+                  >
+                    <Calendar className="h-4 w-4 mr-1.5" /> Reschedule
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => setShowCancelDialog(true)}
+                    disabled={actionLoading}
+                  >
+                    <XCircle className="h-4 w-4 mr-1.5" /> Cancel
+                  </Button>
+                </>
               )}
 
               {/* Completed + no review → Rate (both roles) */}
@@ -579,6 +717,187 @@ export default function BookingDetailScreen() {
           </div>
         )
       })()}
+
+      {/* ── Cancel-with-reason dialog ─────────────────────────────────── */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-800">
+                {isClient ? 'Cancel booking?' : 'Reject booking?'}
+              </h3>
+              <button
+                onClick={() => { setShowCancelDialog(false); setCancelReason('') }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600">
+              Please choose a reason so the other party understands. They will be notified immediately.
+            </p>
+            <div className="space-y-2">
+              {[
+                'Schedule conflict',
+                'No longer needed',
+                'Provider unavailable',
+                'Found another provider',
+                'Emergency came up',
+                'Other',
+              ].map((reason) => {
+                const isSelected = cancelReason === reason
+                return (
+                  <button
+                    key={reason}
+                    onClick={() => setCancelReason(reason)}
+                    className={
+                      isSelected
+                        ? 'w-full text-left px-3 py-2.5 rounded-lg border text-sm border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                        : 'w-full text-left px-3 py-2.5 rounded-lg border text-sm border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }
+                  >
+                    {reason}
+                  </button>
+                )
+              })}
+            </div>
+            {cancelReason === 'Other' && (
+              <input
+                type="text"
+                placeholder="Tell us more..."
+                value={cancelReason === 'Other' ? '' : cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+            )}
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setShowCancelDialog(false); setCancelReason('') }}
+                disabled={actionLoading}
+              >
+                Keep booking
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleCancel}
+                disabled={actionLoading || !cancelReason.trim()}
+              >
+                {actionLoading ? 'Cancelling...' : 'Confirm cancel'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Reschedule dialog ─────────────────────────────────────────── */}
+      {showReschedule && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-800">Reschedule booking</h3>
+              <button
+                onClick={() => { setShowReschedule(false); setNewDate(''); setNewTime('') }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600">
+              Pick a new date and time. The other party will be notified of the new schedule.
+            </p>
+            <div>
+              <label className="text-xs font-medium text-gray-600">New date *</label>
+              <input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600">New time (optional)</label>
+              <input
+                type="time"
+                value={newTime}
+                onChange={(e) => setNewTime(e.target.value)}
+                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setShowReschedule(false); setNewDate(''); setNewTime('') }}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 sintha-gradient text-white"
+                onClick={handleReschedule}
+                disabled={actionLoading || !newDate}
+              >
+                {actionLoading ? 'Rescheduling...' : 'Confirm reschedule'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mark-complete dialog (with price input) ───────────────────── */}
+      {showCompleteDialog && (
+        <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-800">Mark service complete?</h3>
+              <button
+                onClick={() => { setShowCompleteDialog(false); setCompletePrice('') }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600">
+              The client will be notified and can rate you. Enter the final agreed amount so it appears in your earnings.
+            </p>
+            <div>
+              <label className="text-xs font-medium text-gray-600">Final amount (₹) — optional</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                placeholder="e.g. 500"
+                value={completePrice}
+                onChange={(e) => setCompletePrice(e.target.value)}
+                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                Leave blank if no money changed hands or you prefer not to share.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setShowCompleteDialog(false); setCompletePrice('') }}
+                disabled={actionLoading}
+              >
+                Not yet
+              </Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleComplete}
+                disabled={actionLoading}
+              >
+                {actionLoading ? 'Completing...' : 'Mark complete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

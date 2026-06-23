@@ -38,6 +38,9 @@ import MyJobsScreen from '@/components/sintha/MyJobsScreen'
 import OpenJobsScreen from '@/components/sintha/OpenJobsScreen'
 import JobDetailScreen from '@/components/sintha/JobDetailScreen'
 import OfflineBootScreen from '@/components/sintha/OfflineBootScreen'
+import HelpScreen from '@/components/sintha/HelpScreen'
+import SavedProvidersScreen from '@/components/sintha/SavedProvidersScreen'
+import SavedAddressesScreen from '@/components/sintha/SavedAddressesScreen'
 
 export default function Home() {
   const {
@@ -475,6 +478,12 @@ export default function Home() {
         return <OpenJobsScreen />
       case 'job-detail':
         return <JobDetailScreen />
+      case 'help':
+        return <HelpScreen />
+      case 'saved-providers':
+        return <SavedProvidersScreen />
+      case 'saved-addresses':
+        return <SavedAddressesScreen />
       default:
         return <LandingScreen />
     }

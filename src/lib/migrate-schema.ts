@@ -278,6 +278,95 @@ async function runMigration(): Promise<void> {
   `);
 
   console.log('[schema-migration] Ban/claims + verification + jobs schema is ready');
+
+  // ── Phase 2: Marketplace enhancement columns ─────────────────────────
+  // These back the new features: cancel-with-reason, reschedule, service
+  // payment price, before/after photos, saved providers, saved addresses.
+
+  // Booking.cancelReason — populated when status changes to 'cancelled'.
+  // Shown to the other party so they understand why the booking was cancelled.
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "cancelReason" TEXT`
+  );
+
+  // Booking.cancelledBy — who cancelled ('client' | 'provider').
+  // Lets the other party see who initiated the cancellation.
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "cancelledBy" TEXT`
+  );
+
+  // Booking.rescheduledFrom — original date before a reschedule.
+  // Stored as ISO string so the change history is preserved.
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "rescheduledFrom" TEXT`
+  );
+
+  // Booking.rescheduledAt — when the reschedule happened (timestamp).
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "rescheduledAt" TIMESTAMP(3)`
+  );
+
+  // Booking.price — the agreed/charged amount in INR. Set by the provider
+  // when marking the booking complete. Used for the provider earnings dashboard.
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "price" DOUBLE PRECISION`
+  );
+
+  // Booking.beforePhotos — JSON array of Cloudinary URLs (photos taken before
+  // the service starts). Uploaded by the provider.
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "beforePhotos" TEXT`
+  );
+
+  // Booking.afterPhotos — JSON array of Cloudinary URLs (photos taken after
+  // the service is complete). Uploaded by the provider when marking complete.
+  await safeExec(
+    `ALTER TABLE "Booking" ADD COLUMN IF NOT EXISTS "afterPhotos" TEXT`
+  );
+
+  // ── Favorite (saved providers) table ─────────────────────────────────
+  // A client can save a provider to quickly re-book them later.
+  await safeExec(`
+    CREATE TABLE IF NOT EXISTS "Favorite" (
+      "id" TEXT NOT NULL,
+      "clientId" TEXT NOT NULL,
+      "providerId" TEXT NOT NULL,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Favorite_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  // Unique constraint: one client can favorite a provider only once
+  await safeExec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "Favorite_clientId_providerId_key" ON "Favorite"("clientId", "providerId")`
+  );
+  await safeExec(
+    `CREATE INDEX IF NOT EXISTS "Favorite_clientId_idx" ON "Favorite"("clientId")`
+  );
+  await safeExec(
+    `CREATE INDEX IF NOT EXISTS "Favorite_providerId_idx" ON "Favorite"("providerId")`
+  );
+
+  // ── SavedAddress table ───────────────────────────────────────────────
+  // Clients can save frequently-used addresses (Home, Office, etc.) and pick
+  // them from a dropdown when booking — no re-typing every time.
+  await safeExec(`
+    CREATE TABLE IF NOT EXISTS "SavedAddress" (
+      "id" TEXT NOT NULL,
+      "clientId" TEXT NOT NULL,
+      "label" TEXT NOT NULL,
+      "address" TEXT NOT NULL,
+      "latitude" DOUBLE PRECISION,
+      "longitude" DOUBLE PRECISION,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      CONSTRAINT "SavedAddress_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await safeExec(
+    `CREATE INDEX IF NOT EXISTS "SavedAddress_clientId_idx" ON "SavedAddress"("clientId")`
+  );
+
+  console.log('[schema-migration] Phase 2 (marketplace enhancements) schema is ready');
 }
 
 /**

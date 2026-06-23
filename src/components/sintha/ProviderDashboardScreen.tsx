@@ -32,6 +32,17 @@ export default function ProviderDashboardScreen() {
   const [newPackage, setNewPackage] = useState({ name: '', price: '', description: '' })
   const [newOffer, setNewOffer] = useState({ title: '', discount: '', description: '', validDays: '7' })
   const [availability, setAvailability] = useState('available')
+  // Earnings summary — fetched from /api/provider/earnings. Shows total ₹ earned
+  // from completed bookings (where the provider set a price on completion).
+  const [earnings, setEarnings] = useState<{
+    totalEarnings: number
+    totalBookings: number
+    paidBookings: number
+    thisMonthEarnings: number
+    thisMonthBookings: number
+    avgRating: number
+    totalReviews: number
+  } | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -56,6 +67,14 @@ export default function ProviderDashboardScreen() {
         // Load bookings
         const bookingData = await apiFetch(`/bookings?providerId=${user.id}`)
         setBookings(bookingData.bookings || [])
+
+        // Load earnings summary (total ₹ earned, this month, etc.)
+        try {
+          const earningsData = await apiFetch(`/provider/earnings?providerId=${user.id}`)
+          setEarnings(earningsData)
+        } catch {
+          // Earnings endpoint might fail if migration hasn't run — silent
+        }
       } catch {
         // Use existing data
       } finally {
@@ -466,7 +485,15 @@ export default function ProviderDashboardScreen() {
               <CardContent className="p-6 text-center">
                 <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                 <p className="text-sm text-gray-400">No bookings yet</p>
-                <p className="text-xs text-gray-300 mt-1">Bookings will appear when clients book your services</p>
+                <p className="text-xs text-gray-300 mt-1 mb-3">
+                  Bookings will appear when clients book your services
+                </p>
+                <button
+                  onClick={() => navigate('open-jobs')}
+                  className="text-blue-600 text-xs font-medium"
+                >
+                  Browse open jobs →
+                </button>
               </CardContent>
             </Card>
           ) : (
@@ -537,7 +564,7 @@ export default function ProviderDashboardScreen() {
           </div>
         </div>
 
-        {/* Earnings Summary */}
+        {/* Earnings Summary — shows real ₹ totals from completed bookings with prices */}
         <Card className="border-0 shadow-sm bg-gradient-to-r from-green-50 to-emerald-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -547,15 +574,29 @@ export default function ProviderDashboardScreen() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-2xl font-bold text-green-700">
-                  ₹{myProviderProfile?.hourlyRate || 0}
+                  ₹{earnings?.totalEarnings?.toLocaleString('en-IN') || 0}
                 </p>
-                <p className="text-[10px] text-gray-500">Per Hour Rate</p>
+                <p className="text-[10px] text-gray-500">Total Earned</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-700">
-                  {completedBookings.length}
+                  ₹{earnings?.thisMonthEarnings?.toLocaleString('en-IN') || 0}
                 </p>
-                <p className="text-[10px] text-gray-500">Paid Bookings</p>
+                <p className="text-[10px] text-gray-500">This Month</p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-green-100 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-sm font-bold text-gray-800">{earnings?.totalBookings || completedBookings.length}</p>
+                <p className="text-[9px] text-gray-500">Completed</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-800">{earnings?.paidBookings || 0}</p>
+                <p className="text-[9px] text-gray-500">With ₹ Amount</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-800">{earnings?.avgRating?.toFixed(1) || myProviderProfile?.rating || '0'}</p>
+                <p className="text-[9px] text-gray-500">Avg Rating</p>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-green-100 flex items-center justify-between">
@@ -564,6 +605,11 @@ export default function ProviderDashboardScreen() {
                 <span className="text-xs text-green-700 font-medium">Zero Commission - You keep 100%!</span>
               </div>
             </div>
+            {earnings && earnings.totalBookings > 0 && earnings.paidBookings === 0 && (
+              <p className="text-[10px] text-amber-600 mt-2">
+                💡 Tip: When marking a booking complete, enter the final amount to track your earnings here.
+              </p>
+            )}
           </CardContent>
         </Card>
 

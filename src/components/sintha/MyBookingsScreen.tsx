@@ -100,7 +100,20 @@ export default function MyBookingsScreen() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-400">No bookings found</p>
+            <p className="text-gray-400 font-medium">No bookings found</p>
+            <p className="text-xs text-gray-400 mt-1 mb-4">
+              {activeTab === 'all'
+                ? "You haven't made any bookings yet"
+                : `No ${activeTab.replace('_', ' ')} bookings right now`}
+            </p>
+            {user?.role === 'client' && (
+              <button
+                onClick={() => navigate('home')}
+                className="sintha-gradient text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-sm"
+              >
+                Browse services
+              </button>
+            )}
           </div>
         ) : (
           filtered.map((booking: Booking) => (

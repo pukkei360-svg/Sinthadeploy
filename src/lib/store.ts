@@ -36,6 +36,9 @@ export type View =
   | 'my-jobs'
   | 'open-jobs'
   | 'job-detail'
+  | 'help'
+  | 'saved-providers'
+  | 'saved-addresses'
 
 export interface User {
   id: string
@@ -93,6 +96,14 @@ export interface Booking {
   status: string
   address?: string
   createdAt: string
+  // Phase 2 marketplace enhancement fields
+  cancelReason?: string | null
+  cancelledBy?: string | null
+  rescheduledFrom?: string | null
+  rescheduledAt?: string | null
+  price?: number | null
+  beforePhotos?: string | null  // JSON array of URLs
+  afterPhotos?: string | null   // JSON array of URLs
   client?: User
   provider?: User
   providerProfile?: ProviderProfile

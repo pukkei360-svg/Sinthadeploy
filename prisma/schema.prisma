@@ -47,6 +47,10 @@ model User {
   // Job marketplace relations
   jobsPosted Job[] @relation("JobClient")
   jobQuotes JobQuote[] @relation("JobQuoteProvider")
+  // Phase 2 marketplace enhancement relations
+  favorites Favorite[] @relation("ClientFavorites")
+  favoritedBy Favorite[] @relation("ProviderFavoritedBy")
+  savedAddresses SavedAddress[] @relation("ClientSavedAddresses")
 }
 
 // BannedEmail — email blacklist. Survives user deletion so banned users
@@ -154,6 +158,18 @@ model Booking {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // ── Phase 2 marketplace enhancement fields ───────────────────────────
+  // All nullable so existing rows are unaffected. Created at runtime by
+  // src/lib/migrate-schema.ts (raw SQL DDL — prisma db push doesn't run
+  // on Vercel build).
+  cancelReason     String?  // why the booking was cancelled
+  cancelledBy      String?  // 'client' | 'provider'
+  rescheduledFrom  String?  // ISO date string before a reschedule
+  rescheduledAt    DateTime? // when the reschedule happened
+  price            Float?   // agreed/charged INR amount, set on completion
+  beforePhotos     String?  // JSON array of Cloudinary URLs
+  afterPhotos      String?  // JSON array of Cloudinary URLs
+
   client   User           @relation("ClientBookings", fields: [clientId], references: [id])
   provider User           @relation("ProviderBookings", fields: [providerId], references: [id], map: "Booking_provider_user_fkey")
   providerProfile ProviderProfile @relation("BookingProviderProfile", fields: [providerId], references: [userId], map: "Booking_provider_profile_fkey")
@@ -162,6 +178,40 @@ model Booking {
   @@index([clientId])
   @@index([providerId])
   @@index([status])
+}
+
+// Favorite — a client's saved provider. Created at runtime by migrate-schema.ts.
+// Lets clients bookmark providers they like for quick re-booking.
+model Favorite {
+  id         String   @id @default(cuid())
+  clientId   String
+  providerId String
+  createdAt  DateTime @default(now())
+
+  client   User           @relation("ClientFavorites", fields: [clientId], references: [id])
+  provider User           @relation("ProviderFavoritedBy", fields: [providerId], references: [id])
+
+  @@unique([clientId, providerId])
+  @@index([clientId])
+  @@index([providerId])
+}
+
+// SavedAddress — a client's saved booking address (Home, Office, etc.).
+// Created at runtime by migrate-schema.ts. Lets clients pick from saved
+// addresses in the booking form instead of re-typing every time.
+model SavedAddress {
+  id        String   @id @default(cuid())
+  clientId  String
+  label     String   // "Home", "Office", "Mom's house", etc.
+  address   String
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client User @relation("ClientSavedAddresses", fields: [clientId], references: [id])
+
+  @@index([clientId])
 }
 
 model Review {

@@ -11,7 +11,7 @@ import BottomNav from './BottomNav'
 import {
   Calendar, Star, Crown, Bell, HelpCircle, LogOut, Briefcase,
   ChevronRight, PenLine, MapPin, Phone, Camera, Loader2, ImagePlus,
-  ShieldCheck
+  ShieldCheck, Heart, MapPinned
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { signOut as firebaseSignOut } from 'firebase/auth'
@@ -61,10 +61,18 @@ export default function ProfileScreen() {
 
   const menuItems = [
     { icon: Calendar, label: 'My Bookings', action: () => navigate('my-bookings') },
+    // Saved providers — clients only
+    ...(user?.role === 'client' ? [
+      { icon: Heart, label: 'Saved Providers', action: () => navigate('saved-providers') } as const,
+    ] : []),
+    // Saved addresses — clients only (providers don't book services)
+    ...(user?.role === 'client' ? [
+      { icon: MapPinned, label: 'Saved Addresses', action: () => navigate('saved-addresses') } as const,
+    ] : []),
     { icon: Star, label: 'My Reviews', action: () => navigate('reviews', { targetId: user?.id || '' }) },
     { icon: Crown, label: 'SINTHA PRO', action: () => navigate('sintha-pro'), badge: user?.isPro ? 'Active' : undefined },
     { icon: Bell, label: 'Notifications', action: () => navigate('notifications') },
-    { icon: HelpCircle, label: 'Help & Support', action: () => { const msg = encodeURIComponent('Hi SINTHA Support, I need help with my account.'); window.open(`https://wa.me/917005151875?text=${msg}`, '_blank') } },
+    { icon: HelpCircle, label: 'Help & Support', action: () => navigate('help') },
   ]
 
   if (user?.role === 'provider') {

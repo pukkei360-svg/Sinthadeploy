@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore, type Booking } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -8,11 +8,17 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircle, Copy, Phone, Share2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, MapPin, FileText, CheckCircle, MessageCircle, Copy, Phone, Share2, MapPinned } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
 import WhatsAppIcon from './WhatsAppIcon'
 import { cleanError } from '@/lib/clean-error'
+
+interface SavedAddress {
+  id: string
+  label: string
+  address: string
+}
 
 export default function BookingFormScreen() {
   const { navigate, viewParams, user, addBooking } = useAppStore()
@@ -20,6 +26,8 @@ export default function BookingFormScreen() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null)
+  // Saved addresses — shown as quick-pick chips above the address textarea
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
 
   const providerId = viewParams?.providerId
   const providerName = viewParams?.providerName || 'Provider'
@@ -30,6 +38,20 @@ export default function BookingFormScreen() {
   const [time, setTime] = useState('')
   const [description, setDescription] = useState('')
   const [address, setAddress] = useState('')
+
+  // Load saved addresses for the client — they can tap one to autofill
+  useEffect(() => {
+    const loadAddresses = async () => {
+      if (!user) return
+      try {
+        const data = await apiFetch(`/addresses?clientId=${user.id}`)
+        setSavedAddresses(data.addresses || [])
+      } catch {
+        // Addresses table might not exist yet — silent
+      }
+    }
+    loadAddresses()
+  }, [user])
 
   const handleSubmit = async () => {
     if (!serviceField || !date) {
@@ -270,6 +292,26 @@ export default function BookingFormScreen() {
 
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
+            {/* Saved-address quick-pick chips — tap to autofill the address field */}
+            {savedAddresses.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-1.5">
+                {savedAddresses.map((addr) => (
+                  <button
+                    key={addr.id}
+                    type="button"
+                    onClick={() => setAddress(addr.address)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                      address === addr.address
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                    }`}
+                  >
+                    <MapPinned className="h-3 w-3" />
+                    {addr.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="relative">
               <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -280,6 +322,31 @@ export default function BookingFormScreen() {
                 onChange={(e) => setAddress(e.target.value)}
               />
             </div>
+            {/* "Save this address" prompt — shown when the user typed something
+                that doesn't match any saved address. Lets them reuse it next time. */}
+            {address && address.length > 5 && !savedAddresses.some((a) => a.address === address) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!user) return
+                  const label = prompt('Save this address as (e.g. Home, Office):')
+                  if (!label) return
+                  try {
+                    await apiFetch('/addresses', {
+                      method: 'POST',
+                      body: JSON.stringify({ clientId: user.id, label, address }),
+                    })
+                    setSavedAddresses([...savedAddresses, { id: Date.now().toString(), label, address }])
+                    toast({ title: 'Saved', description: `${label} added to your addresses` })
+                  } catch (err: unknown) {
+                    toast({ title: 'Error', description: cleanError(err) })
+                  }
+                }}
+                className="text-[11px] text-blue-600 hover:text-blue-700 font-medium mt-0.5"
+              >
+                + Save this address for next time
+              </button>
+            )}
           </div>
 
           <div className="space-y-2">
