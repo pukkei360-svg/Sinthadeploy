@@ -151,13 +151,47 @@ export async function POST(request: NextRequest) {
         response: "I'm having trouble connecting right now. Please try again in a moment.",
         timestamp: new Date().toISOString(),
         poweredBy: 'SINTHA AI',
+        providerMatches: [],
       });
+    }
+
+    // Extract provider recommendations from the response.
+    // The AI mentions provider names in its text response. We match those
+    // names against the real provider list and return structured data so
+    // the frontend can render clickable provider cards.
+    const providerMatches: Array<{
+      providerId: string
+      name: string
+      photoUrl?: string
+      category?: string
+      rating: number
+      hourlyRate?: number
+      verified?: boolean
+      pro?: boolean
+    }> = [];
+
+    const responseText = result.text;
+    for (const p of providers) {
+      const providerName = p.user?.name || '';
+      if (providerName && responseText.includes(providerName)) {
+        providerMatches.push({
+          providerId: p.id,  // ProviderProfile ID — correct for /api/providers/[id]
+          name: providerName,
+          photoUrl: p.user?.photoUrl,
+          category: p.category?.name,
+          rating: p.rating || 0,
+          hourlyRate: p.hourlyRate || undefined,
+          verified: p.user?.isVerified || false,
+          pro: p.user?.isPro || false,
+        });
+      }
     }
 
     return NextResponse.json({
       response: result.text,
       timestamp: new Date().toISOString(),
       poweredBy: 'SINTHA AI',
+      providerMatches: providerMatches.slice(0, 5),  // max 5 recommendations
     });
   } catch (error) {
     console.error('AI Chat error:', error);

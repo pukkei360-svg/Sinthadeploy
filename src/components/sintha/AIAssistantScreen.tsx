@@ -8,12 +8,24 @@ import { Input } from '@/components/ui/input'
 import BottomNav from './BottomNav'
 import { ArrowLeft, Sparkles, Send, Loader2 } from 'lucide-react'
 
+interface ProviderMatch {
+  providerId: string
+  name: string
+  photoUrl?: string
+  category?: string
+  rating: number
+  hourlyRate?: number
+  verified?: boolean
+  pro?: boolean
+}
+
 interface AIChatMessage {
   id: string
   content: string
   isBot: boolean
   timestamp: Date
   poweredBy?: string
+  providerMatches?: ProviderMatch[]
 }
 
 export default function AIAssistantScreen() {
@@ -78,6 +90,7 @@ export default function AIAssistantScreen() {
         isBot: true,
         timestamp: new Date(),
         poweredBy: data.poweredBy,
+        providerMatches: data.providerMatches || [],
       }
       setChatMessages((prev) => [...prev, botMsg])
     } catch (err: unknown) {
@@ -124,6 +137,38 @@ export default function AIAssistantScreen() {
               }`}
             >
               <p className="text-sm whitespace-pre-line">{msg.content}</p>
+              {/* Clickable provider recommendation cards — shown when the AI
+                  mentions specific providers in its response. Each card links
+                  to the provider's profile page. */}
+              {msg.isBot && msg.providerMatches && msg.providerMatches.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {msg.providerMatches.map((pm, i) => (
+                    <button
+                      key={i}
+                      onClick={() => navigate('provider-profile', { providerId: pm.providerId })}
+                      className="w-full bg-blue-50 hover:bg-blue-100 rounded-lg p-2 flex items-center gap-2 text-left transition-colors border border-blue-100"
+                    >
+                      <img
+                        src={pm.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pm.name)}&background=2563eb&color=fff&size=40`}
+                        alt={pm.name}
+                        className="w-8 h-8 rounded-full shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="text-xs font-medium text-gray-800 truncate">{pm.name}</p>
+                          {pm.verified && <span className="text-[9px] text-green-600">✓</span>}
+                          {pm.pro && <span className="text-[8px] bg-amber-100 text-amber-700 px-1 rounded">PRO</span>}
+                        </div>
+                        <p className="text-[9px] text-gray-500">
+                          {pm.category} · ⭐{pm.rating}
+                          {pm.hourlyRate ? ` · ₹${pm.hourlyRate}/hr` : ''}
+                        </p>
+                      </div>
+                      <span className="text-[9px] text-blue-600 font-medium shrink-0">View →</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className={`flex items-center gap-2 mt-1 ${msg.isBot ? 'text-[#94A3B8]' : 'text-white/60'}`}>
                 <p className="text-[10px]">
                   {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
