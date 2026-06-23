@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   ArrowLeft, Calendar, Clock, MapPin, FileText, MessageCircle, Phone,
-  CheckCircle, XCircle, Play, Star, Copy, RotateCcw, Share2, AlertCircle
+  CheckCircle, XCircle, Play, Star, Copy, RotateCcw, AlertCircle
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { dialPhone, normalizePhoneNumber, getDigitsOnly } from '@/lib/phone'
@@ -293,76 +293,24 @@ export default function BookingDetailScreen() {
             )}
           </div>
 
-          {/* Replaced 'Add to Calendar' with two higher-value actions:
-              - Book Again: one-tap re-booking of the same provider+service (drives repeat business)
-              - Share Provider: Web Share API to recommend the provider via WhatsApp/SMS (drives growth) */}
-          {isClient && booking.status !== 'cancelled' && (
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {/* Book Again — only show after completion (repeat-business moment) */}
-              {booking.status === 'completed' && (
-                <button
-                  onClick={() =>
-                    navigate('booking-form', {
-                      providerId: booking.providerId,
-                      providerName: booking.provider?.name || 'Provider',
-                      service: booking.service,
-                    })
-                  }
-                  className="flex items-center justify-center gap-2 sintha-gradient text-white rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Book Again
-                </button>
-              )}
-              {/* Share Provider — always available for clients (recommend good providers) */}
-              <button
-                onClick={async () => {
-                  const providerName = booking.provider?.name || 'this provider'
-                  const shareText = `I booked ${providerName} on SINTHA for ${booking.service} — check them out!`
-                  const shareUrl = typeof window !== 'undefined' ? window.location.origin : ''
-                  try {
-                    if (navigator.share) {
-                      await navigator.share({
-                        title: 'Recommended on SINTHA',
-                        text: shareText,
-                        url: shareUrl,
-                      })
-                    } else {
-                      // Fallback: copy to clipboard
-                      const fullText = `${shareText} ${shareUrl}`
-                      try {
-                        if (navigator.clipboard?.writeText) {
-                          await navigator.clipboard.writeText(fullText)
-                        } else {
-                          const ta = document.createElement('textarea')
-                          ta.value = fullText
-                          ta.style.position = 'fixed'
-                          ta.style.opacity = '0'
-                          document.body.appendChild(ta)
-                          ta.select()
-                          document.execCommand('copy')
-                          document.body.removeChild(ta)
-                        }
-                        toast({ title: 'Copied!', description: 'Share message copied — paste it anywhere' })
-                      } catch {
-                        toast({ title: 'Share', description: fullText })
-                      }
-                    }
-                  } catch (err: unknown) {
-                    // user cancelled share — silent
-                    if (err instanceof Error && err.name !== 'AbortError') {
-                      toast({ title: 'Could not share', description: cleanError(err) })
-                    }
-                  }
-                }}
-                className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm border border-gray-200 text-gray-700 hover:bg-gray-50 ${
-                  booking.status === 'completed' ? '' : 'col-span-2 sintha-gradient text-white border-0'
-                }`}
-              >
-                <Share2 className="h-4 w-4" />
-                Share Provider
-              </button>
-            </div>
+          {/* Book Again — one-tap re-booking of the same provider+service.
+              Shown only after completion (the repeat-business moment).
+              'Share Provider' was removed per user request — it added clutter
+              without enough value for a Manipur-local marketplace. */}
+          {isClient && booking.status === 'completed' && (
+            <button
+              onClick={() =>
+                navigate('booking-form', {
+                  providerId: booking.providerId,
+                  providerName: booking.provider?.name || 'Provider',
+                  service: booking.service,
+                })
+              }
+              className="mt-4 w-full flex items-center justify-center gap-2 sintha-gradient text-white rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Book Again
+            </button>
           )}
         </div>
 
@@ -719,7 +667,7 @@ export default function BookingDetailScreen() {
       })()}
 
       {/* ── Cancel-with-reason dialog ─────────────────────────────────── */}
-      {showCancelDialog && (
+      {showCancelDialog && booking && (
         <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -793,7 +741,7 @@ export default function BookingDetailScreen() {
       )}
 
       {/* ── Reschedule dialog ─────────────────────────────────────────── */}
-      {showReschedule && (
+      {showReschedule && booking && (
         <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -809,22 +757,22 @@ export default function BookingDetailScreen() {
               Pick a new date and time. The other party will be notified of the new schedule.
             </p>
             <div>
-              <label className="text-xs font-medium text-gray-600">New date *</label>
+              <label className="text-xs font-medium text-gray-600 block mb-1">New date *</label>
               <input
                 type="date"
                 value={newDate}
                 onChange={(e) => setNewDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600">New time (optional)</label>
+              <label className="text-xs font-medium text-gray-600 block mb-1">New time (optional)</label>
               <input
                 type="time"
                 value={newTime}
                 onChange={(e) => setNewTime(e.target.value)}
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div className="flex gap-2 pt-2">
@@ -849,7 +797,7 @@ export default function BookingDetailScreen() {
       )}
 
       {/* ── Mark-complete dialog (with price input) ───────────────────── */}
-      {showCompleteDialog && (
+      {showCompleteDialog && booking && (
         <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-md w-full p-5 space-y-4">
             <div className="flex items-center justify-between">
