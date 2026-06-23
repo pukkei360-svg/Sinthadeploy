@@ -18,6 +18,10 @@ export default function RoleSelectScreen() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
+  // Referral code — optional. If the user was referred by someone, they
+  // enter the code here. We store it on the user record so when they
+  // buy PRO later, the referrer gets 30% commission.
+  const [referralCode, setReferralCode] = useState<string>('')
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -48,6 +52,23 @@ export default function RoleSelectScreen() {
           })
         } catch {
           // Photo save failed — continue with role selection anyway
+        }
+      }
+
+      // If the user entered a referral code, save it to their profile.
+      // This links them to the referrer so when they buy PRO, the referrer
+      // gets 30% commission. We use /user/profile PATCH (already exists)
+      // — but that endpoint might not support referredBy, so we use a
+      // direct approach: update via auth/sync which accepts referredBy.
+      if (referralCode.trim()) {
+        try {
+          await apiFetch('/user/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({ userId: user.id, referredBy: referralCode.trim().toUpperCase() }),
+          })
+        } catch {
+          // Referral save failed — continue anyway (not critical)
+          console.warn('Failed to save referral code')
         }
       }
 

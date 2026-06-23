@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     await ensureSchemaMigrated();
 
     const body = await request.json();
-    const { firebaseUid, email, name, photoUrl, phone } = body;
+    const { firebaseUid, email, name, photoUrl, phone, referredBy } = body;
 
     if (!firebaseUid || !email) {
       return NextResponse.json(
@@ -87,6 +87,8 @@ export async function POST(request: NextRequest) {
       banReason: true,
       bannedAt: true,
       fcmToken: true,
+      referralCode: true,
+      referredBy: true,
       createdAt: true,
       updatedAt: true,
     } as const;
@@ -145,6 +147,9 @@ export async function POST(request: NextRequest) {
         // them to the role-select screen to choose client or provider.
         // (Admin email detection is handled below — admins get 'admin' role.)
         // DEFENSIVE: use safe select on create too.
+        // Phase 3: auto-generate a unique referral code + store referredBy
+        // (the referral code the user entered at signup, if any).
+        const referralCode = generateReferralCode();
         user = await db.user.create({
           data: {
             firebaseUid,
@@ -153,8 +158,27 @@ export async function POST(request: NextRequest) {
             photoUrl: photoUrl || null,
             phone: phone || null,
             role: isAdmin ? 'admin' : '',
+            referralCode,
+            referredBy: referredBy || null,
           },
           select: SAFE_USER_SELECT,
+        }).catch(async (err) => {
+          // If referralCode collides (very rare), retry with a different code.
+          // The unique constraint on referralCode might trip if we're unlucky.
+          console.warn('[auth/sync] referralCode collision, retrying:', err instanceof Error ? err.message : err);
+          return db.user.create({
+            data: {
+              firebaseUid,
+              email,
+              name: name || email.split('@')[0],
+              photoUrl: photoUrl || null,
+              phone: phone || null,
+              role: isAdmin ? 'admin' : '',
+              referralCode: generateReferralCode() + generateReferralCode().slice(0, 2),
+              referredBy: referredBy || null,
+            },
+            select: SAFE_USER_SELECT,
+          });
         });
       }
     }
@@ -265,4 +289,21 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Generate a unique 8-character referral code.
+ * Format: "SIN" + 5 random alphanumeric chars (uppercase, no confusing chars).
+ * Example: "SIN7K4XQ"
+ *
+ * Collisions are extremely rare (26^5 = ~12M combos) and handled by the
+ * retry logic in the create call above.
+ */
+function generateReferralCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I
+  let code = 'SIN';
+  for (let i = 0; i < 5; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
 }

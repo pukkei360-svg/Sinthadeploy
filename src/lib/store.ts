@@ -53,6 +53,9 @@ export interface User {
   isPro: boolean
   proExpiry?: string
   isBlocked: boolean
+  // Phase 3: referral system
+  referralCode?: string | null
+  referredBy?: string | null
   createdAt: string
 }
 

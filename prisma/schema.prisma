@@ -30,6 +30,9 @@ model User {
   banReason     String?
   bannedAt      DateTime?
   fcmToken      String?
+  // Phase 3: Referral system
+  referralCode  String?  @unique  // 8-char code this user shares (e.g. "SIN7K4XQ")
+  referredBy    String?  // referral code entered at signup (links to referrer)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -51,6 +54,9 @@ model User {
   favorites Favorite[] @relation("ClientFavorites")
   favoritedBy Favorite[] @relation("ProviderFavoritedBy")
   savedAddresses SavedAddress[] @relation("ClientSavedAddresses")
+  // Phase 3 referral relations
+  referralEarnings ReferralEarning[] @relation("ReferralEarnings")  // earnings this user received as a referrer
+  referredUsers ReferralEarning[] @relation("ReferralReferred")     // earnings where this user was the referred one
 }
 
 // BannedEmail — email blacklist. Survives user deletion so banned users
@@ -394,5 +400,40 @@ model JobQuote {
 
   @@index([jobId])
   @@index([providerId])
+  @@index([status])
+}
+
+// ── Phase 3 models ──────────────────────────────────────────────────
+
+// AppConfig — generic key-value store for admin-configurable settings.
+// Created at runtime by migrate-schema.ts. Used for proPrice (₹) etc.
+model AppConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([key])
+}
+
+// ReferralEarning — one row per commission payout. When a referred user
+// buys/renews PRO, a 30% earning is created here for the referrer.
+// status: 'pending' (accruing) → 'paid' (admin marked as paid out).
+model ReferralEarning {
+  id              String   @id @default(cuid())
+  referrerId      String   // the user who shared their referral code
+  referredUserId  String   // the user who was referred
+  subscriptionId  String?  // the PRO subscription that triggered this earning
+  amount          Float    // 30% of the PRO price, in ₹
+  status          String   @default("pending") // pending, paid
+  createdAt       DateTime @default(now())
+  paidOutAt       DateTime?
+
+  referrer     User @relation("ReferralEarnings", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser User @relation("ReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId])
+  @@index([referredUserId])
   @@index([status])
 }

@@ -37,6 +37,25 @@ export default function SinthaProScreen() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const pollingCountRef = useRef(0)
 
+  // Admin-configurable PRO price — fetched from /api/config on mount.
+  // Falls back to ₹199 if the config endpoint is unreachable.
+  const [proPrice, setProPrice] = useState<number>(199)
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        const data = await apiFetch('/config')
+        if (data.proPrice) {
+          const price = parseFloat(data.proPrice)
+          if (!isNaN(price) && price > 0) setProPrice(price)
+        }
+      } catch {
+        // Use default ₹199
+      }
+    }
+    fetchPrice()
+  }, [])
+
   // Auto-polling: check payment status every 5 seconds after payment link is opened
   const startPolling = useCallback((linkId: string) => {
     // Clear any existing polling
@@ -172,7 +191,7 @@ export default function SinthaProScreen() {
           amount: amount,
           currency: currency,
           name: 'SINTHA PRO',
-          description: 'PRO Subscription — ₹199/month',
+          description: `PRO Subscription — ₹${proPrice}/month`,
           order_id: orderId,
           // Explicitly request all payment methods including UPI
           method: {
@@ -314,7 +333,7 @@ export default function SinthaProScreen() {
           <h2 className="text-2xl font-bold mb-1">Unlock Premium</h2>
           <p className="text-sm opacity-80">Grow your business with SINTHA PRO</p>
           <div className="mt-4">
-            <span className="text-3xl font-extrabold">₹199</span>
+            <span className="text-3xl font-extrabold">₹{proPrice}</span>
             <span className="text-sm opacity-70">/month</span>
           </div>
         </div>
@@ -352,7 +371,7 @@ export default function SinthaProScreen() {
               disabled={paymentLinkLoading}
             >
               {paymentLinkLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Crown className="h-5 w-5 mr-2" />}
-              {paymentLinkLoading ? 'Creating Payment...' : 'Pay ₹199 & Activate PRO'}
+              {paymentLinkLoading ? 'Creating Payment...' : `Pay ₹${proPrice} & Activate PRO`}
             </Button>
             <p className="text-[11px] text-center text-gray-500">
               Pay with PhonePe, Paytm, BHIM, UPI, Cards, or Net Banking
@@ -421,7 +440,7 @@ export default function SinthaProScreen() {
               <div className="text-[11px] text-green-600 space-y-1">
                 <p>1. Tap "Open Payment Link" above</p>
                 <p>2. Choose <span className="font-bold">PhonePe / Paytm / UPI / Card</span></p>
-                <p>3. Complete ₹199 payment</p>
+                <p>3. Complete ₹{proPrice} payment</p>
                 <p>4. Come back here — <span className="font-bold">PRO auto-activates!</span></p>
               </div>
             </div>

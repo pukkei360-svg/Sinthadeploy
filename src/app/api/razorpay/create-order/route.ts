@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { ensureSchemaMigrated } from '@/lib/migrate-schema';
 import Razorpay from 'razorpay';
 
 // Lazy-initialize Razorpay so the module doesn't crash at build time
@@ -13,6 +14,27 @@ function getRazorpay(): Razorpay {
     key_secret: process.env.RAZORPAY_KEY_SECRET || '',
   });
   return _razorpay;
+}
+
+/**
+ * Get the current PRO subscription price in rupees.
+ * Reads from AppConfig (admin-configurable). Falls back to ₹199 if
+ * the table doesn't exist or the key is missing.
+ */
+async function getProPrice(): Promise<number> {
+  try {
+    await ensureSchemaMigrated();
+    const config = await db.appConfig.findUnique({
+      where: { key: 'proPrice' },
+    });
+    if (config) {
+      const price = parseFloat(config.value);
+      if (!isNaN(price) && price > 0) return price;
+    }
+  } catch {
+    // AppConfig table might not exist yet — use default
+  }
+  return 199;
 }
 
 export async function POST(request: NextRequest) {
@@ -44,7 +66,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const amount = 19900; // ₹199 in paise
+    // Get the current admin-configured price (in rupees), convert to paise
+    const proPriceRupees = await getProPrice();
+    const amount = Math.round(proPriceRupees * 100); // paise
 
     // Create Razorpay order
     const order = await getRazorpay().orders.create({
@@ -79,6 +103,7 @@ export async function POST(request: NextRequest) {
       amount: order.amount,
       currency: order.currency,
       key: process.env.RAZORPAY_KEY_ID || '',
+      priceInRupees: proPriceRupees,
     });
   } catch (error) {
     console.error('Create Razorpay order error:', error);

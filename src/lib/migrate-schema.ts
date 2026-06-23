@@ -367,6 +367,70 @@ async function runMigration(): Promise<void> {
   );
 
   console.log('[schema-migration] Phase 2 (marketplace enhancements) schema is ready');
+
+  // ── Phase 3: Admin-configurable PRO price + Referral system ─────────
+  // AppConfig: key-value store for admin-configurable settings (e.g. proPrice).
+  // ReferralEarning: tracks 30% lifetime commission payouts to referrers.
+  // User.referralCode: unique code each user shares to refer others.
+  // User.referredBy: the referral code entered at signup (links to referrer).
+
+  // AppConfig table — generic key-value store for app-wide settings
+  await safeExec(`
+    CREATE TABLE IF NOT EXISTS "AppConfig" (
+      "id" TEXT NOT NULL,
+      "key" TEXT NOT NULL,
+      "value" TEXT NOT NULL,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      "updatedBy" TEXT,
+      CONSTRAINT "AppConfig_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await safeExec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "AppConfig_key_key" ON "AppConfig"("key")`
+  );
+
+  // Seed default proPrice = 199 if not present
+  await safeExec(`
+    INSERT INTO "AppConfig" ("id", "key", "value", "updatedAt")
+    VALUES ('seed-pro-price', 'proPrice', '199', CURRENT_TIMESTAMP)
+    ON CONFLICT ("key") DO NOTHING
+  `);
+
+  // User.referralCode — unique 8-char code, auto-generated on first login
+  await safeExec(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "referralCode" TEXT`
+  );
+  await safeExec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "User_referralCode_key" ON "User"("referralCode")`
+  );
+
+  // User.referredBy — the referral code entered at signup (nullable)
+  await safeExec(
+    `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "referredBy" TEXT`
+  );
+
+  // ReferralEarning table — one row per commission payout
+  await safeExec(`
+    CREATE TABLE IF NOT EXISTS "ReferralEarning" (
+      "id" TEXT NOT NULL,
+      "referrerId" TEXT NOT NULL,
+      "referredUserId" TEXT NOT NULL,
+      "subscriptionId" TEXT,
+      "amount" DOUBLE PRECISION NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "paidOutAt" TIMESTAMP(3),
+      CONSTRAINT "ReferralEarning_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await safeExec(
+    `CREATE INDEX IF NOT EXISTS "ReferralEarning_referrerId_idx" ON "ReferralEarning"("referrerId")`
+  );
+  await safeExec(
+    `CREATE INDEX IF NOT EXISTS "ReferralEarning_referredUserId_idx" ON "ReferralEarning"("referredUserId")`
+  );
+
+  console.log('[schema-migration] Phase 3 (admin price + referrals) schema is ready');
 }
 
 /**

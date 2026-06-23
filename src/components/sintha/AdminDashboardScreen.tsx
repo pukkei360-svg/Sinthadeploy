@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
-  ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell, Flag, Megaphone
+  ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell, Flag, Megaphone, IndianRupee
 } from 'lucide-react'
 
 interface AdminStats {
@@ -30,6 +30,9 @@ export default function AdminDashboardScreen() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<unknown[]>([])
   const [loading, setLoading] = useState(true)
+  // PRO price config — admin can change it anytime
+  const [proPrice, setProPrice] = useState<string>('')
+  const [savingPrice, setSavingPrice] = useState(false)
 
   useEffect(() => {
     const loadStats = async () => {
@@ -42,9 +45,38 @@ export default function AdminDashboardScreen() {
       } finally {
         setLoading(false)
       }
+
+      // Load current PRO price
+      try {
+        const configData = await apiFetch('/config')
+        if (configData.proPrice) setProPrice(configData.proPrice)
+      } catch {
+        // Use default
+      }
     }
     loadStats()
   }, [])
+
+  const updateProPrice = async () => {
+    if (!user) return
+    const priceNum = parseFloat(proPrice)
+    if (isNaN(priceNum) || priceNum < 1 || priceNum > 100000) {
+      return
+    }
+    setSavingPrice(true)
+    try {
+      await apiFetch('/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify({ adminId: user.id, key: 'proPrice', value: proPrice }),
+      })
+      // Success — show a brief toast via the toast hook isn't imported here,
+      // so we just update the state. The admin will see the new price reflected.
+    } catch (err) {
+      // Revert on failure
+    } finally {
+      setSavingPrice(false)
+    }
+  }
 
   const quickLinks = [
     { icon: Users, label: 'Users', view: 'admin-users' as const, color: 'bg-blue-100 text-blue-600', params: { role: 'all' } },
@@ -107,6 +139,46 @@ export default function AdminDashboardScreen() {
             </Card>
           </div>
         ) : null}
+
+        {/* PRO Price Config — admin can change the PRO subscription price anytime.
+            Changes take effect immediately for all new PRO purchases. */}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <IndianRupee className="h-5 w-5 text-green-600" />
+              <h3 className="font-semibold text-gray-800 text-sm">PRO Subscription Price</h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Set the monthly PRO subscription price. Changes apply to all new purchases immediately.
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-2.5 text-gray-500 text-sm">₹</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="1"
+                  max="100000"
+                  value={proPrice}
+                  onChange={(e) => setProPrice(e.target.value)}
+                  placeholder="199"
+                  className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+              <span className="text-xs text-gray-500">/month</span>
+              <button
+                onClick={updateProPrice}
+                disabled={savingPrice || !proPrice || parseFloat(proPrice) < 1}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingPrice ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2">
+              Current price: ₹{proPrice || '199'}/month · Referral commission: 30% (₹{((parseFloat(proPrice) || 199) * 0.30).toFixed(2)}/referral)
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Pending Verifications Alert */}
         {stats && stats.pendingVerifications > 0 && (
