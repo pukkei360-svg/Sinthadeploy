@@ -40,6 +40,7 @@ export type View =
   | 'saved-providers'
   | 'saved-addresses'
   | 'referrals'
+  | 'price-estimator'
 
 export interface User {
   id: string

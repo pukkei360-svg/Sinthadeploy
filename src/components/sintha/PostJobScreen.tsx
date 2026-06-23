@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { uploadVerificationPhoto } from '@/lib/cloudinary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon, Sparkles } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { cleanError } from '@/lib/clean-error'
 
@@ -30,6 +30,7 @@ export default function PostJobScreen() {
   const [preferredDate, setPreferredDate] = useState('')
   const [urgency, setUrgency] = useState('flexible')
   const [submitting, setSubmitting] = useState(false)
+  const [improveLoading, setImproveLoading] = useState(false)
 
   // Photo attachments (optional, max 2)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
@@ -211,9 +212,41 @@ export default function PostJobScreen() {
 
         {/* Description */}
         <div>
-          <label className="text-sm font-semibold text-gray-800 block mb-2">
-            Description <span className="text-red-500">*</span>
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-semibold text-gray-800">
+              Description <span className="text-red-500">*</span>
+            </label>
+            {/* AI Improve button — uses Claude to improve the job description */}
+            {description.trim().length >= 10 && (
+              <button
+                onClick={async () => {
+                  setImproveLoading(true)
+                  try {
+                    const data = await apiFetch('/ai/improve-job', {
+                      method: 'POST',
+                      body: JSON.stringify({ title, description, category: categories.find(c => c.id === categoryId)?.name }),
+                    })
+                    if (data.improvedDescription) {
+                      setDescription(data.improvedDescription)
+                    }
+                    if (data.improvedTitle && title.length < 5) {
+                      setTitle(data.improvedTitle)
+                    }
+                    toast({ title: '✨ Improved!', description: `Quality score: ${data.qualityScore}/100` })
+                  } catch (err: unknown) {
+                    toast({ title: 'Could not improve', description: cleanError(err) })
+                  } finally {
+                    setImproveLoading(false)
+                  }
+                }}
+                disabled={improveLoading}
+                className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors disabled:opacity-50"
+              >
+                {improveLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {improveLoading ? 'Improving...' : 'AI Improve'}
+              </button>
+            )}
+          </div>
           <textarea
             placeholder="Describe what you need done. E.g. 'The ceiling fan in my bedroom makes a noise when turned on. Need someone to check and repair it. I'm home after 5pm.'"
             value={description}
