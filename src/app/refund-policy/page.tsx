@@ -165,7 +165,7 @@ export default function RefundPolicyPage() {
             <div className="bg-gray-50 rounded-lg p-4 mt-2">
               <p><strong>SINTHA Refund Support</strong></p>
               <p>Email: <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a></p>
-              <p>WhatsApp: <a href="https://wa.me/917005151875" className="text-blue-600 hover:underline">+91 70051 51875</a></p>
+              <p>Email: <a href="mailto:support@sintha.app" className="text-blue-600 hover:underline">support@sintha.app</a></p>
               <p>Response time: Within 24 hours (business days)</p>
               <p>Refund processing: 5-7 business days</p>
             </div>

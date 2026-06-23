@@ -170,7 +170,7 @@ export default function PrivacyPolicyPage() {
             <div className="bg-gray-50 rounded-lg p-4 mt-2">
               <p><strong>SINTHA</strong></p>
               <p>Email: <a href="mailto:pukkei365@gmail.com" className="text-blue-600 hover:underline">pukkei365@gmail.com</a></p>
-              <p>WhatsApp: <a href="https://wa.me/917005151875" className="text-blue-600 hover:underline">+91 70051 51875</a></p>
+              <p>Email: <a href="mailto:support@sintha.app" className="text-blue-600 hover:underline">support@sintha.app</a></p>
               <p>Location: Manipur, India</p>
             </div>
           </section>
