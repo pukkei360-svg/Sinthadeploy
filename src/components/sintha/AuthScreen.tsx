@@ -480,23 +480,22 @@ export default function AuthScreen() {
               </div>
             )}
 
-            {/* WhatsApp Support */}
+            {/* Help link — directs to in-app Help screen (FAQ + email).
+                WhatsApp removed: was using a personal number and would invite
+                unwanted calls/messages. Users get support via the Help screen
+                accessible from Profile after login. */}
             {!isAdmin && (
-              <div className="mt-6 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => {
-                    const msg = encodeURIComponent('Hi SINTHA Support, I need help with my account.')
-                    window.open(`https://wa.me/917005151875?text=${msg}`, '_blank')
-                  }}
-                  className="w-full flex items-center justify-center gap-2 text-green-600 hover:text-green-700 transition-colors"
-                >
-                  <WhatsAppIcon className="h-5 w-5" />
-                  <span className="text-sm font-semibold">Need help? Chat with us on WhatsApp</span>
-                </button>
+              <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                <p className="text-xs text-gray-400">
+                  Need help? Email us at{' '}
+                  <a href="mailto:support@sintha.app" className="text-blue-600 font-medium hover:underline">
+                    support@sintha.app
+                  </a>
+                </p>
               </div>
             )}
           </CardContent>
-        </Card>
+      </Card>
       </div>
     </div>
   )

@@ -4,9 +4,8 @@ import { useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { Button } from '@/components/ui/button'
 import BottomNav from './BottomNav'
-import WhatsAppIcon from './WhatsAppIcon'
 import {
-  ArrowLeft, ChevronDown, HelpCircle, MessageCircle, Mail, Phone,
+  ArrowLeft, ChevronDown, HelpCircle, Mail,
   Shield, CreditCard, Calendar, User, AlertCircle
 } from 'lucide-react'
 
@@ -98,8 +97,6 @@ export default function HelpScreen() {
   const { navigate, user } = useAppStore()
   const [openCategory, setOpenCategory] = useState<string | null>('Bookings')
 
-  const supportPhone = '+919999999999'  // replace with real SINTHA support number
-  const supportWhatsapp = '919999999999'  // replace with real SINTHA WhatsApp
   const supportEmail = 'support@sintha.app'
 
   return (
@@ -113,7 +110,10 @@ export default function HelpScreen() {
       </div>
 
       <div className="px-4 py-4 space-y-4">
-        {/* Quick contact card */}
+        {/* Quick contact card — email only.
+            WhatsApp and Call removed to avoid unwanted calls/messages to
+            personal numbers. Users can email for support; the FAQ below
+            answers most common questions instantly. */}
         <div className="sintha-gradient rounded-2xl p-5 text-white relative overflow-hidden">
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
           <div className="relative z-10">
@@ -122,33 +122,15 @@ export default function HelpScreen() {
               <h2 className="text-lg font-bold">Need help?</h2>
             </div>
             <p className="text-sm opacity-90 mb-4">
-              We&apos;re here for you. Reach out and we&apos;ll respond within 24 hours.
+              Check the FAQ below — most questions are answered there. For anything else, email us and we&apos;ll respond within 24 hours.
             </p>
-            <div className="grid grid-cols-3 gap-2">
-              <a
-                href={`https://wa.me/${supportWhatsapp}?text=Hi%20SINTHA%20support,%20I%20need%20help%20with...`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center gap-1 transition-colors"
-              >
-                <WhatsAppIcon className="h-5 w-5" />
-                <span className="text-[10px] font-medium">WhatsApp</span>
-              </a>
-              <a
-                href={`tel:${supportPhone}`}
-                className="bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center gap-1 transition-colors"
-              >
-                <Phone className="h-5 w-5" />
-                <span className="text-[10px] font-medium">Call</span>
-              </a>
-              <a
-                href={`mailto:${supportEmail}`}
-                className="bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center gap-1 transition-colors"
-              >
-                <Mail className="h-5 w-5" />
-                <span className="text-[10px] font-medium">Email</span>
-              </a>
-            </div>
+            <a
+              href={`mailto:${supportEmail}`}
+              className="bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-xl p-3 flex items-center justify-center gap-2 transition-colors"
+            >
+              <Mail className="h-5 w-5" />
+              <span className="text-sm font-medium">{supportEmail}</span>
+            </a>
           </div>
         </div>
 

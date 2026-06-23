@@ -200,11 +200,11 @@ export default function LandingScreen() {
           <a href="/contact" className="text-gray-600 hover:text-blue-600 hover:underline">Contact Us</a>
         </div>
 
-        {/* Contact info */}
+        {/* Contact info — email only (WhatsApp removed: personal number). */}
         <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-[#64748B] mb-3">
           <a href="mailto:pukkei365@gmail.com" className="hover:text-blue-600 hover:underline">pukkei365@gmail.com</a>
           <span className="text-gray-300">•</span>
-          <a href="https://wa.me/917005151875" className="hover:text-green-600 hover:underline">WhatsApp Support</a>
+          <a href="/contact" className="hover:text-blue-600 hover:underline">Contact Support</a>
         </div>
 
         <p className="text-xs text-gray-400 mb-2">&copy; 2026 SINTHA &bull; All rights reserved</p>
