@@ -1,7 +1,7 @@
 'use client'
 
 import { useAppStore } from '@/lib/store'
-import { Home, Calendar, MessageCircle, HelpCircle, User, Briefcase, LayoutDashboard } from 'lucide-react'
+import { Home, Calendar, MessageCircle, Sparkles, User, Briefcase, LayoutDashboard } from 'lucide-react'
 
 export default function BottomNav() {
   const { navigate, user, conversations, currentView } = useAppStore()
@@ -21,7 +21,7 @@ export default function BottomNav() {
     { icon: Home, label: 'Home', view: 'home' as const },
     { icon: Calendar, label: 'Bookings', view: 'my-bookings' as const },
     { icon: MessageCircle, label: 'Chat', view: 'chat-list' as const },
-    { icon: HelpCircle, label: 'Help', view: 'ai-assistant' as const },
+    { icon: Sparkles, label: 'AI', view: 'ai-assistant' as const },
     { icon: User, label: 'Profile', view: 'profile' as const },
   ]
 
@@ -29,7 +29,7 @@ export default function BottomNav() {
     { icon: LayoutDashboard, label: 'Dashboard', view: 'provider-dashboard' as const },
     { icon: Calendar, label: 'Bookings', view: 'my-bookings' as const },
     { icon: MessageCircle, label: 'Chat', view: 'chat-list' as const },
-    { icon: HelpCircle, label: 'Help', view: 'ai-assistant' as const },
+    { icon: Sparkles, label: 'AI', view: 'ai-assistant' as const },
     { icon: User, label: 'Profile', view: 'profile' as const },
   ]
 
