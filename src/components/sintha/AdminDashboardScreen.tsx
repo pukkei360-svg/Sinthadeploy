@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import {
-  ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell, Flag, Megaphone, IndianRupee
+  ArrowLeft, Users, Briefcase, Calendar, Crown, Star, Shield, BarChart3, FileCheck, Bell, Flag, Megaphone, IndianRupee, Sparkles, Loader2
 } from 'lucide-react'
 
 interface AdminStats {
@@ -27,9 +28,48 @@ interface AdminStats {
 
 export default function AdminDashboardScreen() {
   const { navigate, user } = useAppStore()
+  const { toast } = useToast()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [recentBookings, setRecentBookings] = useState<unknown[]>([])
   const [loading, setLoading] = useState(true)
+  // AI Festival Broadcast — sends festive greetings to all users
+  const [festivalLoading, setFestivalLoading] = useState(false)
+  const [festivalResult, setFestivalResult] = useState<{
+    isFestival: boolean
+    festivalName?: string
+    title?: string
+    message?: string
+    sent?: number
+    pushSent?: number
+  } | null>(null)
+
+  const sendFestivalGreeting = async () => {
+    if (!user || festivalLoading) return
+    setFestivalLoading(true)
+    setFestivalResult(null)
+    try {
+      const data = await apiFetch('/ai/festival-broadcast', {
+        method: 'POST',
+        body: JSON.stringify({ adminId: user.id }),
+      })
+      setFestivalResult(data)
+      if (data.isFestival) {
+        toast({
+          title: '🎉 Festival greeting sent!',
+          description: `${data.festivalName} — sent to ${data.sent || 0} users (${data.pushSent || 0} push notifications)`,
+        })
+      } else {
+        toast({
+          title: 'No festival today',
+          description: 'No festival detected. Try again on a festive day.',
+        })
+      }
+    } catch (err: unknown) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to send greeting' })
+    } finally {
+      setFestivalLoading(false)
+    }
+  }
   // PRO price config — admin can change it anytime
   const [proPrice, setProPrice] = useState<string>('')
   const [savingPrice, setSavingPrice] = useState(false)
@@ -219,6 +259,43 @@ export default function AdminDashboardScreen() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* AI Festival Broadcast — sends festive greetings to all users.
+            AI checks today's date against Manipur/India festivals and
+            auto-generates a personalized greeting message. */}
+        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-purple-600" />
+            <h3 className="font-semibold text-gray-800 text-sm">AI Festival Greeting</h3>
+            <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.5 rounded-full">SINTHA AI</span>
+          </div>
+          <p className="text-xs text-gray-600 mb-3">
+            AI checks if today is a festival (Yaoshang, Ningol Chakouba, Diwali, Christmas, etc.) and sends a personalized greeting to all users via push notification.
+          </p>
+          <button
+            onClick={sendFestivalGreeting}
+            disabled={festivalLoading}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {festivalLoading ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Checking festivals...</>
+            ) : (
+              <><Sparkles className="h-4 w-4" /> Send Festival Greeting</>
+            )}
+          </button>
+          {festivalResult && festivalResult.isFestival && (
+            <div className="mt-3 bg-white rounded-lg p-3 border border-purple-100">
+              <p className="text-xs font-bold text-purple-700">{festivalResult.title}</p>
+              <p className="text-xs text-gray-600 mt-1">{festivalResult.message}</p>
+              <p className="text-[10px] text-gray-400 mt-2">
+                ✅ Sent to {festivalResult.sent} users ({festivalResult.pushSent} push notifications)
+              </p>
+            </div>
+          )}
+          {festivalResult && !festivalResult.isFestival && (
+            <p className="text-xs text-gray-500 mt-2 text-center">No festival detected today.</p>
+          )}
         </div>
 
         {/* Recent Activity */}

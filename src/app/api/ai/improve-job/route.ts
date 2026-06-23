@@ -14,9 +14,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Description is required' }, { status: 400 });
     }
 
-    const systemPrompt = `You are SINTHA's AI job description helper. Return ONLY valid JSON (no markdown):
-{"improvedTitle":"<max 60 chars>","improvedDescription":"<2-4 sentences>","tips":["<string>"],"qualityScore":<0-100>}
-Keep the user's original intent. Make title specific and searchable. Write in clear English.`;
+    const systemPrompt = `You are SINTHA's AI job posting helper for a Manipur service marketplace. Return ONLY valid JSON (no markdown):
+{"improvedTitle":"<max 60 chars, specific and searchable>","improvedDescription":"<3-5 sentences with what/where/when/urgency>","suggestedBudget":<number in INR or null>,"tips":["<1-3 tips>"],"qualityScore":<0-100>}
+Rules:
+- Keep the user's original intent — don't add services they didn't ask for
+- Title should be specific (e.g. "Leaking Kitchen Tap Repair" not "Plumber needed")
+- Description should include: what needs fixing, urgency, any relevant details
+- If user mentioned a budget, keep it; if not, suggest a reasonable one based on the job type
+- Write in clear, simple English
+- Prices in INR (₹), realistic for Manipur, India`;
 
     const result = await callAI({
       systemPrompt,

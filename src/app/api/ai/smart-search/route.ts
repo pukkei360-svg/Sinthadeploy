@@ -78,7 +78,9 @@ Rules: Max 5 matches sorted by matchScore desc. Only include score >= 40. If no 
       .map((m: any) => {
         const p = providers[m.index];
         return {
-          providerId: p.userId, name: p.user?.name, photoUrl: p.user?.photoUrl,
+          providerId: p.id,          // ProviderProfile ID — used by /api/providers/[id] and navigate('provider-profile')
+          userId: p.userId,          // User ID — used for favorites
+          name: p.user?.name, photoUrl: p.user?.photoUrl,
           category: p.category?.name, rating: p.rating, hourlyRate: p.hourlyRate,
           verified: p.user?.isVerified, pro: p.user?.isPro,
           reason: m.reason, matchScore: m.matchScore,

@@ -51,6 +51,7 @@ export default function PostJobScreen() {
       const data = await apiFetch<{
         improvedTitle?: string
         improvedDescription?: string
+        suggestedBudget?: number | null
         tips?: string[]
         qualityScore?: number
         poweredBy?: string
@@ -64,12 +65,16 @@ export default function PostJobScreen() {
       })
       if (data.improvedTitle) setTitle(data.improvedTitle.slice(0, 80))
       if (data.improvedDescription) setDescription(data.improvedDescription.slice(0, 1000))
+      // Also fill in suggested budget if the user hasn't set one
+      if (data.suggestedBudget && !budget) {
+        setBudget(String(data.suggestedBudget))
+      }
       toast({
-        title: 'Description improved ✨',
+        title: 'AI improved your post ✨',
         description:
           typeof data.qualityScore === 'number'
-            ? `Quality score: ${data.qualityScore}/100`
-            : 'SINTHA AI polished your job post',
+            ? `Quality score: ${data.qualityScore}/100${data.suggestedBudget ? ` · Budget: ₹${data.suggestedBudget}` : ''}`
+            : 'SINTHA AI polished your title, description' + (data.suggestedBudget ? ' and budget' : ''),
       })
     } catch (err) {
       toast({ title: 'AI Improve failed', description: cleanError(err) })
