@@ -194,23 +194,23 @@ export default function HelpScreen() {
           </div>
         </div>
 
-        {/* Powered by SINTHA AI */}
+        {/* About the Creator */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-sm mb-3">Powered by SINTHA AI</h3>
+          <h3 className="font-semibold text-gray-800 text-sm mb-3">About the Creator</h3>
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-full sintha-gradient flex items-center justify-center shrink-0">
-              <Sparkles className="h-6 w-6 text-white" />
+              <User className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800">SINTHA AI</p>
+              <p className="text-sm font-semibold text-gray-800">Irabot Laishram</p>
               <p className="text-xs text-gray-500 mt-0.5">
-                Advanced AI assistant powering SINTHA
+                Khangabok Moirang Palli Bazar, Manipur, India
               </p>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                SINTHA AI powers smart provider search, price estimation, profile optimization, job description improvement, and 24/7 chat support — making it easier than ever to find and hire trusted local service providers in Manipur.
+                SINTHA was founded and developed by Irabot Laishram. As an AI enthusiast and passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
               </p>
               <p className="text-[11px] text-gray-400 mt-2">
-                SINTHA · Trusted Hands. Trusted Services.
+                Ownership: SINTHA is owned and managed by Irabot Laishram.
               </p>
             </div>
           </div>
