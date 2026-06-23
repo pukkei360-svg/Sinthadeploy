@@ -24,8 +24,11 @@ export default function LandingScreen() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden sintha-gradient min-h-[80vh] flex flex-col items-center justify-center px-4 text-white">
+      {/* Hero Section — reduced from 80vh to 55vh so the animated carousel
+          is visible without scrolling (or with minimal scrolling) on phones.
+          The carousel is the most visually compelling element and should be
+          the first thing users see after the logo + CTA buttons. */}
+      <div className="relative overflow-hidden sintha-gradient min-h-[55vh] flex flex-col items-center justify-center px-4 py-8 text-white">
         {/* Animated background circles */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -left-20 w-72 h-72 bg-white/10 rounded-full animate-pulse" />
@@ -35,22 +38,22 @@ export default function LandingScreen() {
 
         <div className="relative z-10 text-center max-w-lg mx-auto">
           {/* Logo */}
-          <div className="mb-2">
-            <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight">SINTHA</h1>
+          <div className="mb-1">
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">SINTHA</h1>
           </div>
-          <p className="text-xl sm:text-2xl opacity-90 mb-2" style={{ fontFamily: 'serif' }}>ꯁꯤꯟꯊꯥ</p>
-          <p className="text-lg sm:text-xl opacity-80 font-light mt-4 mb-2">
+          <p className="text-lg sm:text-xl opacity-90 mb-1" style={{ fontFamily: 'serif' }}>ꯁꯤꯟꯊꯥ</p>
+          <p className="text-base sm:text-lg opacity-80 font-light mt-2 mb-1">
             Trusted Hands. Trusted Services.
           </p>
-          <p className="text-sm opacity-60 mb-8">
+          <p className="text-xs opacity-60 mb-4">
             Manipur&apos;s first commission-free service marketplace
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+          <div className="flex flex-col sm:flex-row gap-2 justify-center mt-4">
             <Button
               size="lg"
-              className="bg-white text-[#0F4C81] hover:bg-gray-100 font-semibold text-base px-8 py-6 rounded-2xl shadow-lg"
+              className="bg-white text-[#0F4C81] hover:bg-gray-100 font-semibold text-base px-8 py-5 rounded-2xl shadow-lg"
               onClick={() => navigate('login')}
             >
               Get Started <ArrowRight className="ml-2 h-5 w-5" />
@@ -58,7 +61,7 @@ export default function LandingScreen() {
             <Button
               size="lg"
               variant="outline"
-              className="border-white/50 text-white hover:bg-white/10 font-semibold text-base px-8 py-6 rounded-2xl"
+              className="border-white/50 text-white hover:bg-white/10 font-semibold text-base px-8 py-5 rounded-2xl"
               onClick={() => navigate('register')}
             >
               <Briefcase className="mr-2 h-5 w-5" /> I&apos;m a Provider
@@ -66,27 +69,28 @@ export default function LandingScreen() {
           </div>
         </div>
 
-        {/* Stats bar */}
-        <div className="relative z-10 mt-10 flex items-center gap-6 text-center">
+        {/* Stats bar — tightened spacing (mt-6 instead of mt-10) */}
+        <div className="relative z-10 mt-6 flex items-center gap-6 text-center">
           <div>
-            <p className="text-2xl font-bold">0%</p>
+            <p className="text-xl font-bold">0%</p>
             <p className="text-[10px] opacity-60">Commission</p>
           </div>
           <div className="w-px h-8 bg-white/30" />
           <div>
-            <p className="text-2xl font-bold">AI</p>
+            <p className="text-xl font-bold">AI</p>
             <p className="text-[10px] opacity-60">Powered</p>
           </div>
           <div className="w-px h-8 bg-white/30" />
           <div>
-            <p className="text-2xl font-bold flex items-center gap-1"><MapPin className="h-5 w-5" /> Manipur</p>
+            <p className="text-xl font-bold flex items-center gap-1"><MapPin className="h-4 w-4" /> Manipur</p>
             <p className="text-[10px] opacity-60">Focused</p>
           </div>
         </div>
       </div>
 
-      {/* Highlight Carousel — AI-generated slides explaining SINTHA's benefits */}
-      <div className="py-6 px-4 bg-white">
+      {/* Highlight Carousel — moved up (reduced top padding from py-6 to pt-4)
+          so it appears immediately below the hero stats bar. */}
+      <div className="pt-4 px-4 bg-white">
         <div className="max-w-lg mx-auto">
           <h2 className="text-center text-lg font-bold text-[#1E293B] mb-3">
             How SINTHA Helps Manipur
