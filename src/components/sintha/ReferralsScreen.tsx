@@ -72,14 +72,15 @@ export default function ReferralsScreen() {
     loadReferrals()
   }, [user])
 
-  const copyCode = async () => {
+  const copyLink = async () => {
     if (!data?.referralCode) return
+    const link = `https://sinthadeploy.vercel.app/r/${data.referralCode}`
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(data.referralCode)
+        await navigator.clipboard.writeText(link)
       } else {
         const ta = document.createElement('textarea')
-        ta.value = data.referralCode
+        ta.value = link
         ta.style.position = 'fixed'
         ta.style.opacity = '0'
         document.body.appendChild(ta)
@@ -88,10 +89,10 @@ export default function ReferralsScreen() {
         document.body.removeChild(ta)
       }
       setCopied(true)
-      toast({ title: 'Copied!', description: `Referral code ${data.referralCode} copied` })
+      toast({ title: 'Link copied!', description: 'Paste it anywhere to share' })
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast({ title: 'Copy failed', description: `Your code: ${data.referralCode}` })
+      toast({ title: 'Copy failed', description: link })
     }
   }
 
@@ -176,18 +177,18 @@ export default function ReferralsScreen() {
                 Share this code with friends. You earn <strong>30%</strong> every time they subscribe to SINTHA PRO — for life!
               </p>
 
-              {/* The referral code — big and copyable */}
+              {/* Referral link — full length, copyable */}
               <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-3">
-                <p className="text-[10px] opacity-70 uppercase tracking-wide mb-1">Your code</p>
-                <p className="text-3xl font-extrabold tracking-wider font-mono break-all">
-                  {data.referralCode}
+                <p className="text-[10px] opacity-70 uppercase tracking-wide mb-1">Your referral link</p>
+                <p className="text-sm font-medium font-mono break-all leading-relaxed">
+                  {`sintha.app/r/${data.referralCode}`}
                 </p>
               </div>
 
-              {/* Action buttons — 3 buttons: Copy, WhatsApp, Share */}
+              {/* Action buttons — 3 buttons: Copy Link, WhatsApp, Share */}
               <div className="grid grid-cols-3 gap-2">
                 <button
-                  onClick={copyCode}
+                  onClick={copyLink}
                   className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
                     copied
                       ? 'bg-green-500 text-white'
@@ -195,7 +196,7 @@ export default function ReferralsScreen() {
                   }`}
                 >
                   {copied ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy'}
+                  {copied ? 'Copied!' : 'Copy Link'}
                 </button>
                 <button
                   onClick={shareViaWhatsApp}
