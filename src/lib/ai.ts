@@ -16,9 +16,9 @@
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// Primary model — NVIDIA Nemotron Nano (good quality, works from all regions)
+// Primary model — NVIDIA Nemotron Nano (good quality, follows English instructions well)
 const PRIMARY_MODEL = 'nvidia/nemotron-nano-9b-v2:free';
-// Fallback model — Liquid LFM (fast, lightweight)
+// Fallback model — Liquid LFM (fast but sometimes responds in wrong language)
 const FALLBACK_MODEL = 'liquid/lfm-2.5-1.2b-instruct:free';
 
 export interface ChatMessage {
@@ -81,6 +81,8 @@ async function tryModel(
         messages,
         max_tokens: maxTokens,
         temperature,
+        // Disable reasoning/thinking for faster responses
+        reasoning: { exclude: true },
       }),
     });
 
