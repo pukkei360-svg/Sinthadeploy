@@ -80,7 +80,7 @@ export default function ProviderDashboardScreen() {
       }
     }
     loadData()
-  }, [user, setBookings, setMyProviderProfile])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pendingBookings = bookings.filter((b) => b.status === 'pending')
   const unreadNotifs = notifications.filter((n) => !n.isRead).length
