@@ -14,7 +14,7 @@ import PushNotificationPrompt from './PushNotificationPrompt'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
   CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase
+  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase, X
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -173,8 +173,8 @@ export default function HomeScreen() {
         <PushNotificationPrompt />
       </div>
 
-      {/* Search Bar */}
-      <div className="px-4 py-3 bg-white">
+      {/* Search Bar — sticky so it stays visible when scrolling through results */}
+      <div className="px-4 py-3 bg-white sticky top-[52px] z-30 border-b border-gray-100">
         <div className={`relative transition-all ${searchFocused ? 'ring-2 ring-blue-300' : ''} rounded-xl`}>
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
@@ -185,14 +185,25 @@ export default function HomeScreen() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
+      {/* When searching, hide everything except results for a clean experience */}
+      {!searchQuery && (
+        <>
       {/* Hero Banner */}
       <div className="px-4 pt-2">
         <div className="sintha-gradient rounded-2xl p-5 text-white relative overflow-hidden">
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
-          <div className="absolute right-8 -bottom-4 w-20 h-20 bg-white/5 rounded-full" />
+          <div className="absolute right:8 -bottom-4 w-20 h-20 bg-white/5 rounded-full" />
           <h2 className="text-lg font-bold relative z-10">Find Trusted Services</h2>
           <h3 className="text-lg font-bold relative z-10">in Manipur</h3>
           <p className="text-sm opacity-80 mt-1 relative z-10">Zero commission &bull; Verified providers &bull; Trusted by Manipur</p>
@@ -279,6 +290,8 @@ export default function HomeScreen() {
           </div>
         )}
       </div>
+        </>
+      )}
 
       {/* Nearby Providers */}
       <div className="pt-6">
