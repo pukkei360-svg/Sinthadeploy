@@ -1,25 +1,24 @@
 /**
- * OpenRouter API helper.
+ * AI helper — tries Groq first (fast, Llama 3.3 70B), falls back to OpenRouter.
  *
- * OpenRouter provides access to multiple AI models through a single API.
- * We use it because it works from any region (unlike direct Anthropic API
- * which blocks certain regions).
+ * Groq is extremely fast (< 1 second) but may be region-blocked (same as
+ * Anthropic). When deployed on Vercel (US/Europe servers), Groq works perfectly.
+ * OpenRouter is the fallback (works from all regions but slightly slower).
  *
- * Models tried (in order of preference):
- *   1. nvidia/nemotron-nano-9b-v2:free — good quality, works from all regions
- *   2. liquid/lfm-2.5-1.2b-instruct:free — fast fallback
- *
- * Claude models on OpenRouter are blocked in some regions (same issue as
- * direct Anthropic API), so we use the free NVIDIA/Liquid models instead.
+ * Models:
+ *   Groq:       llama-3.3-70b-versatile (best quality + speed, ~0.5s on Vercel)
+ *   OpenRouter: liquid/lfm-2.5-1.2b-instruct:free (fallback, ~2s)
+ *               cohere/north-mini-code:free (second fallback, ~3s)
  */
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-// Primary model — Liquid LFM (fastest: 1-2s, responds in English with strong prompt)
-const PRIMARY_MODEL = 'liquid/lfm-2.5-1.2b-instruct:free';
-// Fallback model — Cohere (2-3s, reliable English, good quality)
-const FALLBACK_MODEL = 'cohere/north-mini-code:free';
+const OR_PRIMARY = 'liquid/lfm-2.5-1.2b-instruct:free';
+const OR_FALLBACK = 'cohere/north-mini-code:free';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -32,46 +31,96 @@ export interface AIResult {
   error?: string;
 }
 
-/**
- * Call an AI model via OpenRouter.
- * Tries the primary model first, falls back to a secondary model if it fails.
- */
 export async function callAI(opts: {
   systemPrompt: string;
   messages: ChatMessage[];
   maxTokens?: number;
   temperature?: number;
 }): Promise<AIResult> {
-  if (!OPENROUTER_API_KEY) {
-    return { text: '', success: false, error: 'OPENROUTER_API_KEY not configured' };
-  }
-
   const allMessages: ChatMessage[] = [
     { role: 'system', content: opts.systemPrompt },
     ...opts.messages,
   ];
+  const maxTokens = opts.maxTokens || 400;
+  const temperature = opts.temperature ?? 0.7;
 
-  // Try primary model first (with 8-second timeout — if it's slow, fall back)
-  let result = await tryModel(PRIMARY_MODEL, allMessages, opts.maxTokens || 400, opts.temperature ?? 0.7);
-  if (result.success) return result;
+  // 1. Try Groq first (fastest + best quality, ~0.5s on Vercel)
+  if (GROQ_API_KEY) {
+    const result = await tryGroq(allMessages, maxTokens, temperature);
+    if (result.success) return result
+    console.warn('[AI] Groq failed, trying OpenRouter:', result.error)
+  }
 
-  // Fallback to secondary model
-  console.warn('[AI] Primary model failed, trying fallback:', result.error);
-  result = await tryModel(FALLBACK_MODEL, allMessages, opts.maxTokens || 400, opts.temperature ?? 0.7);
-  return result;
+  // 2. Try OpenRouter primary (Liquid, ~2s)
+  if (OPENROUTER_API_KEY) {
+    let result = await tryOpenRouter(OR_PRIMARY, allMessages, maxTokens, temperature)
+    if (result.success) return result
+    console.warn('[AI] OpenRouter primary failed, trying fallback:', result.error)
+
+    // 3. Try OpenRouter fallback (Cohere, ~3s)
+    result = await tryOpenRouter(OR_FALLBACK, allMessages, maxTokens, temperature)
+    return result
+  }
+
+  return { text: '', success: false, error: 'No AI API key configured' }
 }
 
-async function tryModel(
+async function tryGroq(
+  messages: ChatMessage[],
+  maxTokens: number,
+  temperature: number
+): Promise<AIResult> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
+
+  try {
+    const response = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages,
+        max_tokens: maxTokens,
+        temperature,
+      }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'unknown')
+      console.error('[AI] Groq error:', response.status, errText.slice(0, 200))
+      return { text: '', success: false, error: `Groq ${response.status}` }
+    }
+
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content || ''
+
+    if (!content) {
+      return { text: '', success: false, error: 'Empty Groq response' }
+    }
+
+    return { text: content, success: true }
+  } catch (err) {
+    clearTimeout(timeout)
+    const isAbort = err instanceof Error && err.name === 'AbortError'
+    console.error('[AI] Groq failed:', isAbort ? 'timeout' : err)
+    return { text: '', success: false, error: isAbort ? 'timeout' : 'Groq failed' }
+  }
+}
+
+async function tryOpenRouter(
   model: string,
   messages: ChatMessage[],
   maxTokens: number,
   temperature: number
 ): Promise<AIResult> {
-  // 8-second timeout — if the model hasn't responded by then, abort and
-  // let the caller try the fallback model. This prevents the "sometimes
-  // very slow" issue where a model gets stuck on a queued request.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
 
   try {
     const response = await fetch(OPENROUTER_URL, {
@@ -90,28 +139,28 @@ async function tryModel(
         reasoning: { exclude: true },
       }),
       signal: controller.signal,
-    });
+    })
 
-    clearTimeout(timeout);
+    clearTimeout(timeout)
 
     if (!response.ok) {
-      const errText = await response.text().catch(() => 'unknown');
-      console.error(`[AI] ${model} error:`, response.status, errText.slice(0, 200));
-      return { text: '', success: false, error: `${model} error: ${response.status}` };
+      const errText = await response.text().catch(() => 'unknown')
+      console.error(`[AI] ${model} error:`, response.status, errText.slice(0, 200))
+      return { text: '', success: false, error: `${model} ${response.status}` }
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content || ''
 
-    if (!content || content.trim().length === 0) {
-      return { text: '', success: false, error: 'Empty response' };
+    if (!content) {
+      return { text: '', success: false, error: 'Empty response' }
     }
 
-    return { text: content, success: true };
+    return { text: content, success: true }
   } catch (err) {
-    clearTimeout(timeout);
-    const isAbort = err instanceof Error && err.name === 'AbortError';
-    console.error(`[AI] ${model} ${isAbort ? 'timed out (8s)' : 'request failed:'}`, err instanceof Error ? err.message : 'unknown');
-    return { text: '', success: false, error: isAbort ? 'timeout' : (err instanceof Error ? err.message : 'Request failed') };
+    clearTimeout(timeout)
+    const isAbort = err instanceof Error && err.name === 'AbortError'
+    console.error(`[AI] ${model} ${isAbort ? 'timed out' : 'failed'}`)
+    return { text: '', success: false, error: isAbort ? 'timeout' : 'Request failed' }
   }
 }
