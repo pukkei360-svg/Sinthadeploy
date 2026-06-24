@@ -16,10 +16,10 @@
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// Primary model — NVIDIA Nemotron Nano (good quality, follows English instructions well)
-const PRIMARY_MODEL = 'nvidia/nemotron-nano-9b-v2:free';
-// Fallback model — Liquid LFM (fast but sometimes responds in wrong language)
-const FALLBACK_MODEL = 'liquid/lfm-2.5-1.2b-instruct:free';
+// Primary model — Liquid LFM (fastest: 1-2s, responds in English with strong prompt)
+const PRIMARY_MODEL = 'liquid/lfm-2.5-1.2b-instruct:free';
+// Fallback model — Cohere (2-3s, reliable English, good quality)
+const FALLBACK_MODEL = 'cohere/north-mini-code:free';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -51,13 +51,13 @@ export async function callAI(opts: {
     ...opts.messages,
   ];
 
-  // Try primary model first
-  let result = await tryModel(PRIMARY_MODEL, allMessages, opts.maxTokens || 800, opts.temperature ?? 0.7);
+  // Try primary model first (with 8-second timeout — if it's slow, fall back)
+  let result = await tryModel(PRIMARY_MODEL, allMessages, opts.maxTokens || 400, opts.temperature ?? 0.7);
   if (result.success) return result;
 
   // Fallback to secondary model
   console.warn('[AI] Primary model failed, trying fallback:', result.error);
-  result = await tryModel(FALLBACK_MODEL, allMessages, opts.maxTokens || 800, opts.temperature ?? 0.7);
+  result = await tryModel(FALLBACK_MODEL, allMessages, opts.maxTokens || 400, opts.temperature ?? 0.7);
   return result;
 }
 
@@ -67,6 +67,12 @@ async function tryModel(
   maxTokens: number,
   temperature: number
 ): Promise<AIResult> {
+  // 8-second timeout — if the model hasn't responded by then, abort and
+  // let the caller try the fallback model. This prevents the "sometimes
+  // very slow" issue where a model gets stuck on a queued request.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
   try {
     const response = await fetch(OPENROUTER_URL, {
       method: 'POST',
@@ -81,10 +87,12 @@ async function tryModel(
         messages,
         max_tokens: maxTokens,
         temperature,
-        // Disable reasoning/thinking for faster responses
         reasoning: { exclude: true },
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'unknown');
@@ -101,7 +109,9 @@ async function tryModel(
 
     return { text: content, success: true };
   } catch (err) {
-    console.error(`[AI] ${model} request failed:`, err instanceof Error ? err.message : 'unknown');
-    return { text: '', success: false, error: err instanceof Error ? err.message : 'Request failed' };
+    clearTimeout(timeout);
+    const isAbort = err instanceof Error && err.name === 'AbortError';
+    console.error(`[AI] ${model} ${isAbort ? 'timed out (8s)' : 'request failed:'}`, err instanceof Error ? err.message : 'unknown');
+    return { text: '', success: false, error: isAbort ? 'timeout' : (err instanceof Error ? err.message : 'Request failed') };
   }
 }
