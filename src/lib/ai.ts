@@ -1,20 +1,27 @@
 /**
- * AI helper — tries Groq first (fast, Llama 3.3 70B), falls back to OpenRouter.
+ * AI helper — tries Gemini first (free, 1500 req/day), then Groq, then OpenRouter.
  *
- * Groq is extremely fast (< 1 second) but may be region-blocked (same as
- * Anthropic). When deployed on Vercel (US/Europe servers), Groq works perfectly.
- * OpenRouter is the fallback (works from all regions but slightly slower).
+ * Gemini is the best option: free, generous limits, works from most regions.
+ * Groq is fastest but may be region-blocked.
+ * OpenRouter is the last resort (50 free req/day, needs credits for more).
  *
- * Models:
- *   Groq:       llama-3.3-70b-versatile (best quality + speed, ~0.5s on Vercel)
- *   OpenRouter: liquid/lfm-2.5-1.2b-instruct:free (fallback, ~2s)
- *               cohere/north-mini-code:free (second fallback, ~3s)
+ * Env vars (set on Vercel):
+ *   GeminiApiKey  — Google AI Studio key (https://aistudio.google.com/app/apikey)
+ *   GROQ_API_KEY  — Groq key (https://console.groq.com/keys)
+ *   OPENROUTER_API_KEY — OpenRouter key (https://openrouter.ai/keys)
  */
 
+// Gemini (Google) — primary
+const GEMINI_API_KEY = process.env.GeminiApiKey || process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+// Groq — secondary
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
+// OpenRouter — last resort
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OR_PRIMARY = 'liquid/lfm-2.5-1.2b-instruct:free';
@@ -44,25 +51,97 @@ export async function callAI(opts: {
   const maxTokens = opts.maxTokens || 400;
   const temperature = opts.temperature ?? 0.7;
 
-  // 1. Try Groq first (fastest + best quality, ~0.5s on Vercel)
+  // 1. Try Gemini first (free, 1500 req/day, works from most regions)
+  if (GEMINI_API_KEY) {
+    const result = await tryGemini(opts.systemPrompt, opts.messages, maxTokens, temperature);
+    if (result.success) return result
+    console.warn('[AI] Gemini failed, trying Groq:', result.error)
+  }
+
+  // 2. Try Groq (fast, but may be region-blocked)
   if (GROQ_API_KEY) {
     const result = await tryGroq(allMessages, maxTokens, temperature);
     if (result.success) return result
     console.warn('[AI] Groq failed, trying OpenRouter:', result.error)
   }
 
-  // 2. Try OpenRouter primary (Liquid, ~2s)
+  // 3. Try OpenRouter primary (Liquid, ~2s)
   if (OPENROUTER_API_KEY) {
     let result = await tryOpenRouter(OR_PRIMARY, allMessages, maxTokens, temperature)
     if (result.success) return result
     console.warn('[AI] OpenRouter primary failed, trying fallback:', result.error)
 
-    // 3. Try OpenRouter fallback (Cohere, ~3s)
+    // 4. Try OpenRouter fallback (Cohere, ~3s)
     result = await tryOpenRouter(OR_FALLBACK, allMessages, maxTokens, temperature)
     return result
   }
 
   return { text: '', success: false, error: 'No AI API key configured' }
+}
+
+/**
+ * Call Gemini via Google's Generative Language API.
+ * Gemini uses a different API format (not OpenAI-compatible).
+ */
+async function tryGemini(
+  systemPrompt: string,
+  messages: ChatMessage[],
+  maxTokens: number,
+  temperature: number
+): Promise<AIResult> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
+
+  try {
+    // Convert to Gemini's contents format
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: 'I understand. I am SINTHA AI, ready to help.' }] },
+    ]
+
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        contents.push({ role: 'user', parts: [{ text: msg.content }] })
+      } else if (msg.role === 'assistant') {
+        contents.push({ role: 'model', parts: [{ text: msg.content }] })
+      }
+    }
+
+    const response = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+        },
+      }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'unknown')
+      console.error('[AI] Gemini error:', response.status, errText.slice(0, 200))
+      return { text: '', success: false, error: `Gemini ${response.status}` }
+    }
+
+    const data = await response.json()
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+    if (!content) {
+      return { text: '', success: false, error: 'Empty Gemini response' }
+    }
+
+    return { text: content, success: true }
+  } catch (err) {
+    clearTimeout(timeout)
+    const isAbort = err instanceof Error && err.name === 'AbortError'
+    console.error('[AI] Gemini failed:', isAbort ? 'timeout' : err)
+    return { text: '', success: false, error: isAbort ? 'timeout' : 'Gemini failed' }
+  }
 }
 
 async function tryGroq(
