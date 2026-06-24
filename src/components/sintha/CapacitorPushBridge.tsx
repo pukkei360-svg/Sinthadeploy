@@ -229,15 +229,15 @@ export default function CapacitorPushBridge() {
 
         // 4. Listen for incoming push notifications (foreground)
         //    When the app is open, FCM delivers the push to JavaScript instead
-        //    of the system tray. We display a local notification so the user
-        //    actually SEES it (otherwise foreground pushes are invisible).
+        //    of the system tray. We display ONE local notification only.
+        //    To prevent duplicate notifications (FCM background + Capacitor foreground
+        //    + in-app bell), we deduplicate by title+body within a 5-second window.
+        const recentNotifications = new Map<string, number>()
+        const DEDUP_WINDOW_MS = 5000
+
         const recvListener = await plugin.addListener('pushNotificationReceived', (notification: unknown) => {
           console.log('[Capacitor-Push] Notification received (foreground):', notification)
 
-          // The notification payload structure varies between Capacitor versions:
-          //   v3+: { title, body, data }
-          //   v2:  { title, body, ... }
-          //   data-only pushes: { data: { title, message, ... } }
           const n = notification as {
             title?: string
             body?: string
@@ -247,9 +247,29 @@ export default function CapacitorPushBridge() {
           const title = n.title || (n.data?.title as string) || 'SINTHA'
           const body = n.body || (n.data?.message as string) || (n.data?.body as string) || ''
 
-          if (title || body) {
-            showForegroundNotification(title, body, n.data)
+          if (!title && !body) return
+
+          // Deduplicate: if we received the same notification within 5 seconds,
+          // skip it (FCM may deliver it multiple times — background + foreground)
+          const dedupKey = `${title}::${body}`
+          const now = Date.now()
+          const lastReceived = recentNotifications.get(dedupKey)
+          if (lastReceived && now - lastReceived < DEDUP_WINDOW_MS) {
+            console.log('[Capacitor-Push] Duplicate notification skipped:', title)
+            return
           }
+          recentNotifications.set(dedupKey, now)
+
+          // Clean up old entries every 30 seconds
+          if (recentNotifications.size > 20) {
+            for (const [key, timestamp] of recentNotifications.entries()) {
+              if (now - timestamp > DEDUP_WINDOW_MS * 2) {
+                recentNotifications.delete(key)
+              }
+            }
+          }
+
+          showForegroundNotification(title, body, n.data)
         })
         listeners.push(recvListener)
 

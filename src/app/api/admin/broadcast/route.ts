@@ -80,9 +80,20 @@ export async function POST(request: NextRequest) {
     const where = targetRole === 'all' ? {} : { role: targetRole };
 
     // Fetch the target users (just IDs + FCM tokens)
-    const users = await db.user.findMany({
+    // Deduplicate by FCM token — if the same token appears multiple times
+    // (from multiple sessions/devices), only send once to prevent duplicates.
+    const allUsers = await db.user.findMany({
       where,
       select: { id: true, fcmToken: true },
+    });
+
+    // Deduplicate FCM tokens (same device registered under multiple accounts)
+    const seenTokens = new Set<string>();
+    const users = allUsers.filter(u => {
+      if (!u.fcmToken) return true; // keep users without tokens (for in-app notif)
+      if (seenTokens.has(u.fcmToken)) return false; // duplicate token — skip
+      seenTokens.add(u.fcmToken);
+      return true;
     });
 
     if (users.length === 0) {

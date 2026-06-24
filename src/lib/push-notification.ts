@@ -68,13 +68,19 @@ export async function sendPushNotification(
     const messaging = app.messaging();
 
     // Build the FCM message
+    // Use a notification ID tag so Android collapses duplicate notifications
+    // with the same tag (prevents 3 notifications appearing for 1 broadcast)
     const message: FirebaseAdminMessage = {
       token: user.fcmToken,
       notification: {
         title,
         body,
       },
-      data: data || {},
+      data: {
+        ...data,
+        // Add a timestamp so each broadcast has a unique tag
+        _tag: data?.type ? `${data.type}_${Date.now()}` : `notif_${Date.now()}`,
+      },
       android: {
         priority: 'high',
         notification: {
@@ -82,6 +88,9 @@ export async function sendPushNotification(
           priority: 'high',
           defaultSound: true,
           defaultVibrateTimings: true,
+          // Use tag to collapse duplicates — Android shows only the latest
+          // notification with the same tag
+          tag: data?.type || 'sintha',
         },
       },
     };
@@ -132,6 +141,7 @@ interface FirebaseAdminMessage {
       priority: 'high' | 'default' | 'low' | 'min';
       defaultSound?: boolean;
       defaultVibrateTimings?: boolean;
+      tag?: string;
     };
   };
 }
