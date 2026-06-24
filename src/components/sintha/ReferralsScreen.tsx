@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { cleanError } from '@/lib/clean-error'
+import WhatsAppIcon from './WhatsAppIcon'
 
 interface ReferralData {
   referralCode: string
@@ -78,27 +79,23 @@ export default function ReferralsScreen() {
 
   const shareCode = async () => {
     if (!data?.referralCode) return
-    // Mask the real Vercel URL with a clean branded link.
-    // Uses sintha.app (the branded domain) with /r/<code> path so:
-    //   1. Uses the Vercel deployment URL so links actually work
-    //   2. The link looks professional and on-brand
-    //   3. The referral code is embedded in the URL for easy copy-paste
-    // When sintha.app DNS is configured later, this URL will resolve directly
-    // to the app with the referral code pre-filled. Until then, users can
-    // manually enter the code on the signup screen.
-    const maskedUrl = `https://sinthadeploy.vercel.app/r/${data.referralCode}`
-    const shareText = `Join me on SINTHA — Manipur's trusted service marketplace! Use my referral code ${data.referralCode} when you sign up. When you go PRO, I earn 30% commission (at no cost to you). ${maskedUrl}`
+    // Use a short, clean branded URL that redirects to the real Vercel URL.
+    // The share text shows "sintha.app/r/CODE" (looks professional) but
+    // the actual clickable link goes to sinthadeploy.vercel.app/r/CODE (works).
+    const realUrl = `https://sinthadeploy.vercel.app/r/${data.referralCode}`
+    const displayUrl = `sintha.app/r/${data.referralCode}`
+    const shareText = `Join me on SINTHA — Manipur's trusted service marketplace! Use my referral code ${data.referralCode} when you sign up. When you go PRO, I earn 30% commission (at no cost to you). ${displayUrl}`
     try {
       if (navigator.share) {
         await navigator.share({
           title: 'Join SINTHA',
           text: shareText,
-          url: maskedUrl,
+          url: realUrl,
         })
       } else {
         // Fallback: copy to clipboard
         try {
-          await navigator.clipboard?.writeText(shareText)
+          await navigator.clipboard?.writeText(`${shareText} (Link: ${realUrl})`)
           toast({ title: 'Copied!', description: 'Share message copied — paste it anywhere' })
         } catch {
           toast({ title: 'Share', description: shareText })
@@ -109,6 +106,26 @@ export default function ReferralsScreen() {
         toast({ title: 'Could not share', description: cleanError(err) })
       }
     }
+  }
+
+  // Share via WhatsApp — opens wa.me with pre-filled message.
+  // Uses the same anchor-click pattern as the dial button in BookingDetailScreen
+  // to work inside Android WebView (Capacitor).
+  const shareViaWhatsApp = () => {
+    if (!data?.referralCode) return
+    const realUrl = `https://sinthadeploy.vercel.app/r/${data.referralCode}`
+    const msg = encodeURIComponent(`Join me on SINTHA — Manipur's trusted service marketplace! Use my referral code ${data.referralCode} when you sign up. When you go PRO, I earn 30% commission (at no cost to you). ${realUrl}`)
+    const anchor = document.createElement('a')
+    anchor.href = `https://wa.me/?text=${msg}`
+    anchor.target = '_blank'
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.position = 'fixed'
+    anchor.style.top = '0'
+    anchor.style.left = '0'
+    anchor.style.opacity = '0'
+    document.body.appendChild(anchor)
+    anchor.click()
+    setTimeout(() => { if (anchor.parentNode) anchor.parentNode.removeChild(anchor) }, 200)
   }
 
   return (
@@ -149,8 +166,8 @@ export default function ReferralsScreen() {
                 </p>
               </div>
 
-              {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Action buttons — 3 buttons: Copy, WhatsApp, Share */}
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={copyCode}
                   className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
@@ -160,7 +177,14 @@ export default function ReferralsScreen() {
                   }`}
                 >
                   {copied ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy Code'}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  onClick={shareViaWhatsApp}
+                  className="flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#1ebe5d] text-white rounded-xl py-2.5 text-sm font-semibold transition-colors"
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  WhatsApp
                 </button>
                 <button
                   onClick={shareCode}
