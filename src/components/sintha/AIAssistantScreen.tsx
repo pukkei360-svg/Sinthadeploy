@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import BottomNav from './BottomNav'
-import { ArrowLeft, Sparkles, Send, Loader2 } from 'lucide-react'
+import { ArrowLeft, Sparkles, Send, Loader2, CheckCircle, Crown, Star, ChevronRight } from 'lucide-react'
 
 interface ProviderMatch {
   providerId: string
@@ -136,35 +136,81 @@ export default function AIAssistantScreen() {
                   : 'sintha-gradient text-white rounded-br-md'
               }`}
             >
-              <p className="text-sm whitespace-pre-line">{msg.content}</p>
-              {/* Clickable provider recommendation cards — shown when the AI
-                  mentions specific providers in its response. Each card links
-                  to the provider's profile page. */}
+              {/* AI response text — render with basic markdown formatting */}
+              {msg.isBot ? (
+                <div className="text-sm leading-relaxed">
+                  {msg.content.split('\n').map((line, i) => {
+                    // Render **bold** text
+                    const parts = line.split(/(\*\*[^*]+\*\*)/g)
+                    const rendered = parts.map((part, j) => {
+                      if (part.startsWith('**') && part.endsWith('**')) {
+                        return <strong key={j} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+                      }
+                      return <span key={j}>{part}</span>
+                    })
+                    // Check if line is a numbered list item (1. 2. etc.)
+                    if (/^\d+\.\s/.test(line.trim())) {
+                      return <div key={i} className="ml-3 mb-0.5">{rendered}</div>
+                    }
+                    // Check if line is a bullet (- or *)
+                    if (/^[-*]\s/.test(line.trim())) {
+                      return <div key={i} className="ml-3 mb-0.5 flex gap-1"><span className="text-blue-500">•</span><span>{rendered}</span></div>
+                    }
+                    if (line.trim() === '') return <div key={i} className="h-2" />
+                    return <p key={i} className="mb-1">{rendered}</p>
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm whitespace-pre-line">{msg.content}</p>
+              )}
+              {/* Clickable provider recommendation cards — polished design */}
               {msg.isBot && msg.providerMatches && msg.providerMatches.length > 0 && (
-                <div className="mt-2 space-y-1.5">
+                <div className="mt-3 space-y-2">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Recommended Providers</p>
                   {msg.providerMatches.map((pm, i) => (
                     <button
                       key={i}
                       onClick={() => navigate('provider-profile', { providerId: pm.providerId })}
-                      className="w-full bg-blue-50 hover:bg-blue-100 rounded-lg p-2 flex items-center gap-2 text-left transition-colors border border-blue-100"
+                      className="w-full bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-xl p-3 flex items-center gap-3 text-left transition-all border border-blue-100 active:scale-[0.98]"
                     >
-                      <img
-                        src={pm.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pm.name)}&background=2563eb&color=fff&size=40`}
-                        alt={pm.name}
-                        className="w-8 h-8 rounded-full shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-xs font-medium text-gray-800 truncate">{pm.name}</p>
-                          {pm.verified && <span className="text-[9px] text-green-600">✓</span>}
-                          {pm.pro && <span className="text-[8px] bg-amber-100 text-amber-700 px-1 rounded">PRO</span>}
-                        </div>
-                        <p className="text-[9px] text-gray-500">
-                          {pm.category} · ⭐{pm.rating}
-                          {pm.hourlyRate ? ` · ₹${pm.hourlyRate}/hr` : ''}
-                        </p>
+                      <div className="relative shrink-0">
+                        <img
+                          src={pm.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pm.name)}&background=2563eb&color=fff&size=48`}
+                          alt={pm.name}
+                          className="w-11 h-11 rounded-full border-2 border-white shadow-sm"
+                        />
+                        {pm.verified && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                            <CheckCircle className="h-2.5 w-2.5 text-white" />
+                          </span>
+                        )}
                       </div>
-                      <span className="text-[9px] text-blue-600 font-medium shrink-0">View →</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold text-gray-800 truncate">{pm.name}</p>
+                          {pm.pro && (
+                            <span className="text-[8px] bg-gradient-to-r from-amber-400 to-orange-400 text-white px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                              <Crown className="h-2.5 w-2.5" />PRO
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-gray-500 truncate">{pm.category}</span>
+                          {typeof pm.rating === 'number' && pm.rating > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-gray-600">
+                              <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                              {pm.rating.toFixed(1)}
+                            </span>
+                          )}
+                          {pm.hourlyRate ? (
+                            <span className="text-[10px] font-semibold text-green-600">₹{pm.hourlyRate}/hr</span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="shrink-0 flex items-center gap-1">
+                        <span className="text-[10px] text-blue-600 font-bold">View</span>
+                        <ChevronRight className="h-3.5 w-3.5 text-blue-400" />
+                      </div>
                     </button>
                   ))}
                 </div>
