@@ -54,16 +54,17 @@ export default function HomeScreen() {
   useEffect(() => {
     if (dataLoaded) return
     const loadData = async () => {
-      setIsLoading(true)
+      // DON'T set loading=true if we already have cached data — show it immediately
+      // and refresh in the background. Only show loading spinner on very first load.
+      if (categories.length === 0 && providers.length === 0) {
+        setIsLoading(true)
+      }
       try {
+        // Only call /seed on very first ever load (no categories in store AND no cache)
         if (categories.length === 0) {
           try { await apiFetch('/seed', { method: 'POST' }) } catch {}
         }
-        // Cache categories for 5 min and providers for 2 min on the client.
-        // Returning users see the home screen instantly from cache while
-        // fresh data loads in the background (stale-while-revalidate).
-        // When offline, apiFetch returns the cached payload (persisted to
-        // localStorage) so the home screen still renders.
+        // Fetch categories + providers in parallel (cached for 5 min / 2 min)
         const [catData, provData] = await Promise.all([
           apiFetch('/categories', { cacheTtl: 5 * 60 * 1000 }),
           apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 2 * 60 * 1000 }),
@@ -71,15 +72,8 @@ export default function HomeScreen() {
         setCategories(catData.categories || [])
         setProviders(provData.providers || [])
       } catch (err) {
-        // Offline or server unreachable — keep whatever the store already
-        // has (possibly populated from a previous session via the persisted
-        // API cache). The OfflineBootstrap banner tells the user why.
         console.error('Failed to load data:', err)
       } finally {
-        // ALWAYS mark data as loaded — even on failure — so the screen
-        // renders with cached/empty state instead of hanging forever
-        // on the loading spinner. This is what makes the app openable
-        // when offline.
         setDataLoaded(true)
         setIsLoading(false)
       }
