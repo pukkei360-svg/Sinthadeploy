@@ -113,11 +113,10 @@ export default function Home() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // If we already navigated (user is already logged in), DON'T re-navigate.
-        // Firebase re-emits auth state on token refresh — we only want to
-        // navigate once on initial login.
+        // RETURNING USER FAST PATH:
+        // If we already navigated (user is already logged in), DON'T do anything.
+        // The screen is already showing — just refresh user data silently.
         if (hasNavigated.current) {
-          // Just refresh the user data silently, don't re-navigate
           try {
             const effectiveEmail = firebaseUser.email ||
               `${firebaseUser.phoneNumber}@phone.sintha.app`
@@ -136,6 +135,87 @@ export default function Home() {
           return
         }
 
+        // NEW LOGIN PATH:
+        // For returning users with saved session, navigate IMMEDIATELY from
+        // localStorage — don't wait for /auth/sync API call. The API sync
+        // runs in the background and updates the user data when ready.
+        const savedUserStr = typeof window !== 'undefined' ? localStorage.getItem('sintha_user') : null
+        if (savedUserStr) {
+          try {
+            const savedUser = JSON.parse(savedUserStr)
+            setUser(savedUser, localStorage.getItem('sintha_token'))
+            hasNavigated.current = true
+
+            // Navigate immediately based on saved role
+            if (savedUser.role === 'provider') {
+              const savedProfile = localStorage.getItem('sintha_provider_profile')
+              if (savedProfile) {
+                setMyProviderProfile(JSON.parse(savedProfile))
+                navigate('provider-dashboard')
+              } else {
+                navigate('provider-onboarding')
+              }
+            } else if (savedUser.role === 'admin') {
+              navigate('admin-dashboard')
+            } else if (savedUser.role === 'client') {
+              navigate('home')
+            } else {
+              navigate('role-select')
+            }
+
+            // Now sync with backend in the background (non-blocking)
+            try {
+              const effectiveEmail = firebaseUser.email ||
+                `${firebaseUser.phoneNumber}@phone.sintha.app`
+              const data = await apiFetch('/auth/sync', {
+                method: 'POST',
+                body: JSON.stringify({
+                  firebaseUid: firebaseUser.uid,
+                  email: effectiveEmail,
+                  name: firebaseUser.displayName || firebaseUser.phoneNumber || 'User',
+                  photoUrl: firebaseUser.photoURL || undefined,
+                  phone: firebaseUser.phoneNumber || undefined,
+                }),
+              })
+              setUser(data.user, firebaseUser.uid)
+
+              // If provider, also fetch profile in background
+              if (data.user.role === 'provider') {
+                try {
+                  const provData = await apiFetch(`/providers?userId=${data.user.id}`)
+                  const providers = provData.providers || []
+                  if (providers.length > 0) {
+                    setMyProviderProfile(providers[0])
+                  }
+                } catch {}
+              }
+            } catch (err) {
+              // Background sync failed — user is still logged in from localStorage
+              // If banned, handle it
+              if (err instanceof Error && (err.message.includes('banned') || err.message.includes('suspended'))) {
+                try {
+                  const { signOut } = await import('firebase/auth')
+                  await signOut(auth)
+                } catch {}
+                localStorage.removeItem('sintha_user')
+                localStorage.removeItem('sintha_token')
+                localStorage.removeItem('sintha_provider_profile')
+                const banMsg = err.message.toLowerCase().includes('banned')
+                  ? 'This account has been permanently banned. Please contact support.'
+                  : 'Your account has been temporarily suspended. Please contact support.'
+                alert(banMsg)
+                setUser(null, null)
+                navigate('landing')
+                hasNavigated.current = false
+              }
+            }
+
+            setAuthReady(true)
+            return
+          } catch {}
+        }
+
+        // FIRST TIME LOGIN (no saved session) — must wait for API
         try {
           const effectiveEmail = firebaseUser.email ||
             `${firebaseUser.phoneNumber}@phone.sintha.app`
@@ -152,8 +232,6 @@ export default function Home() {
           })
 
           setUser(data.user, firebaseUser.uid)
-
-          // Mark as navigated so we don't re-navigate on next auth state change
           hasNavigated.current = true
 
           if (data.user.role === 'provider') {
@@ -168,18 +246,7 @@ export default function Home() {
               }
             } catch (provErr) {
               console.error('Provider profile check failed:', provErr)
-              try {
-                const savedProfile = localStorage.getItem('sintha_provider_profile')
-                if (savedProfile) {
-                  const profile = JSON.parse(savedProfile)
-                  setMyProviderProfile(profile)
-                  navigate('provider-dashboard')
-                } else {
-                  navigate('provider-onboarding')
-                }
-              } catch {
-                navigate('provider-onboarding')
-              }
+              navigate('provider-onboarding')
             }
           } else if (data.user.role === 'admin') {
             navigate('admin-dashboard')
@@ -209,68 +276,14 @@ export default function Home() {
 
             setUser(null, null)
             navigate('landing')
-            setAuthReady(true)
             hasNavigated.current = false
+            setAuthReady(true)
             return
-          }
-
-          // Fallback to localStorage
-          try {
-            const savedUser = localStorage.getItem('sintha_user')
-            const savedToken = localStorage.getItem('sintha_token')
-            if (savedUser && savedToken) {
-              const user = JSON.parse(savedUser)
-              setUser(user, savedToken)
-              hasNavigated.current = true
-              if (user.role === 'admin') {
-                navigate('admin-dashboard')
-              } else if (user.role === 'provider') {
-                const savedProfile = localStorage.getItem('sintha_provider_profile')
-                if (savedProfile) {
-                  setMyProviderProfile(JSON.parse(savedProfile))
-                  navigate('provider-dashboard')
-                } else {
-                  navigate('provider-onboarding')
-                }
-              } else if (user.role === 'client') {
-                navigate('home')
-              } else {
-                navigate('role-select')
-              }
-            }
-          } catch {
-            // Ignore
           }
         }
       } else {
-        // No Firebase user - check localStorage for session
+        // No Firebase user - not logged in
         hasNavigated.current = false
-        try {
-          const savedUser = localStorage.getItem('sintha_user')
-          const savedToken = localStorage.getItem('sintha_token')
-          if (savedUser && savedToken) {
-            const user = JSON.parse(savedUser)
-            setUser(user, savedToken)
-            hasNavigated.current = true
-            if (user.role === 'admin') {
-              navigate('admin-dashboard')
-            } else if (user.role === 'provider') {
-              const savedProfile = localStorage.getItem('sintha_provider_profile')
-              if (savedProfile) {
-                setMyProviderProfile(JSON.parse(savedProfile))
-                navigate('provider-dashboard')
-              } else {
-                navigate('provider-onboarding')
-              }
-            } else if (user.role === 'client') {
-              navigate('home')
-            } else {
-              navigate('role-select')
-            }
-          }
-        } catch {
-          // Ignore
-        }
       }
       setAuthReady(true)
     })
