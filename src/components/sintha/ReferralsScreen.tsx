@@ -80,13 +80,13 @@ export default function ReferralsScreen() {
     if (!data?.referralCode) return
     // Mask the real Vercel URL with a clean branded link.
     // Uses sintha.app (the branded domain) with /r/<code> path so:
-    //   1. The real deployment URL (sinthadeploy.vercel.app) is hidden
+    //   1. Uses the Vercel deployment URL so links actually work
     //   2. The link looks professional and on-brand
     //   3. The referral code is embedded in the URL for easy copy-paste
     // When sintha.app DNS is configured later, this URL will resolve directly
     // to the app with the referral code pre-filled. Until then, users can
     // manually enter the code on the signup screen.
-    const maskedUrl = `https://sintha.app/r/${data.referralCode}`
+    const maskedUrl = `https://sinthadeploy.vercel.app/r/${data.referralCode}`
     const shareText = `Join me on SINTHA — Manipur's trusted service marketplace! Use my referral code ${data.referralCode} when you sign up. When you go PRO, I earn 30% commission (at no cost to you). ${maskedUrl}`
     try {
       if (navigator.share) {
