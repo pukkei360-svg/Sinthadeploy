@@ -1,48 +1,37 @@
 /**
- * SINTHA AI — Powered by Z.AI internal API
+ * SINTHA AI — Powered by Gemini (Vercel) + Z.AI internal (this container)
  *
- * Reads the Z.AI config from /etc/.z-ai-config (or .z-ai-config in cwd)
- * and calls the API directly. Works from this container.
+ * Two providers, tried in order:
+ * 1. Gemini (Google) — works from Vercel (all regions), free 1500 req/day
+ * 2. Z.AI internal API — works from this container only (for local testing)
  *
- * On Vercel: set these env vars instead:
- *   ZAI_TOKEN — the token from .z-ai-config
- *   ZAI_CHAT_ID — the chatId from .z-ai-config
- *   ZAI_USER_ID — the userId from .z-ai-config
+ * Vercel env vars: GeminiApiKey (the Google AI key)
+ * Container: reads /etc/.z-ai-config automatically
  */
 
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
+// Gemini config
+const GEMINI_KEY = process.env.GeminiApiKey || process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+
+// Z.AI internal config
 const ZAI_BASE_URL = 'https://internal-api.z.ai/v1';
 
-// Read config — try env vars first (for Vercel), then config file (for this container)
-function getConfig(): { token: string; chatId: string; userId: string } | null {
-  // Try env vars (set on Vercel)
+function getZaiConfig(): { token: string; chatId: string; userId: string } | null {
   if (process.env.ZAI_TOKEN && process.env.ZAI_CHAT_ID && process.env.ZAI_USER_ID) {
-    return {
-      token: process.env.ZAI_TOKEN,
-      chatId: process.env.ZAI_CHAT_ID,
-      userId: process.env.ZAI_USER_ID,
-    };
+    return { token: process.env.ZAI_TOKEN, chatId: process.env.ZAI_CHAT_ID, userId: process.env.ZAI_USER_ID };
   }
-
-  // Try config file (this container)
-  const configPaths = [
-    '/etc/.z-ai-config',
-    path.join(process.cwd(), '.z-ai-config'),
-    path.join(require('os').homedir(), '.z-ai-config'),
-  ];
-
-  for (const p of configPaths) {
+  for (const p of ['/etc/.z-ai-config', path.join(process.cwd(), '.z-ai-config'), path.join(os.homedir(), '.z-ai-config')]) {
     try {
-      const raw = fs.readFileSync(p, 'utf-8');
-      const config = JSON.parse(raw);
+      const config = JSON.parse(fs.readFileSync(p, 'utf-8'));
       if (config.token && config.chatId && config.userId) {
         return { token: config.token, chatId: config.chatId, userId: config.userId };
       }
     } catch {}
   }
-
   return null;
 }
 
@@ -63,20 +52,84 @@ export async function callAI(opts: {
   maxTokens?: number;
   temperature?: number;
 }): Promise<AIResult> {
-  const config = getConfig();
-  if (!config) {
-    return { text: '', success: false, error: 'Z.AI config not found' };
+  // 1. Try Gemini first (works on Vercel, all regions)
+  if (GEMINI_KEY) {
+    const result = await tryGemini(opts.systemPrompt, opts.messages, opts.maxTokens || 400, opts.temperature ?? 0.7);
+    if (result.success) return result;
+    console.warn('[AI] Gemini failed:', result.error);
   }
 
-  const allMessages: ChatMessage[] = [
-    { role: 'system', content: opts.systemPrompt },
-    ...opts.messages,
-  ];
+  // 2. Try Z.AI internal API (works from this container)
+  const zaiConfig = getZaiConfig();
+  if (zaiConfig) {
+    const result = await tryZai(zaiConfig, opts.systemPrompt, opts.messages, opts.maxTokens || 400, opts.temperature ?? 0.7);
+    if (result.success) return result;
+    console.warn('[AI] Z.AI failed:', result.error);
+  }
 
+  return { text: '', success: false, error: 'All AI providers failed' };
+}
+
+async function tryGemini(
+  systemPrompt: string,
+  messages: ChatMessage[],
+  maxTokens: number,
+  temperature: number
+): Promise<AIResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+
+  try {
+    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
+      { role: 'user', parts: [{ text: systemPrompt }] },
+      { role: 'model', parts: [{ text: 'I am SINTHA AI, ready to help.' }] },
+    ];
+    for (const msg of messages) {
+      contents.push({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] });
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents, generationConfig: { temperature, maxOutputTokens: maxTokens } }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'unknown');
+      console.error('[AI] Gemini error:', response.status, errText.slice(0, 150));
+      return { text: '', success: false, error: `Gemini ${response.status}` };
+    }
+
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!content) return { text: '', success: false, error: 'Empty Gemini response' };
+    return { text: content, success: true };
+  } catch (err) {
+    clearTimeout(timeout);
+    return { text: '', success: false, error: err instanceof Error ? err.message : 'Gemini failed' };
+  }
+}
+
+async function tryZai(
+  config: { token: string; chatId: string; userId: string },
+  systemPrompt: string,
+  messages: ChatMessage[],
+  maxTokens: number,
+  temperature: number
+): Promise<AIResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
+    const allMessages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      ...messages,
+    ];
+
     const response = await fetch(`${ZAI_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -90,8 +143,8 @@ export async function callAI(opts: {
       body: JSON.stringify({
         model: 'glm-4-flash',
         messages: allMessages,
-        max_tokens: opts.maxTokens || 400,
-        temperature: opts.temperature ?? 0.7,
+        max_tokens: maxTokens,
+        temperature,
         thinking: { type: 'disabled' },
       }),
       signal: controller.signal,
@@ -101,23 +154,17 @@ export async function callAI(opts: {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'unknown');
-      console.error('[AI] Z.AI error:', response.status, errText.slice(0, 200));
+      console.error('[AI] Z.AI error:', response.status, errText.slice(0, 150));
       return { text: '', success: false, error: `Z.AI ${response.status}` };
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
-
-    if (!content) {
-      return { text: '', success: false, error: 'Empty response' };
-    }
-
+    if (!content) return { text: '', success: false, error: 'Empty Z.AI response' };
     return { text: content, success: true };
   } catch (err) {
     clearTimeout(timeout);
-    const isAbort = err instanceof Error && err.name === 'AbortError';
-    console.error('[AI] Z.AI failed:', isAbort ? 'timeout' : err);
-    return { text: '', success: false, error: isAbort ? 'timeout' : 'Request failed' };
+    return { text: '', success: false, error: err instanceof Error ? err.message : 'Z.AI failed' };
   }
 }
 
