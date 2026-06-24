@@ -557,7 +557,7 @@ export default function ProviderDashboardScreen() {
               className="bg-white rounded-xl p-3 text-center shadow-sm"
             >
               <Bot className="h-5 w-5 text-purple-600 mx-auto mb-1" />
-              <span className="text-[9px] text-gray-600">AI Help</span>
+              <span className="text-[9px] text-gray-600">Help &amp; FAQ</span>
             </button>
           </div>
         </div>

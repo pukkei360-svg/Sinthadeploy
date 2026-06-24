@@ -207,7 +207,7 @@ export default function HelpScreen() {
                 Khangabok Moirang Palli Bazar, Manipur, India
               </p>
               <p className="text-xs text-gray-600 mt-2 leading-relaxed">
-                SINTHA was founded and developed by Irabot Laishram. As an AI enthusiast and passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
+                SINTHA was founded and developed by Irabot Laishram. As a passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
               </p>
               <p className="text-[11px] text-gray-400 mt-2">
                 Ownership: SINTHA is owned and managed by Irabot Laishram.

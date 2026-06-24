@@ -23,8 +23,8 @@ const meeteiMayek = Noto_Sans_Meetei_Mayek({
 
 export const metadata: Metadata = {
   title: "SINTHA - Trusted Hands. Trusted Services.",
-  description: "Manipur's trusted service marketplace. Find verified providers for home services, education, transport, events, beauty, and repairs. Zero commission, AI-powered.",
-  keywords: ["SINTHA", "Manipur", "services", "marketplace", "verified providers", "zero commission", "AI powered"],
+  description: "Manipur's trusted service marketplace. Find verified providers for home services, education, transport, events, beauty, and repairs. Zero commission, trusted.",
+  keywords: ["SINTHA", "Manipur", "services", "marketplace", "verified providers", "zero commission", "trusted"],
   authors: [{ name: "SINTHA Team" }],
   // App icons — Meitei Mayek ꯁ (Sa) on blue gradient
   icons: {

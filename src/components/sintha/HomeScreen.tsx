@@ -195,7 +195,7 @@ export default function HomeScreen() {
           <div className="absolute right-8 -bottom-4 w-20 h-20 bg-white/5 rounded-full" />
           <h2 className="text-lg font-bold relative z-10">Find Trusted Services</h2>
           <h3 className="text-lg font-bold relative z-10">in Manipur</h3>
-          <p className="text-sm opacity-80 mt-1 relative z-10">Zero commission &bull; AI powered &bull; Verified providers</p>
+          <p className="text-sm opacity-80 mt-1 relative z-10">Zero commission &bull; Verified providers &bull; Trusted by Manipur</p>
           <div className="flex items-center gap-3 mt-3 relative z-10">
             <div className="flex items-center gap-1 bg-white/20 rounded-full px-2.5 py-1">
               <Shield className="h-3 w-3" />
@@ -207,7 +207,7 @@ export default function HomeScreen() {
             </div>
             <div className="flex items-center gap-1 bg-white/20 rounded-full px-2.5 py-1">
               <Bot className="h-3 w-3" />
-              <span className="text-[10px] font-medium">AI Match</span>
+              <span className="text-[10px] font-medium">Quick Match</span>
             </div>
           </div>
         </div>
@@ -476,7 +476,7 @@ export default function HomeScreen() {
             </div>
             <div className="bg-gradient-to-br from-purple-50 to-white rounded-xl p-4 shadow-sm">
               <Bot className="h-6 w-6 text-purple-600 mb-2" />
-              <p className="text-xs font-semibold text-gray-800">AI Assistant</p>
+              <p className="text-xs font-semibold text-gray-800">Help &amp; FAQ</p>
               <p className="text-[10px] text-gray-500 mt-1">Smart matching & guidance</p>
             </div>
             <div className="bg-gradient-to-br from-amber-50 to-white rounded-xl p-4 shadow-sm">

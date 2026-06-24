@@ -295,7 +295,7 @@ export default function RoleSelectScreen() {
 
       {/* Trust indicators */}
       <div className="mt-8 text-center">
-        <p className="text-xs text-gray-400">Built for Manipur &bull; Zero commission &bull; AI powered</p>
+        <p className="text-xs text-gray-400">Built for Manipur &bull; Zero commission &bull; Trusted</p>
       </div>
     </div>
   )

@@ -5,7 +5,7 @@ import { IndianRupee, ShieldCheck, Briefcase, Bot } from 'lucide-react'
 
 /**
  * HighlightCarousel — animated auto-rotating banner carousel for the
- * LandingScreen. Shows 3 AI-generated highlight slides explaining how
+ * LandingScreen. Shows 3 feature highlight slides explaining how
  * SINTHA benefits the people of Manipur.
  *
  * Features:
@@ -14,7 +14,7 @@ import { IndianRupee, ShieldCheck, Briefcase, Bot } from 'lucide-react'
  *   - Swipeable on mobile (touch events)
  *   - Dot indicators for manual navigation
  *   - Smooth slide transition with CSS transforms
- *   - Each slide: AI image + gradient overlay + headline + subtext + icon
+ *   - Each slide: feature image + gradient overlay + headline + subtext + icon
  */
 
 interface Slide {
@@ -52,7 +52,7 @@ const SLIDES: Slide[] = [
     iconColor: 'text-amber-600',
     iconBg: 'bg-amber-100',
     headline: 'Post a Job, Get Quotes',
-    subtext: 'Describe what you need and let providers come to you with competitive quotes. AI-powered matching finds the right person.',
+    subtext: 'Describe what you need and let providers come to you with competitive quotes. Post a job and let providers come to you with quotes.',
     gradient: 'from-amber-600/80 to-orange-600/80',
   },
 ]
@@ -143,7 +143,7 @@ export default function HighlightCarousel() {
           const Icon = slide.icon
           return (
             <div key={index} className="w-full shrink-0 relative">
-              {/* AI-generated background image */}
+              {/* background image */}
               <div className="relative h-48 sm:h-56 overflow-hidden">
                 <img
                   src={slide.image}

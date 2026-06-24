@@ -10,7 +10,7 @@ export default function LandingScreen() {
 
   const features = [
     { icon: Shield, title: 'No Commission', desc: '100% earnings to providers' },
-    { icon: Bot, title: 'AI Powered', desc: 'Smart matching & assistance' },
+    { icon: Zap, title: 'Fast & Easy', desc: 'Quick booking in minutes' },
     { icon: Star, title: 'Verified Providers', desc: 'Background checked pros' },
     { icon: Languages, title: 'Local Language', desc: 'Meitei Mayek support' },
   ]
@@ -77,8 +77,8 @@ export default function LandingScreen() {
           </div>
           <div className="w-px h-8 bg-white/30" />
           <div>
-            <p className="text-xl font-bold">AI</p>
-            <p className="text-[10px] opacity-60">Powered</p>
+            <p className="text-xl font-bold">Local</p>
+            <p className="text-[10px] opacity-60">Trusted</p>
           </div>
           <div className="w-px h-8 bg-white/30" />
           <div>

@@ -79,11 +79,11 @@ export default function ContactPage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-gray-900">In-App Support</p>
-                <p className="text-sm text-gray-600">Use the AI Assistant inside the SINTHA app</p>
+                <p className="text-sm text-gray-600">Use the Help & FAQ section inside the SINTHA app</p>
                 <a href="https://sinthadeploy.vercel.app" className="text-purple-600 hover:underline text-sm font-medium mt-1 inline-block">
                   Open SINTHA App
                 </a>
-                <p className="text-xs text-gray-500 mt-1">Available 24/7 — AI-powered instant responses</p>
+                <p className="text-xs text-gray-500 mt-1">Available 24/7 — instant answers to common questions</p>
               </div>
             </div>
           </section>
@@ -147,7 +147,7 @@ export default function ContactPage() {
           <section className="bg-gradient-to-br from-blue-50 to-white rounded-xl p-5 border border-blue-100">
             <h2 className="text-lg font-bold text-gray-900 mb-3">About the Creator</h2>
             <p className="text-sm text-gray-700 leading-relaxed">
-              <strong>SINTHA</strong> was founded and developed by <strong>Irabot Laishram</strong> of Khangabok Moirang Palli Bazar, Manipur, India. As an AI enthusiast and passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
+              <strong>SINTHA</strong> was founded and developed by <strong>Irabot Laishram</strong> of Khangabok Moirang Palli Bazar, Manipur, India. As a passionate web and app developer, he created SINTHA to simplify how people discover, connect with, and hire local service providers.
             </p>
             <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-blue-100">
               <strong>Ownership:</strong> SINTHA is owned and managed by Irabot Laishram.
