@@ -48,7 +48,6 @@ const HelpScreen = lazy(() => import('@/components/sintha/HelpScreen'))
 const SavedProvidersScreen = lazy(() => import('@/components/sintha/SavedProvidersScreen'))
 const SavedAddressesScreen = lazy(() => import('@/components/sintha/SavedAddressesScreen'))
 const ReferralsScreen = lazy(() => import('@/components/sintha/ReferralsScreen'))
-const PriceEstimatorScreen = lazy(() => import('@/components/sintha/PriceEstimatorScreen'))
 
 // Loading fallback shown while a lazy-loaded screen downloads
 function ScreenLoader() {
@@ -532,8 +531,6 @@ export default function Home() {
         return <S><SavedAddressesScreen /></S>
       case 'referrals':
         return <S><ReferralsScreen /></S>
-      case 'price-estimator':
-        return <S><PriceEstimatorScreen /></S>
       default:
         return <LandingScreen />
     }

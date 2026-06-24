@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api'
 import { uploadVerificationPhoto } from '@/lib/cloudinary'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon, Sparkles } from 'lucide-react'
+import { ArrowLeft, Briefcase, Loader2, MapPin, Calendar, IndianRupee, Zap, Camera, XCircle, Image as ImageIcon } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { cleanError } from '@/lib/clean-error'
 
@@ -19,7 +19,7 @@ const URGENCY_OPTIONS = [
 const MAX_PHOTOS = 2
 
 export default function PostJobScreen() {
-  const { navigate, user, categories, viewParams } = useAppStore()
+  const { navigate, user, categories } = useAppStore()
   const { toast } = useToast()
 
   const [categoryId, setCategoryId] = useState('')
@@ -30,58 +30,6 @@ export default function PostJobScreen() {
   const [preferredDate, setPreferredDate] = useState('')
   const [urgency, setUrgency] = useState('flexible')
   const [submitting, setSubmitting] = useState(false)
-
-  // AI Improve loading state — drives the spinner on the "AI Improve" button.
-  const [improveLoading, setImproveLoading] = useState(false)
-
-  // Pre-fill description if the user came from the AI Price Estimator's
-  // "Post this job →" button (viewParams.prefilledDescription).
-  useEffect(() => {
-    if (viewParams.prefilledDescription && !description) {
-      setDescription(viewParams.prefilledDescription)
-    }
-  }, [viewParams.prefilledDescription, description])
-
-  const handleAiImprove = async () => {
-    const desc = description.trim()
-    if (desc.length < 10 || improveLoading) return
-    setImproveLoading(true)
-    try {
-      const catName = categories.find((c) => c.id === categoryId)?.name
-      const data = await apiFetch<{
-        improvedTitle?: string
-        improvedDescription?: string
-        suggestedBudget?: number | null
-        tips?: string[]
-        qualityScore?: number
-        poweredBy?: string
-      }>('/ai/improve-job', {
-        method: 'POST',
-        body: JSON.stringify({
-          title: title.trim() || undefined,
-          description: desc,
-          category: catName,
-        }),
-      })
-      if (data.improvedTitle) setTitle(data.improvedTitle.slice(0, 80))
-      if (data.improvedDescription) setDescription(data.improvedDescription.slice(0, 1000))
-      // Also fill in suggested budget if the user hasn't set one
-      if (data.suggestedBudget && !budget) {
-        setBudget(String(data.suggestedBudget))
-      }
-      toast({
-        title: 'AI improved your post ✨',
-        description:
-          typeof data.qualityScore === 'number'
-            ? `Quality score: ${data.qualityScore}/100${data.suggestedBudget ? ` · Budget: ₹${data.suggestedBudget}` : ''}`
-            : 'SINTHA AI polished your title, description' + (data.suggestedBudget ? ' and budget' : ''),
-      })
-    } catch (err) {
-      toast({ title: 'AI Improve failed', description: cleanError(err) })
-    } finally {
-      setImproveLoading(false)
-    }
-  }
 
   // Photo attachments (optional, max 2)
   const [photoFiles, setPhotoFiles] = useState<File[]>([])
@@ -263,34 +211,10 @@ export default function PostJobScreen() {
 
         {/* Description */}
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="mb-2">
             <label className="text-sm font-semibold text-gray-800 block">
               Description <span className="text-red-500">*</span>
             </label>
-            {/* AI Improve button — only appears once the user has written at
-                least 10 characters, so it never feels like noise on an empty
-                form. Purple gradient + Sparkles icon ties it visually to the
-                other SINTHA AI surfaces. */}
-            {description.trim().length >= 10 && (
-              <button
-                type="button"
-                onClick={handleAiImprove}
-                disabled={improveLoading || submitting}
-                className="flex items-center gap-1.5 text-[11px] font-bold bg-gradient-to-r from-purple-600 to-violet-600 text-white px-2.5 py-1.5 rounded-full disabled:opacity-60 active:scale-95 transition-transform"
-              >
-                {improveLoading ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Improving...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3 w-3" />
-                    AI Improve
-                  </>
-                )}
-              </button>
-            )}
           </div>
           <textarea
             placeholder="Describe what you need done. E.g. 'The ceiling fan in my bedroom makes a noise when turned on. Need someone to check and repair it. I'm home after 5pm.'"
@@ -300,13 +224,8 @@ export default function PostJobScreen() {
             rows={5}
             className="w-full p-3 border border-gray-200 rounded-xl bg-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
-          <div className="flex items-center justify-between mt-1">
+          <div className="mt-1">
             <p className="text-[10px] text-gray-400">{description.length}/1000</p>
-            {description.trim().length < 10 && (
-              <p className="text-[10px] text-gray-400">
-                Write {10 - description.trim().length} more chars to enable AI Improve
-              </p>
-            )}
           </div>
         </div>
 
@@ -390,18 +309,10 @@ export default function PostJobScreen() {
 
         {/* Budget */}
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="mb-2">
             <label className="text-sm font-semibold text-gray-800 flex items-center gap-1">
               <IndianRupee className="h-3.5 w-3.5" /> Budget (optional)
             </label>
-            <button
-              type="button"
-              onClick={() => navigate('price-estimator')}
-              className="text-[11px] font-medium text-purple-700 hover:text-purple-800 flex items-center gap-1"
-            >
-              <Sparkles className="h-3 w-3" />
-              Estimate with AI
-            </button>
           </div>
           <Input
             type="number"

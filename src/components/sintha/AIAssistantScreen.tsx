@@ -1,110 +1,48 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
 import { useAppStore } from '@/lib/store'
-import { apiFetch } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import BottomNav from './BottomNav'
-import { ArrowLeft, Sparkles, Send, Loader2, CheckCircle, Crown, Star, ChevronRight } from 'lucide-react'
+import { ArrowLeft, HelpCircle, Mail, ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 
-interface ProviderMatch {
-  providerId: string
-  name: string
-  photoUrl?: string
-  category?: string
-  rating: number
-  hourlyRate?: number
-  verified?: boolean
-  pro?: boolean
-}
-
-interface AIChatMessage {
-  id: string
-  content: string
-  isBot: boolean
-  timestamp: Date
-  poweredBy?: string
-  providerMatches?: ProviderMatch[]
-}
+const QUICK_ANSWERS = [
+  {
+    q: 'How do I book a service?',
+    a: 'Browse categories from Home → select a provider → tap "Book Now" → fill date/time/address → submit. The booking is auto-confirmed!',
+  },
+  {
+    q: 'What is SINTHA PRO?',
+    a: 'PRO is a monthly subscription for providers (₹199/month). Benefits: higher search ranking, PRO badge, homepage visibility. Tap "SINTHA PRO" in your Profile to subscribe.',
+  },
+  {
+    q: 'How does the referral program work?',
+    a: 'Share your referral code (Profile → Refer & Earn). When someone signs up with your code and buys PRO, you earn 30% — every month, for life!',
+  },
+  {
+    q: 'How do I reschedule a booking?',
+    a: 'Open the booking → tap "Reschedule" → pick a new date/time. The other party is notified instantly.',
+  },
+  {
+    q: 'How do I cancel a booking?',
+    a: 'Open the booking → tap "Cancel" → choose a reason. The other party is notified with the reason.',
+  },
+  {
+    q: 'Is SINTHA free?',
+    a: 'Yes! Zero commission — providers keep 100% of earnings. Only PRO subscription is optional (₹199/month). Clients pay providers directly for services.',
+  },
+  {
+    q: 'How do I become a verified provider?',
+    a: 'Go to Profile → Get Verified. Upload your Aadhaar (front + back) and a passport photo. Admin reviews within 1-2 business days.',
+  },
+  {
+    q: 'Need more help?',
+    a: 'Email us at sinthahelp@gmail.com — we respond within 24 hours.',
+  },
+]
 
 export default function AIAssistantScreen() {
   const { navigate } = useAppStore()
-  const [chatMessages, setChatMessages] = useState<AIChatMessage[]>([
-    {
-      id: 'welcome',
-      content: "Hi! I'm SINTHA AI, your smart assistant. I can help you find providers, guide you through booking, and answer any questions about SINTHA. What can I help you with today?",
-      isBot: true,
-      timestamp: new Date(),
-      poweredBy: 'SINTHA AI',
-    },
-  ])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chatMessages])
-
-  const quickActions = [
-    'Find me an electrician',
-    'How do I book a service?',
-    'What is SINTHA PRO?',
-    'Best tutor near me',
-  ]
-
-  const sendMessage = async (text?: string) => {
-    const msgText = text || input.trim()
-    if (!msgText || loading) return
-
-    const userMsg: AIChatMessage = {
-      id: `user-${Date.now()}`,
-      content: msgText,
-      isBot: false,
-      timestamp: new Date(),
-    }
-    setChatMessages((prev) => [...prev, userMsg])
-    setInput('')
-    setLoading(true)
-
-    try {
-      const conversationHistory = chatMessages
-        .slice(-6)
-        .map((msg) => ({
-          role: msg.isBot ? 'assistant' : 'user',
-          content: msg.content,
-        }))
-
-      const data = await apiFetch('/ai/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          message: msgText,
-          conversationHistory,
-        }),
-      })
-
-      const botMsg: AIChatMessage = {
-        id: `bot-${Date.now()}`,
-        content: data.response || "I'm sorry, I couldn't process that. Please try again.",
-        isBot: true,
-        timestamp: new Date(),
-        poweredBy: data.poweredBy,
-        providerMatches: data.providerMatches || [],
-      }
-      setChatMessages((prev) => [...prev, botMsg])
-    } catch (err: unknown) {
-      const botMsg: AIChatMessage = {
-        id: `bot-${Date.now()}`,
-        content: "I'm having trouble connecting right now. Please try again, or browse providers from the Home screen!",
-        isBot: true,
-        timestamp: new Date(),
-      }
-      setChatMessages((prev) => [...prev, botMsg])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col pb-20">
@@ -114,170 +52,56 @@ export default function AIAssistantScreen() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="w-8 h-8 rounded-full sintha-gradient flex items-center justify-center">
-          <Sparkles className="h-4 w-4 text-white" />
+          <HelpCircle className="h-4 w-4 text-white" />
         </div>
         <div>
-          <h1 className="text-sm font-bold text-[#1E293B]">SINTHA AI</h1>
+          <h1 className="text-sm font-bold text-[#1E293B]">Help & FAQ</h1>
           <p className="text-[10px] text-[#10B981] flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-            Online
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+            Quick answers
           </p>
         </div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 sintha-scrollbar">
-        {chatMessages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.isBot ? 'justify-start' : 'justify-end'}`}>
-            <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                msg.isBot
-                  ? 'bg-white text-[#1E293B] shadow-sm rounded-bl-md border border-[#E2E8F0]'
-                  : 'sintha-gradient text-white rounded-br-md'
-              }`}
+      {/* Quick answers */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+        <p className="text-xs text-[#64748B] mb-2">
+          Tap a question to see the answer:
+        </p>
+        {QUICK_ANSWERS.map((item, i) => (
+          <div key={i} className="bg-white rounded-xl border border-[#E2E8F0] overflow-hidden">
+            <button
+              onClick={() => setOpenIndex(openIndex === i ? null : i)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left"
             >
-              {/* AI response text — render with basic markdown formatting */}
-              {msg.isBot ? (
-                <div className="text-sm leading-relaxed">
-                  {msg.content.split('\n').map((line, i) => {
-                    // Render **bold** text
-                    const parts = line.split(/(\*\*[^*]+\*\*)/g)
-                    const rendered = parts.map((part, j) => {
-                      if (part.startsWith('**') && part.endsWith('**')) {
-                        return <strong key={j} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
-                      }
-                      return <span key={j}>{part}</span>
-                    })
-                    // Check if line is a numbered list item (1. 2. etc.)
-                    if (/^\d+\.\s/.test(line.trim())) {
-                      return <div key={i} className="ml-3 mb-0.5">{rendered}</div>
-                    }
-                    // Check if line is a bullet (- or *)
-                    if (/^[-*]\s/.test(line.trim())) {
-                      return <div key={i} className="ml-3 mb-0.5 flex gap-1"><span className="text-blue-500">•</span><span>{rendered}</span></div>
-                    }
-                    if (line.trim() === '') return <div key={i} className="h-2" />
-                    return <p key={i} className="mb-1">{rendered}</p>
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm whitespace-pre-line">{msg.content}</p>
-              )}
-              {/* Clickable provider recommendation cards — polished design */}
-              {msg.isBot && msg.providerMatches && msg.providerMatches.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Recommended Providers</p>
-                  {msg.providerMatches.map((pm, i) => (
-                    <button
-                      key={i}
-                      onClick={() => navigate('provider-profile', { providerId: pm.providerId })}
-                      className="w-full bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 rounded-xl p-3 flex items-center gap-3 text-left transition-all border border-blue-100 active:scale-[0.98]"
-                    >
-                      <div className="relative shrink-0">
-                        <img
-                          src={pm.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(pm.name)}&background=2563eb&color=fff&size=48`}
-                          alt={pm.name}
-                          className="w-11 h-11 rounded-full border-2 border-white shadow-sm"
-                        />
-                        {pm.verified && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                            <CheckCircle className="h-2.5 w-2.5 text-white" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-bold text-gray-800 truncate">{pm.name}</p>
-                          {pm.pro && (
-                            <span className="text-[8px] bg-gradient-to-r from-amber-400 to-orange-400 text-white px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
-                              <Crown className="h-2.5 w-2.5" />PRO
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-gray-500 truncate">{pm.category}</span>
-                          {typeof pm.rating === 'number' && pm.rating > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-gray-600">
-                              <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-                              {pm.rating.toFixed(1)}
-                            </span>
-                          )}
-                          {pm.hourlyRate ? (
-                            <span className="text-[10px] font-semibold text-green-600">₹{pm.hourlyRate}/hr</span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <div className="shrink-0 flex items-center gap-1">
-                        <span className="text-[10px] text-blue-600 font-bold">View</span>
-                        <ChevronRight className="h-3.5 w-3.5 text-blue-400" />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className={`flex items-center gap-2 mt-1 ${msg.isBot ? 'text-[#94A3B8]' : 'text-white/60'}`}>
-                <p className="text-[10px]">
-                  {msg.timestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-                {msg.isBot && msg.poweredBy && (
-                  <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
-                    {msg.poweredBy}
-                  </span>
-                )}
+              <span className="text-sm font-medium text-[#1E293B]">{item.q}</span>
+              <ChevronDown
+                className={`h-4 w-4 text-[#94A3B8] transition-transform shrink-0 ml-2 ${
+                  openIndex === i ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            {openIndex === i && (
+              <div className="px-4 pb-3">
+                <p className="text-sm text-[#64748B] leading-relaxed">{item.a}</p>
               </div>
-            </div>
+            )}
           </div>
         ))}
 
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white text-[#1E293B] shadow-sm rounded-2xl rounded-bl-md border border-[#E2E8F0] px-4 py-3 flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-[#0F4C81]" />
-              <span className="text-sm text-[#64748B]">SINTHA AI is thinking...</span>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Quick Actions */}
-      {chatMessages.length <= 1 && !loading && (
-        <div className="px-4 pb-3 flex gap-2 overflow-x-auto">
-          {quickActions.map((action) => (
-            <Button
-              key={action}
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap text-xs rounded-full border-[#0F4C81] text-[#0F4C81] hover:bg-[#0F4C81] hover:text-white"
-              onClick={() => sendMessage(action)}
-            >
-              <Sparkles className="h-3 w-3 mr-1" />
-              {action}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="bg-white border-t border-[#E2E8F0] p-3 sticky bottom-16">
-        <div className="flex items-center gap-2 max-w-lg mx-auto">
-          <Input
-            placeholder="Ask SINTHA AI anything..."
-            className="flex-1 bg-[#F8FAFC] border-[#E2E8F0] rounded-full"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !loading && sendMessage()}
-            disabled={loading}
-          />
-          <Button
-            size="icon"
-            className="sintha-gradient text-white rounded-full h-9 w-9 shrink-0"
-            onClick={() => sendMessage()}
-            disabled={!input.trim() || loading}
+        {/* Contact support */}
+        <div className="sintha-gradient rounded-2xl p-5 text-white mt-4">
+          <h3 className="font-bold mb-1">Still need help?</h3>
+          <p className="text-sm opacity-90 mb-3">
+            Email us and we&apos;ll respond within 24 hours.
+          </p>
+          <a
+            href="mailto:sinthahelp@gmail.com"
+            className="bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
+            <Mail className="h-4 w-4" />
+            sinthahelp@gmail.com
+          </a>
         </div>
       </div>
 
