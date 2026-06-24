@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAI } from '@/lib/ai';
+import { callAI, extractJSON } from '@/lib/ai';
 
 /**
  * POST /api/ai/optimize-profile
@@ -55,7 +55,7 @@ Score guide: 90+ excellent, 70-89 good, 50-69 average, <50 needs work.`;
     }
 
     let parsed: any = {};
-    try { parsed = JSON.parse(result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); }
+    try { parsed = extractJSON(result.text); }
     catch { parsed = { score: 50, strengths: [], improvements: [], suggestedDescription: '', suggestedRate: {}, tips: [] }; }
 
     return NextResponse.json({ ...parsed, poweredBy: 'SINTHA AI' });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAI } from '@/lib/ai';
+import { callAI, extractJSON } from '@/lib/ai';
 
 /**
  * POST /api/ai/festival-broadcast
@@ -103,7 +103,7 @@ If no festival is near today, return isFestival: false with empty fields.`;
     let festivalData: any = { isFestival: false };
     if (result.success) {
       try {
-        festivalData = JSON.parse(result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+        festivalData = extractJSON(result.text) || { isFestival: false };
       } catch {}
     }
 

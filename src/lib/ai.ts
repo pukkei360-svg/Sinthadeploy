@@ -164,3 +164,48 @@ async function tryOpenRouter(
     return { text: '', success: false, error: isAbort ? 'timeout' : 'Request failed' }
   }
 }
+
+/**
+ * Extract JSON from an AI response that may be wrapped in markdown
+ * code fences (```json ... ```) or have extra text before/after the JSON.
+ * 
+ * Used by smart-search, estimate-price, optimize-profile, and improve-job
+ * endpoints to parse the AI's JSON response.
+ */
+export function extractJSON(text: string): any | null {
+  if (!text) return null
+  
+  // Strategy 1: Try parsing the whole text as JSON
+  try {
+    return JSON.parse(text.trim())
+  } catch {}
+
+  // Strategy 2: Remove markdown code fences and try again
+  const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+  try {
+    return JSON.parse(cleaned)
+  } catch {}
+
+  // Strategy 3: Find the first { and last } and extract between them
+  const firstBrace = cleaned.indexOf('{')
+  const lastBrace = cleaned.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const jsonStr = cleaned.substring(firstBrace, lastBrace + 1)
+    try {
+      return JSON.parse(jsonStr)
+    } catch {}
+  }
+
+  // Strategy 4: Find the first [ and last ] (for arrays)
+  const firstBracket = cleaned.indexOf('[')
+  const lastBracket = cleaned.lastIndexOf(']')
+  if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+    const jsonStr = cleaned.substring(firstBracket, lastBracket + 1)
+    try {
+      return JSON.parse(jsonStr)
+    } catch {}
+  }
+
+  console.error('[AI] Could not extract JSON from:', text.slice(0, 200))
+  return null
+}

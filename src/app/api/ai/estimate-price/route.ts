@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAI } from '@/lib/ai';
+import { callAI, extractJSON } from '@/lib/ai';
 
 /**
  * POST /api/ai/estimate-price
@@ -49,7 +49,7 @@ All prices in INR. Base on provider rates + job complexity. Always give a range.
     }
 
     let parsed: any = {};
-    try { parsed = JSON.parse(result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); }
+    try { parsed = extractJSON(result.text); }
     catch { parsed = { lowEstimate: Math.round(minRate), highEstimate: Math.round(maxRate * 3), medianEstimate: Math.round(avgRate * 1.5), estimatedDuration: '1-3 hours', factors: ['Job complexity'], tips: 'Post a job to get quotes.' }; }
 
     return NextResponse.json({ ...parsed, currency: 'INR', poweredBy: 'SINTHA AI' });

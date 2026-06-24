@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAI } from '@/lib/ai';
+import { callAI, extractJSON } from '@/lib/ai';
 
 /**
  * POST /api/ai/smart-search
@@ -68,7 +68,7 @@ Rules: Max 5 matches sorted by matchScore desc. Only include score >= 40. If no 
 
     let parsed: any = {};
     try {
-      parsed = JSON.parse(result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+      parsed = extractJSON(result.text);
     } catch {
       return NextResponse.json({ matches: [], summary: result.text, suggestions: '', poweredBy: 'SINTHA AI' });
     }

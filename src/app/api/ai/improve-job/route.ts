@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callAI } from '@/lib/ai';
+import { callAI, extractJSON } from '@/lib/ai';
 
 /**
  * POST /api/ai/improve-job
@@ -39,7 +39,7 @@ Rules:
     }
 
     let parsed: any = {};
-    try { parsed = JSON.parse(result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()); }
+    try { parsed = extractJSON(result.text); }
     catch { parsed = { improvedTitle: title || description.slice(0, 50), improvedDescription: description, tips: [], qualityScore: 50 }; }
 
     return NextResponse.json({ ...parsed, poweredBy: 'SINTHA AI' });
