@@ -47,13 +47,15 @@ export default function ProviderDashboardScreen() {
       if (!user) return
       setLoading(true)
       try {
-        // Load provider profile
-        const provData = await apiFetch(`/providers?userId=${user.id}`)
+        // Load provider profile + bookings in parallel (was sequential)
+        const [provData, bookingData] = await Promise.all([
+          apiFetch(`/providers?userId=${user.id}`),
+          apiFetch(`/bookings?providerId=${user.id}`),
+        ])
         const providers = provData.providers || []
         if (providers.length > 0) {
           setMyProviderProfile(providers[0])
           setAvailability(providers[0].availability || 'available')
-          // Load existing packages and offers
           if (providers[0].packages) {
             try { setPackages(JSON.parse(providers[0].packages)) } catch {}
           }
@@ -62,17 +64,12 @@ export default function ProviderDashboardScreen() {
           }
         }
 
-        // Load bookings
-        const bookingData = await apiFetch(`/bookings?providerId=${user.id}`)
         setBookings(bookingData.bookings || [])
 
-        // Load earnings summary (total ₹ earned, this month, etc.)
-        try {
-          const earningsData = await apiFetch(`/provider/earnings?providerId=${user.id}`)
-          setEarnings(earningsData)
-        } catch {
-          // Earnings endpoint might fail if migration hasn't run — silent
-        }
+        // Load earnings summary (non-blocking — don't wait for it)
+        apiFetch(`/provider/earnings?providerId=${user.id}`)
+          .then((earningsData) => setEarnings(earningsData))
+          .catch(() => {})
       } catch {
         // Use existing data
       } finally {

@@ -49,16 +49,30 @@ export default function Home() {
     setMyProviderProfile, user, setNotifications,
   } = useAppStore()
 
-  // Boot-time connectivity check
-  const [bootOnline, setBootOnline] = useState<boolean | null>(null)
+  // Boot-time connectivity check — only runs ONCE per session.
+  // If the user is already logged in (has a saved session), skip the check
+  // and render immediately. The OfflineBootstrap banner handles mid-session
+  // offline states.
+  const [bootOnline, setBootOnline] = useState<boolean | null>(() => {
+    // If user has a saved session, skip the boot check — render immediately.
+    // The auth listener will handle the session restoration.
+    if (typeof window !== 'undefined' && localStorage.getItem('sintha_user')) {
+      return true
+    }
+    return null
+  })
 
   useEffect(() => {
+    // Skip if already determined (user has saved session)
+    if (bootOnline !== null) return
+
     let cancelled = false
     const check = async () => {
       try {
+        // Quick HEAD request (lighter than GET) to check connectivity
         const url = `/api/push-test?_=${Date.now()}`
         const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 5000)
+        const timeout = setTimeout(() => controller.abort(), 3000)
         const res = await fetch(url, {
           method: 'GET',
           signal: controller.signal,
@@ -68,12 +82,8 @@ export default function Home() {
         clearTimeout(timeout)
         if (cancelled) return
         if (res.ok) {
-          try {
-            const text = await res.text()
-            JSON.parse(text)
-            setBootOnline(true)
-            return
-          } catch {}
+          setBootOnline(true)
+          return
         }
         setBootOnline(false)
       } catch {
@@ -82,7 +92,7 @@ export default function Home() {
     }
     check()
     return () => { cancelled = true }
-  }, [])
+  }, [bootOnline])
 
   // Referral code pre-fill from /r/<code> redirect
   useEffect(() => {
