@@ -39,12 +39,30 @@ export default function ReferralsScreen() {
 
   const loadReferrals = async () => {
     if (!user) return
-    setLoading(true)
+    // Show the user's referral code immediately from the store (if available)
+    // so the screen renders fast, then fetch full data from the API.
+    if (user.referralCode) {
+      setData({
+        referralCode: user.referralCode,
+        referredBy: user.referredBy || null,
+        totalEarnings: 0,
+        pendingEarnings: 0,
+        paidEarnings: 0,
+        referralCount: 0,
+        proReferralCount: 0,
+        referrals: [],
+      })
+      setLoading(false)  // Show the code immediately
+    }
     try {
       const result = await apiFetch(`/referrals?userId=${user.id}`)
       setData(result)
     } catch (err) {
       console.error('Failed to load referrals:', err)
+      // If we already have the code from the store, don't show loading
+      if (!user.referralCode) {
+        setLoading(false)
+      }
     } finally {
       setLoading(false)
     }

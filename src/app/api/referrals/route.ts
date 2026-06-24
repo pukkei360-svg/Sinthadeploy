@@ -31,10 +31,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
+    // Single query — get user with name + referralCode + referredBy
     const user = await db.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
+        name: true,
         referralCode: true,
         referredBy: true,
       },
@@ -45,59 +47,38 @@ export async function GET(request: NextRequest) {
     }
 
     // Auto-generate a referral code if the user doesn't have one yet.
-    // This handles existing users who signed up before the referral feature.
-    // The code is based on the user's name + random chars for uniqueness.
     let referralCode = user.referralCode;
     if (!referralCode) {
-      // Fetch the user's name to generate a personalized code
-      const userWithName = await db.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      });
-      referralCode = generateReferralCode(userWithName?.name || 'USER');
+      referralCode = generateReferralCode(user.name || 'USER');
       try {
         await db.user.update({
           where: { id: userId },
           data: { referralCode },
         });
       } catch {
-        // If the code collides, generate another one with more random chars
-        referralCode = generateReferralCode(userWithName?.name || 'USER', 4);
+        referralCode = generateReferralCode(user.name || 'USER', 4);
         try {
           await db.user.update({
             where: { id: userId },
             data: { referralCode },
           });
-        } catch {
-          // Give up — return the code without saving (it'll regenerate next time)
-        }
+        } catch {}
       }
     }
 
-    // Find all users who were referred by this user's code
-    const referredUsers = await db.user.findMany({
-      where: { referredBy: referralCode },
-      select: {
-        id: true,
-        name: true,
-        isPro: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    }).catch(() => []);
-
-    // Find all referral earnings for this user (as referrer)
-    const earnings = await db.referralEarning.findMany({
-      where: { referrerId: userId },
-      select: {
-        id: true,
-        amount: true,
-        status: true,
-        createdAt: true,
-        referredUserId: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    }).catch(() => []);
+    // Run referred users + earnings queries IN PARALLEL (was sequential)
+    const [referredUsers, earnings] = await Promise.all([
+      db.user.findMany({
+        where: { referredBy: referralCode },
+        select: { id: true, name: true, isPro: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      }).catch(() => []),
+      db.referralEarning.findMany({
+        where: { referrerId: userId },
+        select: { id: true, amount: true, status: true, createdAt: true, referredUserId: true },
+        orderBy: { createdAt: 'desc' },
+      }).catch(() => []),
+    ]);
 
     const totalEarnings = earnings.reduce((sum, e) => sum + e.amount, 0);
     const pendingEarnings = earnings
