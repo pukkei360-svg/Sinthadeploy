@@ -39,7 +39,7 @@ export default function MyBookingsScreen() {
       }
     }
     loadBookings()
-  }, [user, setBookings])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = activeTab === 'all'
     ? bookings
