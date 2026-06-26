@@ -52,19 +52,21 @@ export default function AdminUsersScreen() {
   const [banReasonText, setBanReasonText] = useState('')
   const [acting, setActing] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const data = await apiFetch('/admin/users')
-        setUsers(data.users || [])
-      } catch {
-        toast({ title: 'Error', description: 'Failed to load users' })
-      } finally {
-        setLoading(false)
-      }
+  const loadUsers = async () => {
+    setLoading(true)
+    try {
+      const data = await apiFetch('/admin/users')
+      setUsers(data.users || [])
+    } catch {
+      toast({ title: 'Error', description: 'Failed to load users' })
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadUsers()
-  }, [toast])
+  }, [toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = users.filter((u) => {
     // Role filter — admins are hidden by default (set to 'all' shows everyone,
@@ -106,9 +108,11 @@ export default function AdminUsersScreen() {
         }),
       })
 
-      // For 'reject', the user is deleted — remove from list
+      // For 'reject', the user is deleted — remove from list immediately,
+      // then re-fetch from server to guarantee sync.
       if (action === 'reject') {
         setUsers((prev) => prev.filter((u) => u.id !== userId))
+        setTimeout(() => loadUsers(), 500)
       } else {
         // Update local state
         setUsers((prev) =>
@@ -184,22 +188,98 @@ export default function AdminUsersScreen() {
     if (!confirm('Delete? User can re-register. Use "Reject" to ban email.')) return
     try {
       await apiFetch(`/admin/users/${userId}`, { method: 'DELETE' })
+      // Remove from local state immediately (instant UI feedback)
       setUsers((prev) => prev.filter((u) => u.id !== userId))
-      toast({ title: 'Deleted' })
+      toast({ title: 'Deleted', description: 'User permanently removed' })
+      // Re-fetch the full list from the server to guarantee the list
+      // is in sync with the database. This catches any edge case where
+      // the local state diverges from the server (e.g., cascade deletes
+      // that also affected other users).
+      setTimeout(() => loadUsers(), 500)
     } catch (err: unknown) {
       toast({ title: 'Error', description: cleanError(err) })
     }
   }
 
+  // ── Bulk-delete ALL non-admin users ──
+  // Deletes every non-admin user and ALL their related data (provider
+  // profiles, bookings, chat, reviews, jobs, etc.). Admin accounts are
+  // NEVER deleted. Users can sign up again with the same email.
+  const clearAllUsers = async () => {
+    const nonAdminCount = users.filter((u) => u.role !== 'admin').length
+    if (nonAdminCount === 0) {
+      toast({ title: 'Nothing to delete', description: 'No non-admin users found.' })
+      return
+    }
+
+    // Triple confirmation — this is destructive and irreversible
+    const step1 = confirm(
+      `⚠️ DELETE ALL ${nonAdminCount} NON-ADMIN USERS?\n\n` +
+      `This will permanently delete:\n` +
+      `• All ${nonAdminCount} client/provider accounts\n` +
+      `• Their provider profiles (removed from service portal)\n` +
+      `• All bookings, chat messages, reviews\n` +
+      `• All jobs, quotes, favorites, saved addresses\n` +
+      `• All referral earnings\n\n` +
+      `Admin accounts are NOT affected.\n\n` +
+      `Users CAN sign up again with the same email for a fresh start.\n\n` +
+      `Click OK to continue.`
+    )
+    if (!step1) return
+
+    const step2 = confirm(
+      `Are you ABSOLUTELY SURE?\n\n` +
+      `This will delete ${nonAdminCount} users and ALL their data.\n` +
+      `This action CANNOT be undone.\n\n` +
+      `Type confirmation will be required next.`
+    )
+    if (!step2) return
+
+    const step3 = prompt(
+      `Type DELETE ALL to confirm (case-sensitive):`
+    )
+    if (step3 !== 'DELETE ALL') {
+      toast({ title: 'Cancelled', description: 'Confirmation text did not match.' })
+      return
+    }
+
+    setActing('bulk-delete')
+    try {
+      const result = await apiFetch('/admin/users', {
+        method: 'DELETE',
+        body: JSON.stringify({
+          adminId: adminUser?.id,
+          confirm: 'DELETE ALL',
+        }),
+      })
+      toast({
+        title: 'Bulk delete complete',
+        description: `Deleted ${result.deletedCount} of ${result.totalFound} users.`,
+      })
+      // Reload the user list from the server
+      await loadUsers()
+    } catch (err: unknown) {
+      toast({
+        title: 'Bulk delete failed',
+        description: cleanError(err),
+        variant: 'destructive',
+      })
+    } finally {
+      setActing(null)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white sticky top-0 z-40 px-4 py-3 border-b border-gray-100">
+      {/* Header — Material-style top app bar */}
+      <div className="sintha-top-bar px-4 py-3">
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={() => navigate('admin-dashboard')} className="text-gray-600">
+          <button onClick={() => navigate('admin-dashboard')} className="text-white p-1.5 rounded-full hover:bg-white/10 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-bold text-gray-800">Users</h1>
-          <Badge variant="secondary" className="text-[10px]">{users.length}</Badge>
+          <h1 className="text-lg font-bold text-white">Users</h1>
+          <Badge className="bg-white/20 text-white border-0 text-[10px]">{users.length}</Badge>
+          <div className="flex-1" />
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -232,6 +312,23 @@ export default function AdminUsersScreen() {
           ))}
         </div>
       </div>
+
+      {/* Bulk actions bar — Clear All Non-Admin Users */}
+      {users.length > 0 && roleFilter !== 'admin' && (
+        <div className="px-4 py-2 bg-red-50 border-b border-red-100 flex items-center justify-between">
+          <p className="text-xs text-red-700 font-medium">
+            {users.filter((u) => u.role !== 'admin').length} non-admin user(s) in the list
+          </p>
+          <button
+            onClick={() => clearAllUsers()}
+            disabled={!!acting || loading}
+            className="text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Clear All Users
+          </button>
+        </div>
+      )}
 
       <div className="divide-y divide-gray-100">
         {loading ? (
