@@ -457,3 +457,152 @@
   color: #0F172A;
   font-weight: 600;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Provider Card V2 — matches the HTML template exactly
+   Layout: Header (avatar + info) | Body (description + details) | Footer (buttons)
+   ═══════════════════════════════════════════════════════════════ */
+
+.provider-card-v2 {
+  background: #FFFFFF;
+  width: 100%;
+  max-width: 360px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+}
+.provider-card-v2:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* Header — avatar + provider info */
+.provider-card-v2-header {
+  display: flex;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #F3F4F6;
+}
+.provider-card-v2-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #E5E7EB;
+  flex-shrink: 0;
+}
+.provider-card-v2-info {
+  margin-left: 16px;
+  flex: 1;
+  min-width: 0;
+}
+.provider-card-v2-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.provider-card-v2-title {
+  font-size: 0.875rem;
+  color: #6B7280;
+  margin-top: 4px;
+}
+.provider-card-v2-rating {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #F59E0B;
+  margin-top: 6px;
+  font-weight: 600;
+}
+.provider-card-v2-rating span {
+  color: #9CA3AF;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* Body — description + job details */
+.provider-card-v2-body {
+  padding: 24px;
+}
+.provider-card-v2-description {
+  font-size: 0.875rem;
+  color: #4B5563;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.provider-card-v2-details {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.provider-card-v2-details li {
+  font-size: 0.875rem;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.provider-card-v2-details li:last-child {
+  margin-bottom: 0;
+}
+.provider-card-v2-detail-icon {
+  margin-right: 8px;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Footer — buttons */
+.provider-card-v2-footer {
+  padding: 0 24px 24px 24px;
+  display: flex;
+  gap: 12px;
+}
+.provider-card-v2-footer button {
+  flex: 1;
+  padding: 12px 0;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+/* Book Now button — blue (matches HTML template) */
+.provider-card-v2-btn-book {
+  background-color: #0F4C81;
+  color: #FFFFFF;
+  box-shadow: 0 4px 6px rgba(15, 76, 129, 0.2);
+}
+.provider-card-v2-btn-book:hover {
+  background-color: #0A3A61;
+}
+.provider-card-v2-btn-book:active {
+  transform: scale(0.98);
+}
+/* Call button — light gray with border */
+.provider-card-v2-btn-call {
+  background-color: #F3F4F6;
+  color: #111827;
+  border: 1px solid #D1D5DB;
+}
+.provider-card-v2-btn-call:hover {
+  background-color: #E5E7EB;
+}
+.provider-card-v2-btn-call:active {
+  transform: scale(0.98);
+}
