@@ -96,6 +96,17 @@ export default function RootLayout({
         <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
+        {/*
+          Preconnect to Firebase Auth servers — saves 200-500ms on login.
+          The browser establishes DNS + TCP + TLS handshake BEFORE the user
+          taps "Sign In". When signInWithEmailAndPassword() fires, the
+          connection is already warm and the request flies.
+        */}
+        <link rel="preconnect" href="https://www.googleapis.com" />
+        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+        <link rel="preconnect" href="https://sintha-2999b.firebaseapp.com" />
+        <link rel="dns-prefetch" href="https://www.googleapis.com" />
+        <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com" />
       </head>
       <body
         className={`${inter.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
