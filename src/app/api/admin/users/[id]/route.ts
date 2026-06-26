@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ensureSchemaMigrated } from '@/lib/migrate-schema';
-import { cascadeDeleteUser } from '@/lib/cascade-delete-user';
 
 // ─────────────────────────────────────────────────────────────
 // PUT /api/admin/users/[id]
@@ -221,9 +220,27 @@ export async function PATCH(
           console.warn('[reject] Could not add to BannedEmail table');
         }
 
-        // 2. Cascade-delete all related records + the user record itself.
-        //    Uses the shared helper to ensure consistency across all delete paths.
-        await cascadeDeleteUser(id);
+        // 2. Cascade-delete all related records (same as DELETE endpoint)
+        await db.passwordResetToken.deleteMany({ where: { userId: id } });
+        await db.subscription.deleteMany({ where: { userId: id } });
+        await db.verificationDoc.deleteMany({ where: { userId: id } });
+        await db.notification.deleteMany({ where: { userId: id } });
+        await db.review.deleteMany({ where: { authorId: id } });
+        await db.chatMessage.deleteMany({ where: { senderId: id } });
+        await db.chatConversation.deleteMany({
+          where: { OR: [{ participantA: id }, { participantB: id }] },
+        });
+        await db.booking.deleteMany({
+          where: { OR: [{ clientId: id }, { providerId: id }] },
+        });
+        await db.review.deleteMany({ where: { targetId: id } });
+        await db.claim.deleteMany({
+          where: { OR: [{ reporterId: id }, { subjectId: id }] },
+        });
+        await db.providerProfile.deleteMany({ where: { userId: id } });
+
+        // 3. Finally — delete the user
+        await db.user.delete({ where: { id } });
 
         return NextResponse.json({
           action: 'rejected',
@@ -290,15 +307,27 @@ export async function DELETE(
       );
     }
 
-    // Cascade-delete all related records + the user record itself.
-    // Uses the shared helper to ensure consistency across all delete paths.
-    // After this, the user is completely GONE from:
-    //   - Database (user table)
-    //   - Admin panel (users list)
-    //   - Service portal (provider list — providerProfile is deleted)
-    //   - Chat, bookings, reviews, jobs, notifications — all deleted
-    // The user can sign up again with the same email for a fresh start.
-    await cascadeDeleteUser(id);
+    // Cascade-delete all related records (foreign key constraints)
+    await db.passwordResetToken.deleteMany({ where: { userId: id } });
+    await db.subscription.deleteMany({ where: { userId: id } });
+    await db.verificationDoc.deleteMany({ where: { userId: id } });
+    await db.notification.deleteMany({ where: { userId: id } });
+    await db.review.deleteMany({ where: { authorId: id } });
+    await db.chatMessage.deleteMany({ where: { senderId: id } });
+    await db.chatConversation.deleteMany({
+      where: { OR: [{ participantA: id }, { participantB: id }] },
+    });
+    await db.booking.deleteMany({
+      where: { OR: [{ clientId: id }, { providerId: id }] },
+    });
+    await db.review.deleteMany({ where: { targetId: id } });
+    await db.claim.deleteMany({
+      where: { OR: [{ reporterId: id }, { subjectId: id }] },
+    });
+    await db.providerProfile.deleteMany({ where: { userId: id } });
+
+    // Finally — delete the user
+    await db.user.delete({ where: { id } });
 
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {

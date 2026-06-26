@@ -42,6 +42,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --color-sinthablue: #0F4C81;
+  --color-sinthagreen: #10B981;
   --color-sinthadark: #0F172A;
   --color-sinthalight: #F8FAFC;
   --color-sinthagold: #F59E0B;
@@ -52,6 +53,7 @@
 
 :root {
   --radius: 1rem;
+  /* SINTHA Design System */
   --background: #F8FAFC;
   --foreground: #0F1111;
   --card: #FFFFFF;
@@ -143,13 +145,7 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SINTHA — Clean Static Native App Theme (2026)
-   No animations. No hover transforms. No elastic effects.
-   Solid colors. Clean shadows. Native app feel.
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Primary gradient — static, no animation */
+/* SINTHA Custom Styles — Premium Dark Blue Theme */
 .sintha-gradient {
   background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
 }
@@ -161,19 +157,24 @@
   background-clip: text;
 }
 
-/* Card styles — static, no hover lift */
 .sintha-card-hover {
-  transition: box-shadow 0.15s ease;
+  transition: all 0.25s ease;
 }
 .sintha-card-hover:hover {
-  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(15, 76, 129, 0.15);
 }
 
 .sintha-card {
   background: #FFFFFF;
-  border-radius: 16px;
+  border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
+  border: 1px solid #E2E8F0;
+  transition: all 0.25s ease;
+}
+.sintha-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  border-color: #CBD5E1;
 }
 
 .sintha-pro-badge {
@@ -181,23 +182,23 @@
 }
 
 .sintha-verified {
-  color: #0F4C81;
+  color: #10B981;
 }
 
-/* Shadows — subtle, static */
+/* Graphic shadows for depth */
 .shadow-card {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 .shadow-card-hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 .shadow-blue {
-  box-shadow: 0 3px 10px rgba(15, 76, 129, 0.15);
+  box-shadow: 0 4px 15px rgba(15, 76, 129, 0.2);
 }
 
-/* Background gradients */
+/* Graphic gradient backgrounds for sections */
 .bg-gradient-hero {
-  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 50%, #082C49 100%);
 }
 .bg-gradient-soft {
   background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
@@ -206,7 +207,16 @@
   background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
 }
 
-/* Scrollbar */
+.sintha-pulse {
+  animation: sintha-pulse 2s infinite;
+}
+
+@keyframes sintha-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Scrollbar styling */
 .sintha-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -217,8 +227,11 @@
   background: #CBD5E1;
   border-radius: 2px;
 }
+.sintha-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
 
-/* reCAPTCHA */
+/* reCAPTCHA container — should be invisible but still functional */
 .recaptcha-container {
   position: absolute;
   left: -9999px;
@@ -227,353 +240,20 @@
   overflow: hidden;
 }
 
-/* Marquee */
+/* Marquee animation for service highlights */
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
+
 .animate-marquee {
   animation: marquee 20s linear infinite;
 }
+
 .animate-marquee:hover {
   animation-play-state: paused;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Material Design — Static Native App Components
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Elevation levels */
-.elevation-1 { box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.10); }
-.elevation-2 { box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.12); }
-.elevation-3 { box-shadow: 0 4px 8px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.10); }
-.elevation-4 { box-shadow: 0 6px 12px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.10); }
-.elevation-5 { box-shadow: 0 10px 20px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.10); }
-
-/* Top app bar — solid static gradient, no animation */
-.sintha-top-bar {
-  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
-  color: #FFFFFF;
-  padding-top: env(safe-area-inset-top);
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
-.sintha-app-bar {
-  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
-  color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
-/* Filled button — static, no hover lift */
-.sintha-btn-filled {
-  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
-  color: #FFFFFF;
-  border-radius: 12px;
-  min-height: 48px;
-  font-weight: 600;
-  box-shadow: 0 2px 6px rgba(15, 76, 129, 0.20);
-  transition: filter 0.1s ease;
-}
-.sintha-btn-filled:active {
-  filter: brightness(0.92);
-}
-.sintha-btn-filled:disabled {
-  background: #CBD5E1;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-/* Book button — static Sintha Blue */
-.sintha-btn-book {
-  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
-  color: #FFFFFF;
-  border-radius: 12px;
-  min-height: 48px;
-  font-weight: 600;
-  box-shadow: 0 2px 6px rgba(15, 76, 129, 0.20);
-  transition: filter 0.1s ease;
-}
-.sintha-btn-book:active {
-  filter: brightness(0.92);
-}
-.sintha-btn-book:disabled {
-  background: #CBD5E1;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-/* Outlined button — static */
-.sintha-btn-outlined {
-  background: transparent;
-  color: #0F4C81;
-  border: 2px solid #0F4C81;
-  border-radius: 12px;
-  min-height: 48px;
-  font-weight: 600;
-  transition: background 0.1s ease;
-}
-.sintha-btn-outlined:active {
-  background: rgba(15, 76, 129, 0.08);
-}
-
-/* Chip — static */
-.sintha-chip {
-  background: #F1F5F9;
-  color: #1F2937;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid #E2E8F0;
-}
-.sintha-chip-active {
-  background: #0F4C81;
-  color: #FFFFFF;
-  border-color: #0F4C81;
-}
-
-/* Material card — solid, no blur */
-.sintha-material-card {
-  background: #FFFFFF;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
-}
-
-/* Bottom navigation — solid white */
-.sintha-bottom-nav {
-  background: #FFFFFF;
-  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.06);
-  border-top: none;
-}
-.sintha-bottom-nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 56px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #64748B;
-}
-.sintha-bottom-nav-item-active {
-  color: #0F4C81;
-}
-
-/* Verified badge — solid blue */
-.sintha-badge-verified {
-  background: #EFF6FF;
-  color: #0F4C81;
-  border: 1px solid #BFDBFE;
-  border-radius: 9999px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   Provider Cards — Uniform, Static, Clean
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Vertical card (search results + verified providers) */
-.provider-card-uniform {
-  background: #FFFFFF;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  text-align: left;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* Horizontal card (nearby scroll) — fixed size */
-.provider-card-horizontal {
-  background: #FFFFFF;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
-  height: 290px;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Text truncation */
-.text-truncate-1 {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  width: 100%;
-}
-.text-truncate-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-/* Card content sections */
-.provider-card-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.provider-card-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
-}
-.provider-card-title {
-  font-size: 12px;
-  color: #0F4C81;
-  font-weight: 500;
-}
-.provider-card-skills {
-  font-size: 11px;
-  color: #6B7280;
-}
-.provider-card-desc {
-  font-size: 11px;
-  color: #9CA3AF;
-  line-height: 1.4;
-  margin-top: 2px;
-}
-.provider-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  font-size: 11px;
-}
-.provider-card-rating {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  color: #F59E0B;
-  font-weight: 600;
-}
-.provider-card-rate {
-  color: #6B7280;
-}
-.provider-card-location {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  color: #9CA3AF;
-  max-width: 70px;
-}
-
-/* Provider card with gradient header (used on profile screen) */
-.sintha-provider-card {
-  background: #FFFFFF;
-  border-radius: 22px;
-  overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border: none;
-}
-
-.sintha-provider-card-header {
-  height: 80px;
-  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
-}
-
-.sintha-provider-card-avatar {
-  margin-top: -40px;
-  border: 5px solid #FFFFFF;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-}
-
-.sintha-info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 14px;
-  border-bottom: 1px solid #F1F5F9;
-}
-.sintha-info-row:last-child {
-  border-bottom: none;
-}
-.sintha-info-label {
-  color: #64748B;
-  font-weight: 500;
-}
-.sintha-info-value {
-  color: #0F172A;
-  font-weight: 600;
-}
-
-/* Highlight box (provider profile description) */
-.sintha-highlight-box {
-  background: #F0F9FF;
-  border-left: 4px solid #0F4C81;
-  border-radius: 0 12px 12px 0;
-  padding: 16px 18px;
-}
-.sintha-highlight-title {
-  color: #0F4C81;
-  font-weight: 700;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
-}
-.sintha-highlight-body {
-  color: #1E3A5F;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* Snackbar */
-.sintha-snackbar {
-  background: #1F2937;
-  color: #FFFFFF;
-  border-radius: 8px;
-  padding: 14px 16px;
-  min-height: 48px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* List item */
-.sintha-list-item {
-  display: flex;
-  align-items: center;
-  padding: 14px 16px;
-  min-height: 56px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F1F5F9;
-}
-.sintha-list-item:active {
-  background: #F8FAFC;
-}
-
-/* Divider */
-.sintha-divider {
-  height: 1px;
-  background: #E2E8F0;
-  margin: 16px 0;
 }

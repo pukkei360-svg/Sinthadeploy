@@ -13,8 +13,8 @@ import BottomNav from './BottomNav'
 import PushNotificationPrompt from './PushNotificationPrompt'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
-  CheckCircle, Crown, ChevronRight, Calendar, MessageCircle,
-  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase, X, Phone
+  CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
+  MapPin, TrendingUp, Zap, Shield, Bot, Briefcase, X
 } from 'lucide-react'
 
 const categoryIcons: Record<string, typeof Home> = {
@@ -54,66 +54,25 @@ export default function HomeScreen() {
   useEffect(() => {
     if (dataLoaded) return
     const loadData = async () => {
-      // Step 1: Try to load from localStorage cache FIRST — this is instant
-      // and lets us render the home screen immediately without waiting for
-      // any network request. The API calls run in the background and
-      // update the data when they complete.
-      try {
-        const cachedCats = localStorage.getItem('sintha_cache_categories')
-        const cachedProvs = localStorage.getItem('sintha_cache_providers')
-        if (cachedCats) {
-          const parsed = JSON.parse(cachedCats)
-          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-            setCategories(parsed)
-            setDataLoaded(true)  // mark as loaded so we don't show spinner
-          }
-        }
-        if (cachedProvs) {
-          const parsed = JSON.parse(cachedProvs)
-          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-            setProviders(parsed)
-          }
-        }
-      } catch {
-        // Corrupted cache — ignore, fetch from API
-      }
-
-      // Step 2: Only show loading spinner if we have NO cached data at all
+      // DON'T set loading=true if we already have cached data — show it immediately
+      // and refresh in the background. Only show loading spinner on very first load.
       if (categories.length === 0 && providers.length === 0) {
         setIsLoading(true)
       }
-
       try {
-        // Fire /seed in the background (don't await) — it's a seeding helper
-        // that should NOT block the categories + providers fetch.
+        // Only call /seed on very first ever load (no categories in store AND no cache)
         if (categories.length === 0) {
-          apiFetch('/seed', { method: 'POST' }).catch(() => {})
+          try { await apiFetch('/seed', { method: 'POST' }) } catch {}
         }
-
-        // Fetch categories + providers in parallel with LONGER cache TTLs.
-        // Categories rarely change (30 min cache), providers change more
-        // often but still benefit from 10 min cache. The SWR pattern means
-        // cached data returns INSTANTLY and revalidates in the background.
+        // Fetch categories + providers in parallel (cached for 5 min / 2 min)
         const [catData, provData] = await Promise.all([
-          apiFetch('/categories', { cacheTtl: 30 * 60 * 1000 }),  // 30 min
-          apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 10 * 60 * 1000 }),  // 10 min
+          apiFetch('/categories', { cacheTtl: 5 * 60 * 1000 }),
+          apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 2 * 60 * 1000 }),
         ])
-
-        const newCategories = catData.categories || []
-        const newProviders = provData.providers || []
-        setCategories(newCategories)
-        setProviders(newProviders)
-
-        // Step 3: Save to localStorage for instant load on next visit
-        try {
-          localStorage.setItem('sintha_cache_categories', JSON.stringify(newCategories))
-          localStorage.setItem('sintha_cache_providers', JSON.stringify(newProviders))
-        } catch {
-          // localStorage full — ignore
-        }
+        setCategories(catData.categories || [])
+        setProviders(provData.providers || [])
       } catch (err) {
         console.error('Failed to load data:', err)
-        // If API fails but we have cached data, keep showing it (already set above)
       } finally {
         setDataLoaded(true)
         setIsLoading(false)
@@ -390,82 +349,67 @@ export default function HomeScreen() {
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="provider-card-uniform"
+                className="w-full bg-white rounded-xl p-4 shadow-sm sintha-card-hover flex items-center gap-3 text-left"
               >
-                <Avatar className="provider-card-avatar-sm h-12 w-12 shrink-0">
-                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff`} />
-                  <AvatarFallback className="text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=2563eb&color=fff`} />
+                  <AvatarFallback>{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <div className="provider-card-content">
-                  <div className="flex items-center gap-1.5">
-                    <span className="provider-card-name text-truncate-1">{p.user?.name}</span>
-                    {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81] shrink-0" />}
-                    {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                      <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                    )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-800 truncate">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />}
                   </div>
-                  <span className="provider-card-title text-truncate-1">{p.category?.name} • {p.experience || 'Experienced'}</span>
-                  {p.skills && (
-                    <span className="provider-card-skills text-truncate-1">
-                      {p.skills.split(',').slice(0, 3).join(', ')}
-                      {p.skills.split(',').length > 3 && '...'}
-                    </span>
+                  <p className="text-xs text-gray-500 truncate">{p.category?.name} &bull; {p.experience || 'Experienced'}</p>
+                  {p.user?.location && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3 text-gray-400" />
+                      <span className="text-[10px] text-gray-400">{p.user.location}</span>
+                    </div>
                   )}
-                  {p.description && (
-                    <span className="provider-card-desc text-truncate-2">{p.description}</span>
-                  )}
-                  <div className="provider-card-meta">
-                    <span className="provider-card-rating">
-                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && <span className="text-gray-400 font-normal">({p.totalReviews})</span>}
-                    </span>
-                    {p.hourlyRate && <span className="provider-card-rate">₹{p.hourlyRate}/hr</span>}
-                    {p.user?.location && (
-                      <span className="provider-card-location text-truncate-1">📍 {p.user.location}</span>
-                    )}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-sm font-semibold">{p.rating}</span>
                   </div>
+                  {p.hourlyRate && (
+                    <p className="text-[10px] text-gray-400">₹{p.hourlyRate}/hr</p>
+                  )}
                 </div>
               </button>
             ))}
           </div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto px-4 pb-2 sintha-scrollbar">
+          <div className="flex gap-4 overflow-x-auto px-4 pb-2 sintha-scrollbar">
             {topProviders.map((p: ProviderProfile) => (
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="provider-card-horizontal"
+                className="bg-white rounded-2xl p-4 shadow-sm min-w-[160px] shrink-0 sintha-card-hover text-left border border-[#E2E8F0] relative"
               >
+                {/* Available Now badge */}
                 {p.availability === 'available' && (
-                  <span className="absolute top-2 right-2 bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-                    Available
+                  <span className="absolute top-2 right-2 bg-green-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                    Available Now
                   </span>
                 )}
-                <Avatar className="provider-card-avatar-md h-16 w-16 mb-2">
+                <Avatar className="h-20 w-20 mx-auto mb-2 border-2 border-[#E2E8F0]">
                   <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                  <AvatarFallback className="text-base font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                  <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <span className="provider-card-name text-truncate-1 text-sm">{p.user?.name}</span>
-                <span className="provider-card-title text-truncate-1">{p.category?.name}</span>
-                {p.skills && (
-                  <span className="provider-card-skills text-truncate-1">
-                    {p.skills.split(',').slice(0, 2).join(', ')}
-                    {p.skills.split(',').length > 2 && '...'}
-                  </span>
-                )}
-                {p.description && (
-                  <span className="provider-card-desc text-truncate-2 mt-1">{p.description}</span>
-                )}
-                <div className="flex items-center justify-center gap-1.5 mt-auto pt-2">
-                  <span className="provider-card-rating text-xs">★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
-                  {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81]" />}
+                <p className="text-sm font-bold text-[#0F1111] text-center truncate">{p.user?.name}</p>
+                <p className="text-xs text-[#0F4C81] font-medium text-center truncate mt-0.5">{p.category?.name}</p>
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <div className="flex items-center gap-0.5">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-bold text-[#0F1111]">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
+                  </div>
+                  {p.isVerified && <CheckCircle className="h-4 w-4 text-[#10B981]" />}
                   {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                    <Crown className="h-3.5 w-3.5 text-amber-500" />
+                    <Crown className="h-4 w-4 text-amber-500" />
                   )}
                 </div>
-                {p.hourlyRate && (
-                  <span className="provider-card-rate text-[10px] mt-1">₹{p.hourlyRate}/hr</span>
-                )}
               </button>
             ))}
           </div>
@@ -484,40 +428,37 @@ export default function HomeScreen() {
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="provider-card-uniform"
+                className="w-full bg-white rounded-2xl p-4 shadow-sm sintha-card-hover flex items-center gap-4 text-left border border-[#E2E8F0]"
               >
-                <Avatar className="provider-card-avatar-md h-16 w-16 shrink-0">
+                <Avatar className="h-16 w-16 border-2 border-[#E2E8F0]">
                   <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
                   <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <div className="provider-card-content">
-                  <div className="flex items-center gap-1.5">
-                    <span className="provider-card-name text-truncate-1">{p.user?.name}</span>
-                    {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81] shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-800 truncate">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />}
+                    {/* PRO badge — shows for PRO subscribers */}
                     {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                      <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <Badge className="sintha-pro-badge text-[9px] text-white px-1.5 py-0 border-0">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />PRO
+                      </Badge>
                     )}
                   </div>
-                  <span className="provider-card-title text-truncate-1">{p.category?.name} • {p.experience || 'Experienced'}</span>
-                  {p.skills && (
-                    <span className="provider-card-skills text-truncate-1">
-                      {p.skills.split(',').slice(0, 3).join(', ')}
-                      {p.skills.split(',').length > 3 && '...'}
-                    </span>
+                  <p className="text-xs text-gray-500 truncate">{p.category?.name} &bull; {p.experience || 'Experienced'}</p>
+                  {p.user?.location && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3 text-gray-400" />
+                      <span className="text-[10px] text-gray-400">{p.user.location}</span>
+                    </div>
                   )}
-                  {p.description && (
-                    <span className="provider-card-desc text-truncate-2">{p.description}</span>
-                  )}
-                  <div className="provider-card-meta">
-                    <span className="provider-card-rating">
-                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && <span className="text-gray-400 font-normal">({p.totalReviews})</span>}
-                    </span>
-                    {p.hourlyRate && <span className="provider-card-rate">₹{p.hourlyRate}/hr</span>}
-                    {p.user?.location && (
-                      <span className="provider-card-location text-truncate-1">📍 {p.user.location}</span>
-                    )}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-sm font-semibold">{p.rating}</span>
                   </div>
+                  {p.hourlyRate && <p className="text-[10px] text-gray-400">₹{p.hourlyRate}/hr</p>}
                 </div>
               </button>
             ))}

@@ -264,11 +264,6 @@ export async function apiFetch<T = unknown>(
         'Content-Type': 'application/json',
         ...options?.headers,
       },
-      // CRITICAL: Disable browser HTTP cache for non-cached requests.
-      // Without this, the browser may serve stale GET responses (e.g.,
-      // the admin users list) even after a DELETE succeeds on the server.
-      // This was causing deleted users to reappear in the admin panel.
-      cache: 'no-store',
     });
 
     if (!res.ok) {

@@ -89,25 +89,13 @@ export default function RootLayout({
         from disk — which references OLD JS chunk filenames that
         have since been replaced by new builds. Forcing the HTML to
         always revalidate ensures the WebView always discovers the
-        latest JS chunk URLs (and therefore the latest UI code).
+        latest JS chunk URLs (and therefore the latest UI code,
+        including the ₹199 PRO price fix).
       */}
       <head>
-        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
         <meta httpEquiv="Pragma" content="no-cache" />
-        <meta httpEquiv="Expires" content="-1" />
-        {/* Force APK WebView to always reload — not use cached HTML/JS */}
-        <meta name="version" content="2026-06-26-v3" />
-        {/*
-          Preconnect to Firebase Auth servers — saves 200-500ms on login.
-          The browser establishes DNS + TCP + TLS handshake BEFORE the user
-          taps "Sign In". When the actual signInWithEmailAndPassword() call
-          fires, the connection is already warm and the request flies.
-        */}
-        <link rel="preconnect" href="https://firebaserun.googleapis.com" />
-        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
-        <link rel="preconnect" href="https://sintha-2999b.firebaseapp.com" />
-        <link rel="dns-prefetch" href="https://firebaserun.googleapis.com" />
-        <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com" />
+        <meta httpEquiv="Expires" content="0" />
       </head>
       <body
         className={`${inter.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
