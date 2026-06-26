@@ -39,6 +39,7 @@ export default function ProviderOnboardingScreen() {
   const [skills, setSkills] = useState('')
   const [description, setDescription] = useState('')
   const [hourlyRate, setHourlyRate] = useState('')
+  const [wageType, setWageType] = useState<'hourly' | 'daily'>('hourly')
   const [phone, setPhone] = useState('')
   const [location, setLocation] = useState('')
 
@@ -355,19 +356,51 @@ export default function ProviderOnboardingScreen() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="hourlyRate">Hourly Rate (₹)</Label>
+              <Label>Wage Type</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWageType('hourly')}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                    wageType === 'hourly'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  Hourly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWageType('daily')}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                    wageType === 'daily'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-gray-600 border-gray-200'
+                  }`}
+                >
+                  Daily
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="hourlyRate">
+                {wageType === 'hourly' ? 'Hourly Rate (₹)' : 'Daily Wage (₹)'}
+              </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="hourlyRate"
                   type="number"
-                  placeholder="e.g., 300"
+                  placeholder={wageType === 'hourly' ? 'e.g., 300' : 'e.g., 1500'}
                   className="pl-10"
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(e.target.value)}
                 />
               </div>
-              <p className="text-[11px] text-gray-400">You can change this anytime</p>
+              <p className="text-[11px] text-gray-400">
+                {wageType === 'hourly' ? 'Per hour charge' : 'Per day charge'} — you can change this anytime
+              </p>
             </div>
           </div>
         )
@@ -469,8 +502,12 @@ export default function ProviderOnboardingScreen() {
                 )}
                 {hourlyRate && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Hourly Rate</span>
-                    <span className="text-sm font-bold text-green-600">₹{hourlyRate}/hr</span>
+                    <span className="text-xs text-gray-500">
+                      {wageType === 'hourly' ? 'Hourly Rate' : 'Daily Wage'}
+                    </span>
+                    <span className="text-sm font-bold text-green-600">
+                      ₹{hourlyRate}{wageType === 'hourly' ? '/hr' : '/day'}
+                    </span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
