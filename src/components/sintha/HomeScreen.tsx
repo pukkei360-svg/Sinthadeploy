@@ -348,71 +348,63 @@ export default function HomeScreen() {
             {filteredProviders.slice(0, 10).map((p: ProviderProfile) => (
               <div
                 key={p.id}
-                className="provider-card-v2 mx-auto"
+                className="sintha-provider-card"
               >
-                {/* Header — avatar + provider info */}
+                {/* Gradient header */}
+                <div className="sintha-provider-card-header" />
+
+                {/* Centered avatar + name + job title */}
                 <button
                   onClick={() => navigate('provider-profile', { providerId: p.id })}
-                  className="provider-card-v2-header w-full text-left"
+                  className="w-full flex flex-col items-center pt-0 pb-3 px-4 -mt-10"
                 >
-                  <Avatar className="provider-card-v2-avatar">
+                  <Avatar className="sintha-provider-card-avatar h-20 w-20">
                     <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                    <AvatarFallback className="text-lg font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                    <AvatarFallback className="text-xl font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                   </Avatar>
-                  <div className="provider-card-v2-info">
-                    <div className="provider-card-v2-name">
-                      <span>{p.user?.name}</span>
-                      {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
-                      {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                        <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    <p className="provider-card-v2-title">{p.category?.name}</p>
-                    <div className="provider-card-v2-rating">
-                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && <span>({p.totalReviews} reviews)</span>}
-                    </div>
+                  <div className="flex items-center gap-1.5 mt-2 justify-center">
+                    <p className="text-lg font-bold text-[#0F4C81]">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
+                    {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
+                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 font-medium">{p.category?.name}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-amber-500 text-sm">{'★'.repeat(Math.round(p.rating || 0))}</span>
+                    <span className="text-xs text-gray-500">
+                      ({p.rating > 0 ? p.rating.toFixed(1) : 'New'}
+                      {p.totalReviews > 0 && ` · ${p.totalReviews} reviews`})
+                    </span>
                   </div>
                 </button>
 
-                {/* Body — description + job details */}
-                <div className="provider-card-v2-body">
-                  {p.description && (
-                    <p className="provider-card-v2-description">{p.description}</p>
+                {/* Info rows */}
+                <div className="px-5 py-2">
+                  <div className="sintha-info-row">
+                    <span className="sintha-info-label">Experience</span>
+                    <span className="sintha-info-value">{p.experience || 'Experienced'}</span>
+                  </div>
+                  {p.user?.location && (
+                    <div className="sintha-info-row">
+                      <span className="sintha-info-label">Location</span>
+                      <span className="sintha-info-value">{p.user.location}</span>
+                    </div>
                   )}
-                  <ul className="provider-card-v2-details">
-                    {p.user?.location && (
-                      <li>
-                        <span className="provider-card-v2-detail-icon">📍</span>
-                        {p.user.location}
-                      </li>
-                    )}
-                    <li>
-                      <span className="provider-card-v2-detail-icon">💼</span>
-                      {p.experience || 'Experienced'} Experience
-                    </li>
-                    {p.hourlyRate && (
-                      <li>
-                        <span className="provider-card-v2-detail-icon">💵</span>
-                        ₹{p.hourlyRate} / hour
-                      </li>
-                    )}
-                  </ul>
+                  <div className="sintha-info-row">
+                    <span className="sintha-info-label">Completed</span>
+                    <span className="sintha-info-value">{p.totalBookings || 0} Jobs</span>
+                  </div>
+                  {p.hourlyRate && (
+                    <div className="sintha-info-row">
+                      <span className="sintha-info-label">Starting Price</span>
+                      <span className="sintha-info-value">₹{p.hourlyRate}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Footer — Book Now + Call buttons */}
-                <div className="provider-card-v2-footer">
-                  <button
-                    onClick={() => navigate('booking-form', {
-                      providerId: p.userId,
-                      providerName: p.user?.name || 'Provider',
-                      service: p.category?.name || '',
-                    })}
-                    className="provider-card-v2-btn-book"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Book Now
-                  </button>
+                {/* Buttons: Call (blue) + Book (orange) */}
+                <div className="flex gap-3 px-5 pb-5 pt-2">
                   <button
                     onClick={() => {
                       if (p.user?.phone) {
@@ -424,10 +416,21 @@ export default function HomeScreen() {
                         })
                       }
                     }}
-                    className="provider-card-v2-btn-call"
+                    className="sintha-btn-filled flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
                   >
                     <Phone className="h-4 w-4" />
                     Call
+                  </button>
+                  <button
+                    onClick={() => navigate('booking-form', {
+                      providerId: p.userId,
+                      providerName: p.user?.name || 'Provider',
+                      service: p.category?.name || '',
+                    })}
+                    className="sintha-btn-book flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Book
                   </button>
                 </div>
               </div>
@@ -438,63 +441,39 @@ export default function HomeScreen() {
             {topProviders.map((p: ProviderProfile) => (
               <div
                 key={p.id}
-                className="provider-card-v2 shrink-0"
-                style={{ width: '280px', maxWidth: '280px' }}
+                className="sintha-provider-card shrink-0"
+                style={{ width: '260px', maxWidth: '260px' }}
               >
-                {/* Header — avatar + provider info */}
+                {/* Gradient header */}
+                <div className="sintha-provider-card-header" />
+
+                {/* Centered avatar + name + job title */}
                 <button
                   onClick={() => navigate('provider-profile', { providerId: p.id })}
-                  className="provider-card-v2-header w-full text-left"
+                  className="w-full flex flex-col items-center pt-0 pb-3 px-4 -mt-10"
                 >
-                  <Avatar className="provider-card-v2-avatar">
+                  <Avatar className="sintha-provider-card-avatar h-16 w-16">
                     <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
                     <AvatarFallback className="text-lg font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                   </Avatar>
-                  <div className="provider-card-v2-info">
-                    <div className="provider-card-v2-name">
-                      <span className="truncate">{p.user?.name}</span>
-                      {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
-                      {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                        <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    <p className="provider-card-v2-title">{p.category?.name}</p>
-                    <div className="provider-card-v2-rating">
-                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && <span>({p.totalReviews})</span>}
-                    </div>
+                  <div className="flex items-center gap-1.5 mt-2 justify-center">
+                    <p className="text-base font-bold text-[#0F4C81] truncate max-w-[180px]">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
+                    {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
+                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">{p.category?.name}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-amber-500 text-xs">{'★'.repeat(Math.round(p.rating || 0))}</span>
+                    <span className="text-[10px] text-gray-500">
+                      ({p.rating > 0 ? p.rating.toFixed(1) : 'New'})
+                    </span>
                   </div>
                 </button>
 
-                {/* Body — job details only (no description for horizontal cards) */}
-                <div className="provider-card-v2-body" style={{ padding: '16px 20px' }}>
-                  <ul className="provider-card-v2-details">
-                    <li>
-                      <span className="provider-card-v2-detail-icon">💼</span>
-                      {p.experience || 'Experienced'}
-                    </li>
-                    {p.hourlyRate && (
-                      <li>
-                        <span className="provider-card-v2-detail-icon">💵</span>
-                        ₹{p.hourlyRate} / hour
-                      </li>
-                    )}
-                  </ul>
-                </div>
-
-                {/* Footer — Book Now + Call buttons */}
-                <div className="provider-card-v2-footer">
-                  <button
-                    onClick={() => navigate('booking-form', {
-                      providerId: p.userId,
-                      providerName: p.user?.name || 'Provider',
-                      service: p.category?.name || '',
-                    })}
-                    className="provider-card-v2-btn-book"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Book Now
-                  </button>
+                {/* Buttons: Call (blue) + Book (orange) */}
+                <div className="flex gap-2 px-4 pb-4">
                   <button
                     onClick={() => {
                       if (p.user?.phone) {
@@ -506,10 +485,21 @@ export default function HomeScreen() {
                         })
                       }
                     }}
-                    className="provider-card-v2-btn-call"
+                    className="sintha-btn-filled flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5"
                   >
                     <Phone className="h-4 w-4" />
                     Call
+                  </button>
+                  <button
+                    onClick={() => navigate('booking-form', {
+                      providerId: p.userId,
+                      providerName: p.user?.name || 'Provider',
+                      service: p.category?.name || '',
+                    })}
+                    className="sintha-btn-book flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Book
                   </button>
                 </div>
               </div>
@@ -518,82 +508,77 @@ export default function HomeScreen() {
         )}
       </div>
 
-      {/* Featured / Verified Providers — V2 card design (matches HTML template) */}
+      {/* Featured / Verified Providers — gradient header + centered avatar + info rows */}
       {featuredProviders.length > 0 && !searchQuery && (
         <div className="pt-6 px-4">
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-5 w-5 text-amber-500" />
             <h2 className="text-lg font-bold text-gray-800">Verified Providers</h2>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {featuredProviders.slice(0, 5).map((p: ProviderProfile) => (
               <div
                 key={p.id}
-                className="provider-card-v2 mx-auto"
+                className="sintha-provider-card"
               >
-                {/* Header — avatar + provider info (tappable → provider profile) */}
+                {/* Gradient header */}
+                <div className="sintha-provider-card-header" />
+
+                {/* Centered avatar + name + job title (tappable → provider profile) */}
                 <button
                   onClick={() => navigate('provider-profile', { providerId: p.id })}
-                  className="provider-card-v2-header w-full text-left"
+                  className="w-full flex flex-col items-center pt-0 pb-3 px-4 -mt-10"
                 >
-                  <Avatar className="provider-card-v2-avatar">
+                  <Avatar className="sintha-provider-card-avatar h-20 w-20">
                     <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                    <AvatarFallback className="text-lg font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                    <AvatarFallback className="text-xl font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                   </Avatar>
-                  <div className="provider-card-v2-info">
-                    <div className="provider-card-v2-name">
-                      <span>{p.user?.name}</span>
-                      {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
-                      {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                        <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    <p className="provider-card-v2-title">{p.category?.name}</p>
-                    <div className="provider-card-v2-rating">
-                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && <span>({p.totalReviews} reviews)</span>}
-                    </div>
+                  {/* Name + badges */}
+                  <div className="flex items-center gap-1.5 mt-2 justify-center">
+                    <p className="text-lg font-bold text-[#0F4C81]">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
+                    {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
+                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
+                    )}
+                  </div>
+                  {/* Job title ONLY */}
+                  <p className="text-sm text-gray-500 font-medium">{p.category?.name}</p>
+                  {/* Rating */}
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-amber-500 text-sm">{'★'.repeat(Math.round(p.rating || 0))}</span>
+                    <span className="text-xs text-gray-500">
+                      ({p.rating > 0 ? p.rating.toFixed(1) : 'New'}
+                      {p.totalReviews > 0 && ` · ${p.totalReviews} reviews`})
+                    </span>
                   </div>
                 </button>
 
-                {/* Body — description + job details */}
-                <div className="provider-card-v2-body">
-                  {p.description && (
-                    <p className="provider-card-v2-description">{p.description}</p>
+                {/* Info rows */}
+                <div className="px-5 py-2">
+                  <div className="sintha-info-row">
+                    <span className="sintha-info-label">Experience</span>
+                    <span className="sintha-info-value">{p.experience || 'Experienced'}</span>
+                  </div>
+                  {p.user?.location && (
+                    <div className="sintha-info-row">
+                      <span className="sintha-info-label">Location</span>
+                      <span className="sintha-info-value">{p.user.location}</span>
+                    </div>
                   )}
-                  <ul className="provider-card-v2-details">
-                    {p.user?.location && (
-                      <li>
-                        <span className="provider-card-v2-detail-icon">📍</span>
-                        {p.user.location}
-                      </li>
-                    )}
-                    <li>
-                      <span className="provider-card-v2-detail-icon">💼</span>
-                      {p.experience || 'Experienced'} Experience
-                    </li>
-                    {p.hourlyRate && (
-                      <li>
-                        <span className="provider-card-v2-detail-icon">💵</span>
-                        ₹{p.hourlyRate} / hour
-                      </li>
-                    )}
-                  </ul>
+                  <div className="sintha-info-row">
+                    <span className="sintha-info-label">Completed</span>
+                    <span className="sintha-info-value">{p.totalBookings || 0} Jobs</span>
+                  </div>
+                  {p.hourlyRate && (
+                    <div className="sintha-info-row">
+                      <span className="sintha-info-label">Starting Price</span>
+                      <span className="sintha-info-value">₹{p.hourlyRate}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Footer — Book Now + Call buttons */}
-                <div className="provider-card-v2-footer">
-                  <button
-                    onClick={() => navigate('booking-form', {
-                      providerId: p.userId,
-                      providerName: p.user?.name || 'Provider',
-                      service: p.category?.name || '',
-                    })}
-                    className="provider-card-v2-btn-book"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Book Now
-                  </button>
+                {/* Buttons: Call (blue) + Book (orange) */}
+                <div className="flex gap-3 px-5 pb-5 pt-2">
                   <button
                     onClick={() => {
                       if (p.user?.phone) {
@@ -605,10 +590,21 @@ export default function HomeScreen() {
                         })
                       }
                     }}
-                    className="provider-card-v2-btn-call"
+                    className="sintha-btn-filled flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
                   >
                     <Phone className="h-4 w-4" />
                     Call
+                  </button>
+                  <button
+                    onClick={() => navigate('booking-form', {
+                      providerId: p.userId,
+                      providerName: p.user?.name || 'Provider',
+                      service: p.category?.name || '',
+                    })}
+                    className="sintha-btn-book flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Book
                   </button>
                 </div>
               </div>
