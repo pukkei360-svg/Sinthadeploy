@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle, MessageCircle, CheckCircle2, XCircle, Gift } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { validateEmail } from '@/lib/email-validation'
 import WhatsAppIcon from './WhatsAppIcon'
@@ -38,6 +38,13 @@ export default function AuthScreen() {
   const [regPassword, setRegPassword] = useState('')
   const [regConfirm, setRegConfirm] = useState('')
   const [regEmailTouched, setRegEmailTouched] = useState(false)
+  // Referral code — pre-filled from localStorage if user came via referral link
+  const [regReferralCode, setRegReferralCode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sintha_pending_referral') || ''
+    }
+    return ''
+  })
 
   // Compute email validation results (re-validated on every keystroke)
   const loginEmailValidation = useMemo(() => validateEmail(loginEmail), [loginEmail])
@@ -58,11 +65,13 @@ export default function AuthScreen() {
   const getAdminEmail = (id: string) => `${id.toLowerCase().trim()}@sintha.app`
 
   // Sync Firebase user to our backend database
-  const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string) => {
+  const syncUserToBackend = async (firebaseUid: string, email: string, name: string, photoUrl?: string, referredBy?: string) => {
     try {
+      const body: Record<string, string | undefined> = { firebaseUid, email, name, photoUrl }
+      if (referredBy) body.referredBy = referredBy
       const data = await apiFetch('/auth/sync', {
         method: 'POST',
-        body: JSON.stringify({ firebaseUid, email, name, photoUrl }),
+        body: JSON.stringify(body),
       })
       return data
     } catch (err) {
@@ -204,13 +213,15 @@ export default function AuthScreen() {
       const credential = await createUserWithEmailAndPassword(auth, regEmail, regPassword)
 
       // Run updateProfile + syncToBackend IN PARALLEL (saves ~500ms)
+      const referralCode = regReferralCode.trim().toUpperCase() || undefined
       const [, data] = await Promise.all([
         updateProfile(credential.user, { displayName: regName }),
         syncUserToBackend(
           credential.user.uid,
           regEmail,
           regName,
-          credential.user.photoURL || undefined
+          credential.user.photoURL || undefined,
+          referralCode,
         ),
       ])
 
@@ -495,6 +506,26 @@ export default function AuthScreen() {
                       autoComplete="new-password"
                     />
                   </div>
+                </div>
+                {/* Referral code — optional, pre-filled from referral link */}
+                <div className="space-y-2">
+                  <Label htmlFor="reg-referral">Referral Code (optional)</Label>
+                  <div className="relative">
+                    <Gift className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="reg-referral"
+                      type="text"
+                      placeholder="Enter referral code"
+                      className="pl-10 uppercase"
+                      value={regReferralCode}
+                      onChange={(e) => setRegReferralCode(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  {regReferralCode && (
+                    <p className="text-[11px] text-gray-400">
+                      Referred by: <span className="font-mono font-semibold text-blue-600">{regReferralCode}</span>
+                    </p>
+                  )}
                 </div>
                 <Button
                   className="w-full sintha-gradient text-white font-semibold py-6"

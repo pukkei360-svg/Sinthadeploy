@@ -536,7 +536,7 @@ export default function ProviderDashboardScreen() {
               <span className="text-[9px] text-gray-600">Open Jobs</span>
             </button>
             <button
-              onClick={() => navigate('provider-onboarding')}
+              onClick={() => navigate('provider-onboarding', { editMode: 'true' })}
               className="bg-white rounded-xl p-3 text-center shadow-sm"
             >
               <PenLine className="h-5 w-5 text-blue-600 mx-auto mb-1" />

@@ -27,7 +27,7 @@ const categoryIcons: Record<string, typeof Home> = {
 const STEPS = ['Category', 'Details', 'Contact', 'Review']
 
 export default function ProviderOnboardingScreen() {
-  const { navigate, user, setUser, categories, setCategories, setMyProviderProfile, token, goBack, myProviderProfile } = useAppStore()
+  const { navigate, user, setUser, categories, setCategories, setMyProviderProfile, token, goBack, myProviderProfile, viewParams } = useAppStore()
   const { toast } = useToast()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -41,6 +41,10 @@ export default function ProviderOnboardingScreen() {
   const [hourlyRate, setHourlyRate] = useState('')
   const [phone, setPhone] = useState('')
   const [location, setLocation] = useState('')
+
+  // If viewParams has editMode=true, we're editing (not creating).
+  // Skip the "redirect to dashboard if profile exists" check.
+  const isEditMode = viewParams?.editMode === 'true'
 
   // Pre-fill existing provider data if editing
   const isEditing = user?.role === 'provider'
@@ -57,7 +61,42 @@ export default function ProviderOnboardingScreen() {
         return
       }
 
-      // First, check if we already have the profile in the Zustand store
+      // If editing (came from Edit Profile button), load existing data
+      // into the form fields instead of redirecting away.
+      if (isEditMode) {
+        // Try to get profile from store or localStorage
+        let profile = myProviderProfile
+        if (!profile) {
+          try {
+            const saved = localStorage.getItem('sintha_provider_profile')
+            if (saved) profile = JSON.parse(saved)
+          } catch {}
+        }
+        if (!profile) {
+          // Fetch from API
+          try {
+            const data = await apiFetch(`/providers?userId=${user.id}`)
+            const providers = data.providers || []
+            if (providers.length > 0) profile = providers[0]
+          } catch {}
+        }
+        if (profile) {
+          setMyProviderProfile(profile)
+          // Pre-fill form fields with existing data
+          if (profile.categoryId) setSelectedCategory(profile.categoryId)
+          if (profile.experience) setExperience(profile.experience)
+          if (profile.skills) setSkills(profile.skills)
+          if (profile.description) setDescription(profile.description)
+          if (profile.hourlyRate) setHourlyRate(String(profile.hourlyRate))
+          if (profile.user?.phone) setPhone(profile.user.phone)
+          if (profile.user?.location) setLocation(profile.user.location)
+        }
+        setCheckingExistingProfile(false)
+        return
+      }
+
+      // NOT editing — check if provider already has a profile.
+      // If they do, redirect to dashboard (prevent recreate on refresh).
       if (myProviderProfile) {
         navigate('provider-dashboard')
         return
@@ -130,11 +169,13 @@ export default function ProviderOnboardingScreen() {
     if (!user || !selectedCategory) return
     setLoading(true)
     try {
-      // Step 1: Update user role to provider
-      await apiFetch('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ userId: user.id, role: 'provider' }),
-      })
+      // Step 1: Update user role to provider (skip if already provider)
+      if (!isEditing) {
+        await apiFetch('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ userId: user.id, role: 'provider' }),
+        })
+      }
 
       // Step 2: Update user phone and location via the profile endpoint
       try {
@@ -163,17 +204,36 @@ export default function ProviderOnboardingScreen() {
       }
 
       // Step 3: Create or update provider profile
-      const profileData = await apiFetch('/providers', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId: user.id,
-          categoryId: selectedCategory,
-          experience,
-          skills,
-          description,
-          hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
-        }),
-      })
+      // If editing (existing profile), use PUT to update. Otherwise POST to create.
+      const existingProfile = myProviderProfile
+      let profileData
+
+      if (existingProfile?.id) {
+        // EDIT: Update existing profile via PUT /api/providers/[id]
+        profileData = await apiFetch(`/providers/${existingProfile.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            categoryId: selectedCategory,
+            experience,
+            skills,
+            description,
+            hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+          }),
+        })
+      } else {
+        // CREATE: New profile via POST /api/providers
+        profileData = await apiFetch('/providers', {
+          method: 'POST',
+          body: JSON.stringify({
+            userId: user.id,
+            categoryId: selectedCategory,
+            experience,
+            skills,
+            description,
+            hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+          }),
+        })
+      }
 
       setMyProviderProfile(profileData.provider || null)
 

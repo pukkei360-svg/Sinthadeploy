@@ -74,13 +74,14 @@ export default function ReferralsScreen() {
 
   const copyLink = async () => {
     if (!data?.referralCode) return
-    const link = `https://sinthadeploy.vercel.app/r/${data.referralCode}`
+    // Copy the CODE (not the link) — user asked to change from link to code
+    const code = data.referralCode
     try {
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(link)
+        await navigator.clipboard.writeText(code)
       } else {
         const ta = document.createElement('textarea')
-        ta.value = link
+        ta.value = code
         ta.style.position = 'fixed'
         ta.style.opacity = '0'
         document.body.appendChild(ta)
@@ -89,10 +90,10 @@ export default function ReferralsScreen() {
         document.body.removeChild(ta)
       }
       setCopied(true)
-      toast({ title: 'Link copied!', description: 'Paste it anywhere to share' })
+      toast({ title: 'Code copied!', description: `${code} — paste it in the referral field when signing up` })
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast({ title: 'Copy failed', description: link })
+      toast({ title: 'Copy failed', description: code })
     }
   }
 
@@ -177,15 +178,15 @@ export default function ReferralsScreen() {
                 Share this code with friends. You earn <strong>30%</strong> every time they subscribe to SINTHA PRO — for life!
               </p>
 
-              {/* Referral link — full length, copyable */}
+              {/* Referral code — large, copyable */}
               <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-3">
-                <p className="text-[10px] opacity-70 uppercase tracking-wide mb-1">Your referral link</p>
-                <p className="text-sm font-medium font-mono break-all leading-relaxed">
-                  {`sintha.app/r/${data.referralCode}`}
+                <p className="text-[10px] opacity-70 uppercase tracking-wide mb-1">Your referral code</p>
+                <p className="text-2xl font-bold font-mono break-all leading-relaxed text-center py-2">
+                  {data.referralCode}
                 </p>
               </div>
 
-              {/* Action buttons — 3 buttons: Copy Link, WhatsApp, Share */}
+              {/* Action buttons — 3 buttons: Copy Code, WhatsApp, Share */}
               <div className="grid grid-cols-3 gap-2">
                 <button
                   onClick={copyLink}
@@ -196,7 +197,7 @@ export default function ReferralsScreen() {
                   }`}
                 >
                   {copied ? <CheckCircle className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy Link'}
+                  {copied ? 'Copied!' : 'Copy Code'}
                 </button>
                 <button
                   onClick={shareViaWhatsApp}
