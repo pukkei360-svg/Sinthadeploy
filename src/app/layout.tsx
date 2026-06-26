@@ -92,9 +92,11 @@ export default function RootLayout({
         latest JS chunk URLs (and therefore the latest UI code).
       */}
       <head>
-        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
         <meta httpEquiv="Pragma" content="no-cache" />
-        <meta httpEquiv="Expires" content="0" />
+        <meta httpEquiv="Expires" content="-1" />
+        {/* Force APK WebView to always reload — not use cached HTML/JS */}
+        <meta name="version" content="2026-06-26-v3" />
         {/*
           Preconnect to Firebase Auth servers — saves 200-500ms on login.
           The browser establishes DNS + TCP + TLS handshake BEFORE the user
