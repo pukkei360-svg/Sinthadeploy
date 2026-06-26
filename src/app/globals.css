@@ -606,3 +606,128 @@
 .provider-card-v2-btn-call:active {
   transform: scale(0.98);
 }
+/* ═══════════════════════════════════════════════════════════════
+   Provider Card — Uniform Medium Size (all cards same size)
+   Text truncates to fit. No card grows taller than another.
+   ═══════════════════════════════════════════════════════════════ */
+
+.provider-card-uniform {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #E2E8F0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  width: 100%;
+  overflow: hidden;
+}
+.provider-card-uniform:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 76, 129, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.provider-card-uniform:active {
+  transform: scale(0.99);
+}
+
+/* Horizontal scroll card — FIXED size (200px wide, 280px tall) */
+.provider-card-horizontal {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #E2E8F0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
+  height: 280px;
+  overflow: hidden;
+  position: relative;
+}
+.provider-card-horizontal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 76, 129, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+.provider-card-horizontal:active {
+  transform: scale(0.99);
+}
+
+/* Text truncation — single line (clean ellipsis cut) */
+.text-truncate-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  width: 100%;
+}
+/* Text truncation — 2 lines max */
+.text-truncate-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Card content area — fixed height sections so all cards align */
+.provider-card-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.provider-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+.provider-card-title {
+  font-size: 12px;
+  color: #0F4C81;
+  font-weight: 500;
+}
+.provider-card-skills {
+  font-size: 11px;
+  color: #6B7280;
+}
+.provider-card-desc {
+  font-size: 11px;
+  color: #9CA3AF;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.provider-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.provider-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #F59E0B;
+  font-weight: 600;
+}
+.provider-card-rate {
+  color: #6B7280;
+}
+.provider-card-location {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #9CA3AF;
+  max-width: 70px;
+}

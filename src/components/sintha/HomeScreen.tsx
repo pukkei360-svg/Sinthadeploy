@@ -13,7 +13,7 @@ import BottomNav from './BottomNav'
 import PushNotificationPrompt from './PushNotificationPrompt'
 import {
   Search, Bell, Home, GraduationCap, Car, Camera, Sparkles, Wrench,
-  CheckCircle, Star, Crown, ChevronRight, Calendar, MessageCircle,
+  CheckCircle, Crown, ChevronRight, Calendar, MessageCircle,
   MapPin, TrendingUp, Zap, Shield, Bot, Briefcase, X, Phone
 } from 'lucide-react'
 
@@ -390,48 +390,38 @@ export default function HomeScreen() {
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="w-full bg-white rounded-2xl p-4 shadow-sm sintha-card-hover flex items-start gap-3 text-left border border-[#E2E8F0]"
+                className="provider-card-uniform"
               >
-                <Avatar className="h-14 w-14 shrink-0">
+                <Avatar className="provider-card-avatar-sm h-12 w-12 shrink-0">
                   <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff`} />
                   <AvatarFallback className="text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-800 truncate">{p.user?.name}</p>
+                <div className="provider-card-content">
+                  <div className="flex items-center gap-1.5">
+                    <span className="provider-card-name text-truncate-1">{p.user?.name}</span>
                     {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81] shrink-0" />}
                     {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
                       <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     )}
                   </div>
-                  <p className="text-xs text-[#0F4C81] font-medium truncate">{p.category?.name} &bull; {p.experience || 'Experienced'}</p>
-                  {/* Skills preview */}
+                  <span className="provider-card-title text-truncate-1">{p.category?.name} • {p.experience || 'Experienced'}</span>
                   {p.skills && (
-                    <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                      <span className="font-medium text-gray-600">Skills:</span> {p.skills.split(',').slice(0, 3).join(', ')}
+                    <span className="provider-card-skills text-truncate-1">
+                      {p.skills.split(',').slice(0, 3).join(', ')}
                       {p.skills.split(',').length > 3 && '...'}
-                    </p>
+                    </span>
                   )}
-                  {/* About / description preview (2 lines) */}
                   {p.description && (
-                    <p className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-                      {p.description}
-                    </p>
+                    <span className="provider-card-desc text-truncate-2">{p.description}</span>
                   )}
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <div className="flex items-center gap-0.5">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span className="text-[11px] font-bold text-gray-700">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
-                      {p.totalReviews > 0 && <span className="text-[10px] text-gray-400">({p.totalReviews})</span>}
-                    </div>
-                    {p.hourlyRate && (
-                      <span className="text-[10px] text-gray-500">₹{p.hourlyRate}/hr</span>
-                    )}
+                  <div className="provider-card-meta">
+                    <span className="provider-card-rating">
+                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
+                      {p.totalReviews > 0 && <span className="text-gray-400 font-normal">({p.totalReviews})</span>}
+                    </span>
+                    {p.hourlyRate && <span className="provider-card-rate">₹{p.hourlyRate}/hr</span>}
                     {p.user?.location && (
-                      <div className="flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3 text-gray-400" />
-                        <span className="text-[10px] text-gray-400 truncate max-w-[60px]">{p.user.location}</span>
-                      </div>
+                      <span className="provider-card-location text-truncate-1">📍 {p.user.location}</span>
                     )}
                   </div>
                 </div>
@@ -439,50 +429,42 @@ export default function HomeScreen() {
             ))}
           </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto px-4 pb-2 sintha-scrollbar">
+          <div className="flex gap-3 overflow-x-auto px-4 pb-2 sintha-scrollbar">
             {topProviders.map((p: ProviderProfile) => (
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="bg-white rounded-2xl p-4 shadow-sm min-w-[220px] shrink-0 sintha-card-hover text-left border border-[#E2E8F0] relative flex flex-col"
+                className="provider-card-horizontal"
               >
-                {/* Available Now badge */}
                 {p.availability === 'available' && (
                   <span className="absolute top-2 right-2 bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-                    Available Now
+                    Available
                   </span>
                 )}
-                <Avatar className="h-16 w-16 mx-auto mb-2 border-2 border-[#E2E8F0]">
+                <Avatar className="provider-card-avatar-md h-16 w-16 mb-2">
                   <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                  <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                  <AvatarFallback className="text-base font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <p className="text-sm font-bold text-[#0F1111] text-center truncate">{p.user?.name}</p>
-                <p className="text-xs text-[#0F4C81] font-medium text-center truncate mt-0.5">{p.category?.name}</p>
-                {/* Skills preview */}
+                <span className="provider-card-name text-truncate-1 text-sm">{p.user?.name}</span>
+                <span className="provider-card-title text-truncate-1">{p.category?.name}</span>
                 {p.skills && (
-                  <p className="text-[10px] text-gray-500 text-center truncate mt-1">
+                  <span className="provider-card-skills text-truncate-1">
                     {p.skills.split(',').slice(0, 2).join(', ')}
                     {p.skills.split(',').length > 2 && '...'}
-                  </p>
+                  </span>
                 )}
-                {/* About / description preview (2 lines) */}
                 {p.description && (
-                  <p className="text-[10px] text-gray-500 mt-1.5 line-clamp-2 leading-relaxed text-center">
-                    {p.description}
-                  </p>
+                  <span className="provider-card-desc text-truncate-2 mt-1">{p.description}</span>
                 )}
-                <div className="flex items-center justify-center gap-1.5 mt-2">
-                  <div className="flex items-center gap-0.5">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-bold text-[#0F1111]">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
-                  </div>
-                  {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81]" />}
+                <div className="flex items-center justify-center gap-1.5 mt-auto pt-2">
+                  <span className="provider-card-rating text-xs">★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
+                  {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81]" />}
                   {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                    <Crown className="h-4 w-4 text-amber-500" />
+                    <Crown className="h-3.5 w-3.5 text-amber-500" />
                   )}
                 </div>
                 {p.hourlyRate && (
-                  <p className="text-[10px] text-gray-400 text-center mt-1">₹{p.hourlyRate}/hr</p>
+                  <span className="provider-card-rate text-[10px] mt-1">₹{p.hourlyRate}/hr</span>
                 )}
               </button>
             ))}
@@ -502,50 +484,38 @@ export default function HomeScreen() {
               <button
                 key={p.id}
                 onClick={() => navigate('provider-profile', { providerId: p.id })}
-                className="w-full bg-white rounded-2xl p-4 shadow-sm sintha-card-hover flex items-start gap-4 text-left border border-[#E2E8F0]"
+                className="provider-card-uniform"
               >
-                <Avatar className="h-16 w-16 border-2 border-[#E2E8F0] shrink-0">
+                <Avatar className="provider-card-avatar-md h-16 w-16 shrink-0">
                   <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
                   <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-800 truncate">{p.user?.name}</p>
+                <div className="provider-card-content">
+                  <div className="flex items-center gap-1.5">
+                    <span className="provider-card-name text-truncate-1">{p.user?.name}</span>
                     {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81] shrink-0" />}
                     {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                      <Badge className="sintha-pro-badge text-[9px] text-white px-1.5 py-0 border-0">
-                        <Crown className="h-2.5 w-2.5 mr-0.5" />PRO
-                      </Badge>
+                      <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     )}
                   </div>
-                  <p className="text-xs text-[#0F4C81] font-medium truncate">{p.category?.name} &bull; {p.experience || 'Experienced'}</p>
-                  {/* Skills preview */}
+                  <span className="provider-card-title text-truncate-1">{p.category?.name} • {p.experience || 'Experienced'}</span>
                   {p.skills && (
-                    <p className="text-[11px] text-gray-500 truncate mt-0.5">
-                      <span className="font-medium text-gray-600">Skills:</span> {p.skills.split(',').slice(0, 3).join(', ')}
+                    <span className="provider-card-skills text-truncate-1">
+                      {p.skills.split(',').slice(0, 3).join(', ')}
                       {p.skills.split(',').length > 3 && '...'}
-                    </p>
+                    </span>
                   )}
-                  {/* About / description preview (2 lines) */}
                   {p.description && (
-                    <p className="text-[11px] text-gray-500 mt-1 line-clamp-2 leading-relaxed">
-                      {p.description}
-                    </p>
+                    <span className="provider-card-desc text-truncate-2">{p.description}</span>
                   )}
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <div className="flex items-center gap-0.5">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span className="text-[11px] font-bold text-gray-700">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
-                      {p.totalReviews > 0 && <span className="text-[10px] text-gray-400">({p.totalReviews})</span>}
-                    </div>
-                    {p.hourlyRate && (
-                      <span className="text-[10px] text-gray-500">₹{p.hourlyRate}/hr</span>
-                    )}
+                  <div className="provider-card-meta">
+                    <span className="provider-card-rating">
+                      ★ {p.rating > 0 ? p.rating.toFixed(1) : 'New'}
+                      {p.totalReviews > 0 && <span className="text-gray-400 font-normal">({p.totalReviews})</span>}
+                    </span>
+                    {p.hourlyRate && <span className="provider-card-rate">₹{p.hourlyRate}/hr</span>}
                     {p.user?.location && (
-                      <div className="flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3 text-gray-400" />
-                        <span className="text-[10px] text-gray-400 truncate max-w-[60px]">{p.user.location}</span>
-                      </div>
+                      <span className="provider-card-location text-truncate-1">📍 {p.user.location}</span>
                     )}
                   </div>
                 </div>
