@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAppStore, type ServiceCategory } from '@/lib/store'
 import { apiFetch } from '@/lib/api'
 import { Button } from '@/components/ui/button'
@@ -46,6 +46,7 @@ export default function ProviderOnboardingScreen() {
   // If viewParams has editMode=true, we're editing (not creating).
   // Skip the "redirect to dashboard if profile exists" check.
   const isEditMode = viewParams?.editMode === 'true'
+  const hasLoadedEditMode = useRef(false)
 
   // Pre-fill existing provider data if editing
   const isEditing = user?.role === 'provider'
@@ -64,7 +65,10 @@ export default function ProviderOnboardingScreen() {
 
       // If editing (came from Edit Profile button), load existing data
       // into the form fields instead of redirecting away.
-      if (isEditMode) {
+      // Use a ref to prevent re-running when myProviderProfile changes.
+      if (isEditMode && !hasLoadedEditMode.current) {
+        hasLoadedEditMode.current = true
+
         // Try to get profile from store or localStorage
         let profile = myProviderProfile
         if (!profile) {
@@ -93,6 +97,11 @@ export default function ProviderOnboardingScreen() {
           if (profile.user?.location) setLocation(profile.user.location)
         }
         setCheckingExistingProfile(false)
+        return
+      }
+
+      // If already loaded edit mode, just return (prevent redirect)
+      if (isEditMode && hasLoadedEditMode.current) {
         return
       }
 

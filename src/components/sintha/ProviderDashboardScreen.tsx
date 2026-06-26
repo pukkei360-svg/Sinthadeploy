@@ -339,7 +339,7 @@ export default function ProviderDashboardScreen() {
               <Button
                 size="sm"
                 className="bg-amber-500 hover:bg-amber-600 text-white text-xs"
-                onClick={() => navigate('provider-onboarding')}
+                onClick={() => navigate('provider-onboarding', { editMode: 'true' })}
               >
                 Setup
               </Button>
