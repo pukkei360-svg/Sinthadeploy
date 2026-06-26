@@ -125,6 +125,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    /* Prevent elastic/rubber-band overscroll on APK WebView.
+       This makes the app feel static like a native APK —
+       no pull-down bounce, no pull-up bounce. */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
@@ -133,6 +140,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Also prevent overscroll on body — double protection */
+    overscroll-behavior: none;
+    /* Prevent pull-to-refresh gesture */
+    overscroll-behavior-y: contain;
   }
   h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; }
   h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; }
