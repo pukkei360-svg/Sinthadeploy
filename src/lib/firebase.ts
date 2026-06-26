@@ -11,29 +11,15 @@ const firebaseConfig = {
   measurementId: "G-LG3F1Z21YJ"
 }
 
-// Initialize Firebase (prevent re-initialization in dev mode)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-
-// Auth
 export const auth = getAuth(app)
 
-// ── Performance Optimizations ──────────────────────────────────
-// These cut 200-500ms from every login attempt:
-
-// 1. Set language code explicitly — Firebase does a network round-trip
-//    to detect the browser's language by default. Setting it manually
-//    skips that call entirely (~100-200ms saved).
+// Skip language detection network call (saves 100-200ms)
 auth.languageCode = 'en'
 
-// 2. Force local persistence explicitly — Firebase checks IndexedDB
-//    availability on init (async, ~50-100ms). By setting it directly,
-//    we skip the capability check. Returning users get auto-signed-in
-//    instantly from cached credentials.
+// Force local persistence — returning users auto-sign-in instantly
 if (typeof window !== 'undefined') {
-  setPersistence(auth, browserLocalPersistence).catch(() => {
-    // If IndexedDB is unavailable (private browsing), Firebase
-    // falls back to in-memory persistence automatically.
-  })
+  setPersistence(auth, browserLocalPersistence).catch(() => {})
 }
 
 export default app

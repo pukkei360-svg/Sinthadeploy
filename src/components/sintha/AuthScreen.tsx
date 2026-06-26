@@ -92,71 +92,49 @@ export default function AuthScreen() {
     setLoading(true)
     setFirebaseError(null)
     try {
-      // Step 1: Authenticate with Firebase (the only blocking step — 1-2s)
+      // Step 1: Firebase auth (only blocking step)
       const credential = await signInWithEmailAndPassword(auth, emailToUse, passwordToUse)
       const firebaseUser = credential.user
 
-      // Step 2: OPTIMISTIC NAVIGATION — check if we have a cached user
-      // in localStorage with the same email. If yes, navigate IMMEDIATELY
-      // using the cached role. The backend sync runs in the background
-      // and updates the user data when ready.
-      //
-      // This cuts perceived login time from 3-5s to 1-2s for returning
-      // users (which is the common case — most logins are from users
-      // who've logged in before on this device).
+      // Step 2: OPTIMISTIC — if same user as last time, navigate NOW
       const savedUserStr = localStorage.getItem('sintha_user')
       if (savedUserStr && !isAdmin) {
         try {
           const savedUser = JSON.parse(savedUserStr)
           if (savedUser.email?.toLowerCase() === (firebaseUser.email || emailToUse).toLowerCase()) {
-            // Same user as last time — navigate immediately using cached role
             setUser(savedUser, firebaseUser.uid)
-            if (savedUser.role === 'admin') {
-              navigate('admin-dashboard')
-            } else if (savedUser.role === 'provider') {
-              navigate('provider-dashboard')
-            } else if (savedUser.role === 'client') {
-              navigate('home')
-            } else {
-              navigate('role-select')
-            }
+            if (savedUser.role === 'provider') navigate('provider-dashboard')
+            else if (savedUser.role === 'admin') navigate('admin-dashboard')
+            else if (savedUser.role === 'client') navigate('home')
+            else navigate('role-select')
 
-            // Sync in the BACKGROUND — updates user data (PRO status,
-            // verification, etc.) without blocking navigation.
+            // Sync in background (non-blocking)
             syncUserToBackend(
-              firebaseUser.uid,
-              firebaseUser.email || emailToUse,
+              firebaseUser.uid, firebaseUser.email || emailToUse,
               firebaseUser.displayName || emailToUse.split('@')[0],
               firebaseUser.photoURL || undefined
-            ).then((data) => {
-              setUser(data.user, firebaseUser.uid)
-            }).catch((err) => {
-              // If banned/suspended, sign out even for returning users
+            ).then((data) => setUser(data.user, firebaseUser.uid))
+            .catch((err) => {
               if (err instanceof Error && (err.message.includes('banned') || err.message.includes('suspended'))) {
                 import('firebase/auth').then(({ signOut }) => signOut(auth))
                 localStorage.removeItem('sintha_user')
                 localStorage.removeItem('sintha_token')
                 localStorage.removeItem('sintha_provider_profile')
-                const banMsg = err.message.toLowerCase().includes('banned')
-                  ? 'This account has been permanently banned. Please contact support.'
-                  : 'Your account has been temporarily suspended. Please contact support.'
-                alert(banMsg)
+                alert(err.message.toLowerCase().includes('banned')
+                  ? 'This account has been permanently banned.'
+                  : 'Your account has been suspended.')
                 setUser(null, null)
                 navigate('landing')
               }
-              // Other errors — silently keep user logged in from localStorage
             })
 
             toast({ title: 'Welcome back!', description: `Signed in as ${savedUser.name}` })
-            return  // ← Skip the blocking sync below
+            return
           }
-        } catch {
-          // Corrupted localStorage — fall through to normal sync flow
-        }
+        } catch {}
       }
 
-      // Step 3: FIRST LOGIN ON THIS DEVICE (no cached user) — must wait
-      // for backend sync to know the user's role before navigating.
+      // Step 3: First login on this device — must wait for sync
       const data = await syncUserToBackend(
         firebaseUser.uid,
         firebaseUser.email || emailToUse,
@@ -179,7 +157,6 @@ export default function AuthScreen() {
       toast({ title: 'Welcome back!', description: `Signed in as ${data.user.name}` })
     } catch (err: unknown) {
       const message = (err as Error).message || 'Login failed'
-      // Translate Firebase errors to user-friendly messages
       if (message.includes('auth/invalid-credential') || message.includes('auth/wrong-password')) {
         setFirebaseError('Invalid email or password. Please check your credentials.')
       } else if (message.includes('auth/user-not-found')) {
@@ -223,13 +200,10 @@ export default function AuthScreen() {
     setLoading(true)
     setFirebaseError(null)
     try {
-      // Create Firebase account (the only blocking step — 1-2s)
+      // Create Firebase account (only blocking step)
       const credential = await createUserWithEmailAndPassword(auth, regEmail, regPassword)
 
-      // Run updateProfile + syncUserToBackend IN PARALLEL — they don't
-      // depend on each other. syncUserToBackend passes regName directly,
-      // so it doesn't need Firebase's displayName to be set first.
-      // This saves ~500ms vs running them sequentially.
+      // Run updateProfile + syncToBackend IN PARALLEL (saves ~500ms)
       const [, data] = await Promise.all([
         updateProfile(credential.user, { displayName: regName }),
         syncUserToBackend(
