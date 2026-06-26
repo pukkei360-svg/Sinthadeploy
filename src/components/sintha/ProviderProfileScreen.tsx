@@ -329,7 +329,7 @@ export default function ProviderProfileScreen() {
             {checkingBooking ? 'Checking...' : hasBooking ? 'Chat' : 'Chat 🔒'}
           </Button>
           <button
-            className="sintha-btn-book flex-1 py-3.5 px-4 text-sm font-semibold inline-flex items-center justify-center"
+            className="sintha-btn-filled flex-1 py-3.5 px-4 text-sm font-semibold inline-flex items-center justify-center"
             onClick={() => navigate('booking-form', { providerId: provider.userId, providerName: provider.user?.name || 'Provider', service: provider.category?.name || '' })}
           >
             <Calendar className="h-4 w-4 mr-2" /> {hasBooking ? 'Book Again' : 'Book Now'}
