@@ -8,7 +8,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-inter);
-  --font-serif: var(--font-playfair);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,80 +37,88 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sinthablue: #0F4C81;
+  --color-sinthagreen: #10B981;
+  --color-sinthadark: #0F172A;
+  --color-sinthalight: #F8FAFC;
+  --color-sinthagold: #F59E0B;
+  --color-sinthawarning: #F59E0B;
+  --color-sinhaerror: #EF4444;
+  --color-sinthainfo: #3B82F6;
 }
 
 :root {
-  --radius: 8px;
-  /* ═══ SINTHA — "Elevated Minimal" Design System ═══ */
-  --background: #F7F6F3;       /* warm off-white */
-  --foreground: #1A1A2E;        /* deep navy text */
-  --card: #FFFFFF;              /* white surfaces */
-  --card-foreground: #1A1A2E;
-  --popover: #FFFFFF;
-  --popover-foreground: #1A1A2E;
-  --primary: #1A1A2E;           /* deep navy — headlines, CTAs */
+  --radius: 1rem;
+  /* SINTHA Design System — Dark Blue Theme */
+  --background: #F0F6FF;         /* light blue background */
+  --foreground: #0F1111;
+  --card: #E8F2FF;               /* light blue cards (not white) */
+  --card-foreground: #0F1111;
+  --popover: #E8F2FF;
+  --popover-foreground: #0F1111;
+  --primary: #0F4C81;
   --primary-foreground: #FFFFFF;
-  --secondary: #F7F6F3;
-  --secondary-foreground: #1A1A2E;
-  --muted: #F3F2EF;
-  --muted-foreground: #6B7280;  /* secondary text */
-  --accent: #E85D26;            /* burnt orange — the ONE bold choice */
-  --accent-foreground: #FFFFFF;
+  --secondary: #E8F2FF;
+  --secondary-foreground: #0F1111;
+  --muted: #DDEBFA;
+  --muted-foreground: #64748B;
+  --accent: #F1F5F9;
+  --accent-foreground: #0F4C81;
   --destructive: #EF4444;
-  --border: #E5E7EB;            /* dividers, card edges */
-  --input: #E5E7EB;
-  --ring: #E85D26;
-  --chart-1: #1A1A2E;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #0F4C81;
+  --chart-1: #0F4C81;
   --chart-2: #10B981;
-  --chart-3: #E85D26;
+  --chart-3: #F59E0B;
   --chart-4: #EF4444;
-  --chart-5: #6B7280;
+  --chart-5: #3B82F6;
   --sidebar: #FFFFFF;
-  --sidebar-foreground: #1A1A2E;
-  --sidebar-primary: #1A1A2E;
+  --sidebar-foreground: #0F1111;
+  --sidebar-primary: #0F4C81;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F7F6F3;
-  --sidebar-accent-foreground: #1A1A2E;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #E85D26;
+  --sidebar-accent: #F1F5F9;
+  --sidebar-accent-foreground: #0F4C81;
+  --sidebar-border: #E2E8F0;
+  --sidebar-ring: #0F4C81;
 }
 
 .dark {
-  --background: #1A1A2E;
-  --foreground: #F7F6F3;
-  --card: #252539;
-  --card-foreground: #F7F6F3;
-  --popover: #252539;
-  --popover-foreground: #F7F6F3;
-  --primary: #F7F6F3;
-  --primary-foreground: #1A1A2E;
-  --secondary: #252539;
-  --secondary-foreground: #F7F6F3;
-  --muted: #2D2D44;
-  --muted-foreground: #9CA3AF;
-  --accent: #E85D26;
+  --background: #0F172A;
+  --foreground: #FFFFFF;
+  --card: #1E293B;
+  --card-foreground: #FFFFFF;
+  --popover: #1E293B;
+  --popover-foreground: #FFFFFF;
+  --primary: #0F4C81;
+  --primary-foreground: #FFFFFF;
+  --secondary: #1E293B;
+  --secondary-foreground: #FFFFFF;
+  --muted: #334155;
+  --muted-foreground: #94A3B8;
+  --accent: #334155;
   --accent-foreground: #FFFFFF;
   --destructive: #EF4444;
-  --border: #2D2D44;
-  --input: #2D2D44;
-  --ring: #E85D26;
-  --chart-1: #F7F6F3;
+  --border: #334155;
+  --input: #334155;
+  --ring: #0F4C81;
+  --chart-1: #0F4C81;
   --chart-2: #10B981;
-  --chart-3: #E85D26;
+  --chart-3: #F59E0B;
   --chart-4: #EF4444;
-  --chart-5: #6B7280;
-  --sidebar: #252539;
-  --sidebar-foreground: #F7F6F3;
-  --sidebar-primary: #F7F6F3;
-  --sidebar-primary-foreground: #1A1A2E;
-  --sidebar-accent: #2D2D44;
-  --sidebar-accent-foreground: #F7F6F3;
-  --sidebar-border: #2D2D44;
-  --sidebar-ring: #E85D26;
+  --chart-5: #3B82F6;
+  --sidebar: #1E293B;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #0F4C81;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #334155;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #334155;
+  --sidebar-ring: #0F4C81;
 }
 
 @layer base {
@@ -119,6 +126,9 @@
     @apply border-border outline-ring/50;
   }
   html {
+    /* Prevent elastic/rubber-band overscroll on APK WebView.
+       This makes the app feel static like a native APK —
+       no pull-down bounce, no pull-up bounce. */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -130,13 +140,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Also prevent overscroll on body — double protection */
     overscroll-behavior: none;
+    /* Prevent pull-to-refresh gesture */
     overscroll-behavior-y: contain;
   }
-  h1 { font-size: 2.5rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.15; font-family: var(--font-playfair), Georgia, serif; }
-  h2 { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
-  h3 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.3; }
-  h4 { font-size: 1rem; font-weight: 600; line-height: 1.4; }
+  h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; }
+  h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; }
+  h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.35; }
+  h4 { font-size: 0.95rem; font-weight: 600; line-height: 1.4; }
   p { line-height: 1.6; }
   button {
     font-family: inherit;
@@ -144,63 +156,61 @@
   }
 }
 
-/* ═══ SINTHA — Elevated Minimal Custom Styles ═══ */
-
-/* Primary gradient — deep navy */
+/* SINTHA Custom Styles — Premium Dark Blue Theme */
 .sintha-gradient {
-  background: linear-gradient(135deg, #1A1A2E 0%, #16162a 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
 }
 
 .sintha-gradient-text {
-  background: linear-gradient(135deg, #1A1A2E 0%, #E85D26 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Cards — subtle shadow, 8px radius, no border */
 .sintha-card-hover {
 }
 
 .sintha-card {
-  background: #FFFFFF;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
-  border: none;
+  background: #E8F2FF;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(15, 76, 129, 0.08);
+  border: 1px solid #C5DBF5;
 }
 
-/* PRO badge — accent orange */
 .sintha-pro-badge {
-  background: linear-gradient(135deg, #E85D26 0%, #c44d1f 100%);
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
 
 .sintha-verified {
   color: #10B981;
 }
 
-/* Shadows — subtle only */
+/* Graphic shadows for depth */
 .shadow-card {
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(15, 76, 129, 0.08);
 }
 .shadow-card-hover {
-  box-shadow: 0 2px 6px rgba(0,0,0,0.10), 0 8px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 .shadow-blue {
-  box-shadow: 0 2px 6px rgba(26, 26, 46, 0.15);
+  box-shadow: 0 4px 15px rgba(15, 76, 129, 0.2);
 }
 
-/* Backgrounds */
+/* Graphic gradient backgrounds for sections */
 .bg-gradient-hero {
-  background: linear-gradient(135deg, #1A1A2E 0%, #16162a 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 50%, #082C49 100%);
 }
 .bg-gradient-soft {
-  background: linear-gradient(135deg, #F7F6F3 0%, #FFF3EE 100%);
+  background: linear-gradient(135deg, #E8F2FF 0%, #D6E8FA 100%);
 }
 .bg-gradient-card {
-  background: linear-gradient(135deg, #FFFFFF 0%, #F7F6F3 100%);
+  background: linear-gradient(135deg, #E8F2FF 0%, #F0F6FF 100%);
 }
 
-/* Scrollbar */
+/* No animations — static like native APK */
+
+/* Scrollbar styling */
 .sintha-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -208,11 +218,14 @@
   background: transparent;
 }
 .sintha-scrollbar::-webkit-scrollbar-thumb {
-  background: #E5E7EB;
+  background: #CBD5E1;
   border-radius: 2px;
 }
+.sintha-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
 
-/* reCAPTCHA */
+/* reCAPTCHA container — should be invisible but still functional */
 .recaptcha-container {
   position: absolute;
   left: -9999px;
@@ -221,343 +234,20 @@
   overflow: hidden;
 }
 
-/* Marquee */
+/* Marquee animation for service highlights */
 @keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
+
 .animate-marquee {
   animation: marquee 20s linear infinite;
 }
+
 .animate-marquee:hover {
   animation-play-state: paused;
-}
-
-/* ═══ Component Styles — Elevated Minimal ═══ */
-
-/* Top bar — deep navy, static */
-.sintha-top-bar {
-  background: #1A1A2E;
-  color: #FFFFFF;
-  padding-top: env(safe-area-inset-top);
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-}
-
-.sintha-app-bar {
-  background: #1A1A2E;
-  color: #FFFFFF;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-}
-
-/* Filled button — burnt orange accent */
-.sintha-btn-filled {
-  background: #E85D26;
-  color: #FFFFFF;
-  border-radius: 6px;
-  min-height: 44px;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(232, 93, 38, 0.25);
-  transition: filter 0.18s ease;
-}
-.sintha-btn-filled:active {
-  filter: brightness(0.92);
-}
-.sintha-btn-filled:disabled {
-  background: #D1D5DB;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-/* Book button — same accent */
-.sintha-btn-book {
-  background: #E85D26;
-  color: #FFFFFF;
-  border-radius: 6px;
-  min-height: 44px;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(232, 93, 38, 0.25);
-  transition: filter 0.18s ease;
-}
-.sintha-btn-book:active {
-  filter: brightness(0.92);
-}
-.sintha-btn-book:disabled {
-  background: #D1D5DB;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-/* Outlined button — deep navy border */
-.sintha-btn-outlined {
-  background: transparent;
-  color: #1A1A2E;
-  border: 2px solid #1A1A2E;
-  border-radius: 6px;
-  min-height: 44px;
-  font-weight: 600;
-  transition: background 0.18s ease;
-}
-.sintha-btn-outlined:active {
-  background: rgba(26, 26, 46, 0.06);
-}
-
-/* Chips — tag BG tint */
-.sintha-chip {
-  background: #F3F2EF;
-  color: #1A1A2E;
-  border-radius: 9999px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid #E5E7EB;
-}
-.sintha-chip-active {
-  background: #E85D26;
-  color: #FFFFFF;
-  border-color: #E85D26;
-}
-
-/* Material card — clean white */
-.sintha-material-card {
-  background: #FFFFFF;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
-  border: none;
-}
-
-/* Bottom nav — solid white */
-.sintha-bottom-nav {
-  background: #FFFFFF;
-  box-shadow: 0 -1px 6px rgba(0,0,0,0.06);
-  border-top: none;
-}
-.sintha-bottom-nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 56px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #6B7280;
-}
-.sintha-bottom-nav-item-active {
-  color: #E85D26;
-}
-
-/* Verified badge — tag BG tint */
-.sintha-badge-verified {
-  background: #FFF3EE;
-  color: #E85D26;
-  border: 1px solid #FFD4C0;
-  border-radius: 9999px;
-  padding: 2px 10px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-/* Provider card — clean, subtle shadow */
-.sintha-provider-card {
-  background: #FFFFFF;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
-  border: none;
-}
-
-.sintha-provider-card-header {
-  height: 72px;
-  background: linear-gradient(135deg, #1A1A2E 0%, #16162a 100%);
-}
-
-.sintha-provider-card-avatar {
-  margin-top: -36px;
-  border: 4px solid #FFFFFF;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-}
-
-.sintha-info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 14px;
-  border-bottom: 1px solid #F3F2EF;
-}
-.sintha-info-row:last-child {
-  border-bottom: none;
-}
-.sintha-info-label {
-  color: #6B7280;
-  font-weight: 500;
-}
-.sintha-info-value {
-  color: #1A1A2E;
-  font-weight: 600;
-}
-
-/* Uniform provider cards */
-.provider-card-uniform {
-  background: #FFFFFF;
-  border-radius: 8px;
-  padding: 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
-  border: none;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  text-align: left;
-  width: 100%;
-  overflow: hidden;
-}
-
-.provider-card-horizontal {
-  background: #FFFFFF;
-  border-radius: 8px;
-  padding: 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06);
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
-  height: 290px;
-  overflow: hidden;
-  position: relative;
-}
-
-.text-truncate-1 {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
-  width: 100%;
-}
-.text-truncate-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-
-.provider-card-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.provider-card-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1A1A2E;
-}
-.provider-card-title {
-  font-size: 12px;
-  color: #6B7280;
-  font-weight: 500;
-}
-.provider-card-skills {
-  font-size: 11px;
-  color: #6B7280;
-}
-.provider-card-desc {
-  font-size: 11px;
-  color: #9CA3AF;
-  line-height: 1.4;
-  margin-top: 2px;
-}
-.provider-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-  font-size: 11px;
-}
-.provider-card-rating {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  color: #E85D26;
-  font-weight: 600;
-}
-.provider-card-rate {
-  color: #6B7280;
-}
-.provider-card-location {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  color: #9CA3AF;
-  max-width: 70px;
-}
-
-/* Highlight box */
-.sintha-highlight-box {
-  background: #FFF3EE;
-  border-left: 3px solid #E85D26;
-  border-radius: 0 8px 8px 0;
-  padding: 16px 18px;
-}
-.sintha-highlight-title {
-  color: #E85D26;
-  font-weight: 600;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
-}
-.sintha-highlight-body {
-  color: #1A1A2E;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* Snackbar */
-.sintha-snackbar {
-  background: #1A1A2E;
-  color: #FFFFFF;
-  border-radius: 6px;
-  padding: 14px 16px;
-  min-height: 48px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* List item */
-.sintha-list-item {
-  display: flex;
-  align-items: center;
-  padding: 14px 16px;
-  min-height: 56px;
-  background: #FFFFFF;
-  border-bottom: 1px solid #F3F2EF;
-}
-
-/* Divider */
-.sintha-divider {
-  height: 1px;
-  background: #E5E7EB;
-  margin: 16px 0;
-}
-
-/* Fade-in animation on mount */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.animate-fade-in {
-  animation: fade-in 0.3s ease;
 }

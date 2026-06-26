@@ -1,24 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Playfair_Display, Noto_Sans_Meetei_Mayek } from "next/font/google";
+import { Inter, Noto_Sans_Meetei_Mayek } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import WebViewInterceptor from "@/components/WebViewInterceptor";
 import OfflineBootstrap from "@/components/sintha/OfflineBootstrap";
 import CapacitorPushBridge from "@/components/sintha/CapacitorPushBridge";
 
-// Inter — body font (everything except hero headline)
+// Inter — premium sans-serif used by Amazon, Vercel, Stripe, GitHub
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
-
-// Playfair Display — serif, used only for hero headlines (max 2 uses)
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  weight: ["600"],
+  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -111,7 +103,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://identitytoolkit.googleapis.com" />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
+        className={`${inter.variable} ${meeteiMayek.variable} antialiased bg-background text-foreground`}
       >
         <WebViewInterceptor />
         <OfflineBootstrap />
