@@ -344,270 +344,122 @@ export default function HomeScreen() {
             </div>
           </div>
         ) : searchQuery ? (
-          <div className="px-4 space-y-4">
+          <div className="px-4 space-y-3">
             {filteredProviders.slice(0, 10).map((p: ProviderProfile) => (
-              <div
+              <button
                 key={p.id}
-                className="sintha-provider-card"
+                onClick={() => navigate('provider-profile', { providerId: p.id })}
+                className="w-full bg-white rounded-2xl p-4 shadow-sm sintha-card-hover flex items-center gap-3 text-left"
               >
-                {/* Gradient header */}
-                <div className="sintha-provider-card-header" />
-
-                {/* Centered avatar + name + job title */}
-                <button
-                  onClick={() => navigate('provider-profile', { providerId: p.id })}
-                  className="w-full flex flex-col items-center pt-0 pb-3 px-4 -mt-10"
-                >
-                  <Avatar className="sintha-provider-card-avatar h-20 w-20">
-                    <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                    <AvatarFallback className="text-xl font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex items-center gap-1.5 mt-2 justify-center">
-                    <p className="text-lg font-bold text-[#0F4C81]">{p.user?.name}</p>
-                    {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
-                    {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-                    )}
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff`} />
+                  <AvatarFallback>{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-800 truncate">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81] shrink-0" />}
                   </div>
-                  <p className="text-sm text-gray-500 font-medium">{p.category?.name}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-amber-500 text-sm">{'★'.repeat(Math.round(p.rating || 0))}</span>
-                    <span className="text-xs text-gray-500">
-                      ({p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && ` · ${p.totalReviews} reviews`})
-                    </span>
-                  </div>
-                </button>
-
-                {/* Info rows */}
-                <div className="px-5 py-2">
-                  <div className="sintha-info-row">
-                    <span className="sintha-info-label">Experience</span>
-                    <span className="sintha-info-value">{p.experience || 'Experienced'}</span>
-                  </div>
+                  <p className="text-xs text-gray-500 truncate">{p.category?.name} &bull; {p.experience || 'Experienced'}</p>
                   {p.user?.location && (
-                    <div className="sintha-info-row">
-                      <span className="sintha-info-label">Location</span>
-                      <span className="sintha-info-value">{p.user.location}</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3 text-gray-400" />
+                      <span className="text-[10px] text-gray-400">{p.user.location}</span>
                     </div>
                   )}
-                  <div className="sintha-info-row">
-                    <span className="sintha-info-label">Completed</span>
-                    <span className="sintha-info-value">{p.totalBookings || 0} Jobs</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-sm font-semibold">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
                   </div>
                   {p.hourlyRate && (
-                    <div className="sintha-info-row">
-                      <span className="sintha-info-label">Starting Price</span>
-                      <span className="sintha-info-value">₹{p.hourlyRate}</span>
-                    </div>
+                    <p className="text-[10px] text-gray-400">₹{p.hourlyRate}/hr</p>
                   )}
                 </div>
-
-                {/* Buttons: Call (blue) + Book (orange) */}
-                <div className="flex gap-3 px-5 pb-5 pt-2">
-                  <button
-                    onClick={() => {
-                      if (p.user?.phone) {
-                        window.open(`tel:${p.user.phone}`, '_self')
-                      } else {
-                        navigate('chat-room', {
-                          providerId: p.userId,
-                          providerName: p.user?.name || 'Provider',
-                        })
-                      }
-                    }}
-                    className="sintha-btn-filled flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Call
-                  </button>
-                  <button
-                    onClick={() => navigate('booking-form', {
-                      providerId: p.userId,
-                      providerName: p.user?.name || 'Provider',
-                      service: p.category?.name || '',
-                    })}
-                    className="sintha-btn-book flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Book
-                  </button>
-                </div>
-              </div>
+              </button>
             ))}
           </div>
         ) : (
           <div className="flex gap-4 overflow-x-auto px-4 pb-2 sintha-scrollbar">
             {topProviders.map((p: ProviderProfile) => (
-              <div
+              <button
                 key={p.id}
-                className="sintha-provider-card shrink-0"
-                style={{ width: '260px', maxWidth: '260px' }}
+                onClick={() => navigate('provider-profile', { providerId: p.id })}
+                className="bg-white rounded-2xl p-4 shadow-sm min-w-[160px] shrink-0 sintha-card-hover text-left border border-[#E2E8F0] relative"
               >
-                {/* Gradient header */}
-                <div className="sintha-provider-card-header" />
-
-                {/* Centered avatar + name + job title */}
-                <button
-                  onClick={() => navigate('provider-profile', { providerId: p.id })}
-                  className="w-full flex flex-col items-center pt-0 pb-3 px-4 -mt-10"
-                >
-                  <Avatar className="sintha-provider-card-avatar h-16 w-16">
-                    <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                    <AvatarFallback className="text-lg font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex items-center gap-1.5 mt-2 justify-center">
-                    <p className="text-base font-bold text-[#0F4C81] truncate max-w-[180px]">{p.user?.name}</p>
-                    {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
-                    {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
-                    )}
+                {/* Available Now badge */}
+                {p.availability === 'available' && (
+                  <span className="absolute top-2 right-2 bg-blue-600 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+                    Available Now
+                  </span>
+                )}
+                <Avatar className="h-20 w-20 mx-auto mb-2 border-2 border-[#E2E8F0]">
+                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
+                  <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                </Avatar>
+                <p className="text-sm font-bold text-[#0F1111] text-center truncate">{p.user?.name}</p>
+                <p className="text-xs text-[#0F4C81] font-medium text-center truncate mt-0.5">{p.category?.name}</p>
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  <div className="flex items-center gap-0.5">
+                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-bold text-[#0F1111]">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
                   </div>
-                  <p className="text-xs text-gray-500 font-medium">{p.category?.name}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-amber-500 text-xs">{'★'.repeat(Math.round(p.rating || 0))}</span>
-                    <span className="text-[10px] text-gray-500">
-                      ({p.rating > 0 ? p.rating.toFixed(1) : 'New'})
-                    </span>
-                  </div>
-                </button>
-
-                {/* Buttons: Call (blue) + Book (orange) */}
-                <div className="flex gap-2 px-4 pb-4">
-                  <button
-                    onClick={() => {
-                      if (p.user?.phone) {
-                        window.open(`tel:${p.user.phone}`, '_self')
-                      } else {
-                        navigate('chat-room', {
-                          providerId: p.userId,
-                          providerName: p.user?.name || 'Provider',
-                        })
-                      }
-                    }}
-                    className="sintha-btn-filled flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Call
-                  </button>
-                  <button
-                    onClick={() => navigate('booking-form', {
-                      providerId: p.userId,
-                      providerName: p.user?.name || 'Provider',
-                      service: p.category?.name || '',
-                    })}
-                    className="sintha-btn-book flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Book
-                  </button>
+                  {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81]" />}
+                  {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
+                    <Crown className="h-4 w-4 text-amber-500" />
+                  )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Featured / Verified Providers — gradient header + centered avatar + info rows */}
+      {/* Featured / Verified Providers */}
       {featuredProviders.length > 0 && !searchQuery && (
         <div className="pt-6 px-4">
           <div className="flex items-center gap-2 mb-3">
             <Crown className="h-5 w-5 text-amber-500" />
             <h2 className="text-lg font-bold text-gray-800">Verified Providers</h2>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-3">
             {featuredProviders.slice(0, 5).map((p: ProviderProfile) => (
-              <div
+              <button
                 key={p.id}
-                className="sintha-provider-card"
+                onClick={() => navigate('provider-profile', { providerId: p.id })}
+                className="w-full bg-white rounded-2xl p-4 shadow-sm sintha-card-hover flex items-center gap-4 text-left border border-[#E2E8F0]"
               >
-                {/* Gradient header */}
-                <div className="sintha-provider-card-header" />
-
-                {/* Centered avatar + name + job title (tappable → provider profile) */}
-                <button
-                  onClick={() => navigate('provider-profile', { providerId: p.id })}
-                  className="w-full flex flex-col items-center pt-0 pb-3 px-4 -mt-10"
-                >
-                  <Avatar className="sintha-provider-card-avatar h-20 w-20">
-                    <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
-                    <AvatarFallback className="text-xl font-bold text-[#0F4C81] bg-blue-100">{p.user?.name?.[0] || 'P'}</AvatarFallback>
-                  </Avatar>
-                  {/* Name + badges */}
-                  <div className="flex items-center gap-1.5 mt-2 justify-center">
-                    <p className="text-lg font-bold text-[#0F4C81]">{p.user?.name}</p>
-                    {p.isVerified && <CheckCircle className="h-4 w-4 text-[#0F4C81] shrink-0" />}
+                <Avatar className="h-16 w-16 border-2 border-[#E2E8F0]">
+                  <AvatarImage src={p.user?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.user?.name || 'P')}&background=0F4C81&color=fff&size=128`} />
+                  <AvatarFallback className="text-lg font-bold text-[#0F4C81]">{p.user?.name?.[0] || 'P'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-800 truncate">{p.user?.name}</p>
+                    {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-[#0F4C81] shrink-0" />}
                     {p.user?.isPro && (!p.user?.proExpiry || new Date(p.user.proExpiry) > new Date()) && (
-                      <Crown className="h-4 w-4 text-amber-500 shrink-0" />
+                      <Badge className="sintha-pro-badge text-[9px] text-white px-1.5 py-0 border-0">
+                        <Crown className="h-2.5 w-2.5 mr-0.5" />PRO
+                      </Badge>
                     )}
                   </div>
-                  {/* Job title ONLY */}
-                  <p className="text-sm text-gray-500 font-medium">{p.category?.name}</p>
-                  {/* Rating */}
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-amber-500 text-sm">{'★'.repeat(Math.round(p.rating || 0))}</span>
-                    <span className="text-xs text-gray-500">
-                      ({p.rating > 0 ? p.rating.toFixed(1) : 'New'}
-                      {p.totalReviews > 0 && ` · ${p.totalReviews} reviews`})
-                    </span>
-                  </div>
-                </button>
-
-                {/* Info rows */}
-                <div className="px-5 py-2">
-                  <div className="sintha-info-row">
-                    <span className="sintha-info-label">Experience</span>
-                    <span className="sintha-info-value">{p.experience || 'Experienced'}</span>
-                  </div>
+                  <p className="text-xs text-gray-500 truncate">{p.category?.name} &bull; {p.experience || 'Experienced'}</p>
                   {p.user?.location && (
-                    <div className="sintha-info-row">
-                      <span className="sintha-info-label">Location</span>
-                      <span className="sintha-info-value">{p.user.location}</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="h-3 w-3 text-gray-400" />
+                      <span className="text-[10px] text-gray-400">{p.user.location}</span>
                     </div>
                   )}
-                  <div className="sintha-info-row">
-                    <span className="sintha-info-label">Completed</span>
-                    <span className="sintha-info-value">{p.totalBookings || 0} Jobs</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="text-sm font-semibold">{p.rating > 0 ? p.rating.toFixed(1) : 'New'}</span>
                   </div>
-                  {p.hourlyRate && (
-                    <div className="sintha-info-row">
-                      <span className="sintha-info-label">Starting Price</span>
-                      <span className="sintha-info-value">₹{p.hourlyRate}</span>
-                    </div>
-                  )}
+                  {p.hourlyRate && <p className="text-[10px] text-gray-400">₹{p.hourlyRate}/hr</p>}
                 </div>
-
-                {/* Buttons: Call (blue) + Book (orange) */}
-                <div className="flex gap-3 px-5 pb-5 pt-2">
-                  <button
-                    onClick={() => {
-                      if (p.user?.phone) {
-                        window.open(`tel:${p.user.phone}`, '_self')
-                      } else {
-                        navigate('chat-room', {
-                          providerId: p.userId,
-                          providerName: p.user?.name || 'Provider',
-                        })
-                      }
-                    }}
-                    className="sintha-btn-filled flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Call
-                  </button>
-                  <button
-                    onClick={() => navigate('booking-form', {
-                      providerId: p.userId,
-                      providerName: p.user?.name || 'Provider',
-                      service: p.category?.name || '',
-                    })}
-                    className="sintha-btn-book flex-1 py-3.5 text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Book
-                  </button>
-                </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
