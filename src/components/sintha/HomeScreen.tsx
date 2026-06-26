@@ -54,25 +54,66 @@ export default function HomeScreen() {
   useEffect(() => {
     if (dataLoaded) return
     const loadData = async () => {
-      // DON'T set loading=true if we already have cached data — show it immediately
-      // and refresh in the background. Only show loading spinner on very first load.
+      // Step 1: Try to load from localStorage cache FIRST — this is instant
+      // and lets us render the home screen immediately without waiting for
+      // any network request. The API calls run in the background and
+      // update the data when they complete.
+      try {
+        const cachedCats = localStorage.getItem('sintha_cache_categories')
+        const cachedProvs = localStorage.getItem('sintha_cache_providers')
+        if (cachedCats) {
+          const parsed = JSON.parse(cachedCats)
+          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+            setCategories(parsed)
+            setDataLoaded(true)  // mark as loaded so we don't show spinner
+          }
+        }
+        if (cachedProvs) {
+          const parsed = JSON.parse(cachedProvs)
+          if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+            setProviders(parsed)
+          }
+        }
+      } catch {
+        // Corrupted cache — ignore, fetch from API
+      }
+
+      // Step 2: Only show loading spinner if we have NO cached data at all
       if (categories.length === 0 && providers.length === 0) {
         setIsLoading(true)
       }
+
       try {
-        // Only call /seed on very first ever load (no categories in store AND no cache)
+        // Fire /seed in the background (don't await) — it's a seeding helper
+        // that should NOT block the categories + providers fetch.
         if (categories.length === 0) {
-          try { await apiFetch('/seed', { method: 'POST' }) } catch {}
+          apiFetch('/seed', { method: 'POST' }).catch(() => {})
         }
-        // Fetch categories + providers in parallel (cached for 5 min / 2 min)
+
+        // Fetch categories + providers in parallel with LONGER cache TTLs.
+        // Categories rarely change (30 min cache), providers change more
+        // often but still benefit from 10 min cache. The SWR pattern means
+        // cached data returns INSTANTLY and revalidates in the background.
         const [catData, provData] = await Promise.all([
-          apiFetch('/categories', { cacheTtl: 5 * 60 * 1000 }),
-          apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 2 * 60 * 1000 }),
+          apiFetch('/categories', { cacheTtl: 30 * 60 * 1000 }),  // 30 min
+          apiFetch('/providers?limit=20&sort=featured', { cacheTtl: 10 * 60 * 1000 }),  // 10 min
         ])
-        setCategories(catData.categories || [])
-        setProviders(provData.providers || [])
+
+        const newCategories = catData.categories || []
+        const newProviders = provData.providers || []
+        setCategories(newCategories)
+        setProviders(newProviders)
+
+        // Step 3: Save to localStorage for instant load on next visit
+        try {
+          localStorage.setItem('sintha_cache_categories', JSON.stringify(newCategories))
+          localStorage.setItem('sintha_cache_providers', JSON.stringify(newProviders))
+        } catch {
+          // localStorage full — ignore
+        }
       } catch (err) {
         console.error('Failed to load data:', err)
+        // If API fails but we have cached data, keep showing it (already set above)
       } finally {
         setDataLoaded(true)
         setIsLoading(false)

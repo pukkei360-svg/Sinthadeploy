@@ -96,10 +96,11 @@ export async function GET(request: NextRequest) {
       },
     }, {
       headers: {
-        // Cache provider lists for 2 min on browser, 10 min on CDN.
+        // Cache provider lists for 10 min on browser, 30 min on CDN.
         // Providers don't change often, and stale-while-revalidate
         // serves cached data instantly while fetching fresh in background.
-        'Cache-Control': 'public, max-age=120, s-maxage=600, stale-while-revalidate=3600',
+        // Increased from 2min/10min to reduce home screen load time.
+        'Cache-Control': 'public, max-age=600, s-maxage=1800, stale-while-revalidate=86400',
       },
     });
   } catch (error) {
