@@ -158,11 +158,6 @@
 }
 
 .sintha-card-hover {
-  transition: all 0.25s ease;
-}
-.sintha-card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(15, 76, 129, 0.15);
 }
 
 .sintha-card {
@@ -170,11 +165,6 @@
   border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: 1px solid #E2E8F0;
-  transition: all 0.25s ease;
-}
-.sintha-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-  border-color: #CBD5E1;
 }
 
 .sintha-pro-badge {
@@ -207,14 +197,7 @@
   background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
 }
 
-.sintha-pulse {
-  animation: sintha-pulse 2s infinite;
-}
-
-@keyframes sintha-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
+/* No animations — static like native APK */
 
 /* Scrollbar styling */
 .sintha-scrollbar::-webkit-scrollbar {
