@@ -306,7 +306,7 @@ export default function BookingDetailScreen() {
                   service: booking.service,
                 })
               }
-              className="mt-4 w-full flex items-center justify-center gap-2 sintha-gradient text-white rounded-lg py-2.5 text-sm font-semibold transition-colors shadow-sm"
+              className="mt-4 w-full flex items-center justify-center gap-2 sintha-btn-book py-2.5 text-sm font-semibold"
             >
               <RotateCcw className="h-4 w-4" />
               Book Again

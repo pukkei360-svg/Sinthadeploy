@@ -257,3 +257,203 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Material Design (Android Native) — inspired styling
+   ───────────────────────────────────────────────────────────── */
+
+/* Material elevation levels (1-5) */
+.elevation-1 { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.10); }
+.elevation-2 { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08), 0 2px 6px 0 rgba(0, 0, 0, 0.12); }
+.elevation-3 { box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.10), 0 1px 3px 0 rgba(0, 0, 0, 0.10); }
+.elevation-4 { box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.12), 0 3px 6px -1px rgba(0, 0, 0, 0.10); }
+.elevation-5 { box-shadow: 0 10px 20px -4px rgba(0, 0, 0, 0.14), 0 4px 8px -2px rgba(0, 0, 0, 0.10); }
+
+/* Material-style top app bar */
+.sintha-top-bar {
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
+  color: #FFFFFF;
+  padding-top: env(safe-area-inset-top);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.sintha-app-bar {
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
+  color: #FFFFFF;
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.15), 0 4px 12px -2px rgba(15, 76, 129, 0.20);
+}
+
+/* Material-style filled button (blue — for Call) */
+.sintha-btn-filled {
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
+  color: #FFFFFF;
+  border-radius: 14px;
+  min-height: 48px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 3px rgba(15, 76, 129, 0.30), 0 1px 2px rgba(15, 76, 129, 0.20);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sintha-btn-filled:hover {
+  box-shadow: 0 4px 10px rgba(15, 76, 129, 0.40), 0 2px 4px rgba(15, 76, 129, 0.25);
+  filter: brightness(1.05);
+}
+.sintha-btn-filled:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+.sintha-btn-filled:disabled {
+  background: #CBD5E1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Book button — ORANGE (#F59E0B) — matches the new provider card design */
+.sintha-btn-book {
+  background: linear-gradient(135deg, #F59E0B 0%, #E68900 100%);
+  color: #FFFFFF;
+  border-radius: 14px;
+  min-height: 48px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.40), 0 1px 2px rgba(245, 158, 11, 0.25);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sintha-btn-book:hover {
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.50), 0 2px 4px rgba(245, 158, 11, 0.30);
+  filter: brightness(1.05);
+}
+.sintha-btn-book:active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+.sintha-btn-book:disabled {
+  background: #CBD5E1;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Material-style outlined button */
+.sintha-btn-outlined {
+  background: transparent;
+  color: #0F4C81;
+  border: 2px solid #0F4C81;
+  border-radius: 14px;
+  min-height: 48px;
+  font-weight: 600;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sintha-btn-outlined:hover {
+  background: rgba(15, 76, 129, 0.08);
+}
+.sintha-btn-outlined:active {
+  background: rgba(15, 76, 129, 0.14);
+}
+
+/* Material-style chip */
+.sintha-chip {
+  background: #F1F5F9;
+  color: #1F2937;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #E2E8F0;
+  transition: all 0.15s ease;
+}
+.sintha-chip-active {
+  background: #0F4C81;
+  color: #FFFFFF;
+  border-color: #0F4C81;
+}
+
+/* Material-style card */
+.sintha-material-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+  border: none;
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Material-style bottom navigation */
+.sintha-bottom-nav {
+  background: #FFFFFF;
+  box-shadow: 0 -1px 3px 0 rgba(0, 0, 0, 0.08), 0 -1px 2px -1px rgba(0, 0, 0, 0.06);
+  border-top: none;
+}
+.sintha-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+  transition: color 0.15s ease;
+}
+.sintha-bottom-nav-item-active {
+  color: #0F4C81;
+}
+
+/* Material-style status badges */
+.sintha-badge-verified {
+  background: #EFF6FF;
+  color: #0F4C81;
+  border: 1px solid #BFDBFE;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ─── NEW: Provider card design (gradient header + centered avatar) ─── */
+.sintha-provider-card {
+  background: #FFFFFF;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+}
+.sintha-provider-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(15, 76, 129, 0.10);
+}
+
+.sintha-provider-card-header {
+  height: 80px;
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
+}
+
+.sintha-provider-card-avatar {
+  margin-top: -40px;
+  border: 5px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sintha-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #F1F5F9;
+}
+.sintha-info-row:last-child {
+  border-bottom: none;
+}
+.sintha-info-label {
+  color: #64748B;
+  font-weight: 500;
+}
+.sintha-info-value {
+  color: #0F172A;
+  font-weight: 600;
+}

@@ -328,12 +328,12 @@ export default function ProviderProfileScreen() {
             <MessageCircle className="h-4 w-4 mr-2" />
             {checkingBooking ? 'Checking...' : hasBooking ? 'Chat' : 'Chat 🔒'}
           </Button>
-          <Button
-            className="flex-1 sintha-gradient text-white py-6 font-semibold"
+          <button
+            className="sintha-btn-book flex-1 py-3.5 px-4 text-sm font-semibold inline-flex items-center justify-center"
             onClick={() => navigate('booking-form', { providerId: provider.userId, providerName: provider.user?.name || 'Provider', service: provider.category?.name || '' })}
           >
             <Calendar className="h-4 w-4 mr-2" /> {hasBooking ? 'Book Again' : 'Book Now'}
-          </Button>
+          </button>
         </div>
         {checkingBooking && (
           <p className="text-[11px] text-center text-gray-400 mt-2">
