@@ -42,7 +42,6 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --color-sinthablue: #0F4C81;
-  --color-sinthagreen: #10B981;
   --color-sinthadark: #0F172A;
   --color-sinthalight: #F8FAFC;
   --color-sinthagold: #F59E0B;
@@ -53,7 +52,6 @@
 
 :root {
   --radius: 1rem;
-  /* SINTHA Design System */
   --background: #F8FAFC;
   --foreground: #0F1111;
   --card: #FFFFFF;
@@ -145,150 +143,70 @@
   }
 }
 
-/* SINTHA Custom Styles — Vibrant 2026 Graphic Design Theme */
+/* ═══════════════════════════════════════════════════════════════
+   SINTHA — Clean Static Native App Theme (2026)
+   No animations. No hover transforms. No elastic effects.
+   Solid colors. Clean shadows. Native app feel.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Primary gradient — static, no animation */
 .sintha-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #0F4C81 50%, #764ba2 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
 }
 
 .sintha-gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #0F4C81 50%, #764ba2 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Vibrant hero gradient — purple/blue/pink blend */
-.sintha-gradient-vibrant {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-}
-
-/* Sunset gradient — orange/pink for CTAs */
-.sintha-gradient-sunset {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-}
-
-/* Ocean gradient — teal/blue for cards */
-.sintha-gradient-ocean {
-  background: linear-gradient(135deg, #2af598 0%, #009efd 100%);
-}
-
-/* Purple gradient — for PRO badges */
-.sintha-gradient-purple {
-  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
-}
-
-/* Glassmorphism card — frosted glass effect */
-.sintha-glass {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
-}
-
-.sintha-glass-dark {
-  background: rgba(15, 76, 129, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-/* Gradient slide animation for hero backgrounds */
-@keyframes gradient-slide {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.sintha-gradient-animated {
-  background-size: 200% 200%;
-  animation: gradient-slide 8s ease infinite;
-}
-
+/* Card styles — static, no hover lift */
 .sintha-card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.15s ease;
 }
 .sintha-card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.20);
+  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.12);
 }
 
 .sintha-card {
   background: #FFFFFF;
-  border-radius: 1.25rem;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sintha-card:hover {
-  box-shadow: 0 8px 28px rgba(102, 126, 234, 0.15);
 }
 
 .sintha-pro-badge {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
 }
 
 .sintha-verified {
   color: #0F4C81;
 }
 
-/* Graphic shadows for depth */
+/* Shadows — subtle, static */
 .shadow-card {
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 .shadow-card-hover {
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.20);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
 }
 .shadow-blue {
-  box-shadow: 0 6px 20px rgba(15, 76, 129, 0.25);
-}
-.shadow-vibrant {
-  box-shadow: 0 8px 24px rgba(118, 75, 162, 0.25);
-}
-.shadow-glow {
-  box-shadow: 0 0 20px rgba(102, 126, 234, 0.30);
+  box-shadow: 0 3px 10px rgba(15, 76, 129, 0.15);
 }
 
-/* Graphic gradient backgrounds for sections */
+/* Background gradients */
 .bg-gradient-hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
 }
 .bg-gradient-soft {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
 }
 .bg-gradient-card {
   background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
 }
-.bg-gradient-warm {
-  background: linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%);
-}
-.bg-gradient-cool {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-}
-.bg-gradient-purple-soft {
-  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-}
 
-.sintha-pulse {
-  animation: sintha-pulse 2s infinite;
-}
-
-@keyframes sintha-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.02); }
-}
-
-/* Floating animation for hero elements */
-.sintha-float {
-  animation: sintha-float 3s ease-in-out infinite;
-}
-
-@keyframes sintha-float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-}
-
-/* Scrollbar styling */
+/* Scrollbar */
 .sintha-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -296,14 +214,11 @@
   background: transparent;
 }
 .sintha-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #CBD5E1;
   border-radius: 2px;
 }
-.sintha-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #764ba2 0%, #f093fb 100%);
-}
 
-/* reCAPTCHA container — should be invisible but still functional */
+/* reCAPTCHA */
 .recaptcha-container {
   position: absolute;
   left: -9999px;
@@ -312,75 +227,58 @@
   overflow: hidden;
 }
 
-/* Marquee animation for service highlights */
+/* Marquee */
 @keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
-
 .animate-marquee {
   animation: marquee 20s linear infinite;
 }
-
 .animate-marquee:hover {
   animation-play-state: paused;
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Material Design (Android Native) — inspired styling
-   ───────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   Material Design — Static Native App Components
+   ═══════════════════════════════════════════════════════════════ */
 
-/* Material elevation levels (1-5) */
-.elevation-1 { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.06), 0 1px 3px 0 rgba(0, 0, 0, 0.10); }
-.elevation-2 { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.08), 0 2px 6px 0 rgba(0, 0, 0, 0.12); }
-.elevation-3 { box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.10), 0 1px 3px 0 rgba(0, 0, 0, 0.10); }
-.elevation-4 { box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.12), 0 3px 6px -1px rgba(0, 0, 0, 0.10); }
-.elevation-5 { box-shadow: 0 10px 20px -4px rgba(0, 0, 0, 0.14), 0 4px 8px -2px rgba(0, 0, 0, 0.10); }
+/* Elevation levels */
+.elevation-1 { box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.10); }
+.elevation-2 { box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.12); }
+.elevation-3 { box-shadow: 0 4px 8px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.10); }
+.elevation-4 { box-shadow: 0 6px 12px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.10); }
+.elevation-5 { box-shadow: 0 10px 20px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.10); }
 
-/* Vibrant top app bar — animated gradient */
+/* Top app bar — solid static gradient, no animation */
 .sintha-top-bar {
-  background: linear-gradient(135deg, #667eea 0%, #0F4C81 50%, #764ba2 100%);
-  background-size: 200% 200%;
-  animation: gradient-slide 8s ease infinite;
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
   color: #FFFFFF;
   padding-top: env(safe-area-inset-top);
   position: sticky;
   top: 0;
   z-index: 40;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .sintha-app-bar {
-  background: linear-gradient(135deg, #667eea 0%, #0F4C81 50%, #764ba2 100%);
-  background-size: 200% 200%;
-  animation: gradient-slide 8s ease infinite;
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
   color: #FFFFFF;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-/* Material-style filled button — vibrant gradient */
+/* Filled button — static, no hover lift */
 .sintha-btn-filled {
-  background: linear-gradient(135deg, #667eea 0%, #0F4C81 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
   color: #FFFFFF;
-  border-radius: 14px;
+  border-radius: 12px;
   min-height: 48px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.30);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sintha-btn-filled:hover {
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.40);
-  filter: brightness(1.08);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 76, 129, 0.20);
+  transition: filter 0.1s ease;
 }
 .sintha-btn-filled:active {
-  transform: scale(0.98);
-  filter: brightness(0.95);
+  filter: brightness(0.92);
 }
 .sintha-btn-filled:disabled {
   background: #CBD5E1;
@@ -388,24 +286,18 @@
   cursor: not-allowed;
 }
 
-/* Book button — ORANGE (#F59E0B) — matches the new provider card design */
+/* Book button — static Sintha Blue */
 .sintha-btn-book {
-  background: linear-gradient(135deg, #F59E0B 0%, #E68900 100%);
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
   color: #FFFFFF;
-  border-radius: 14px;
+  border-radius: 12px;
   min-height: 48px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.40), 0 1px 2px rgba(245, 158, 11, 0.25);
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sintha-btn-book:hover {
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.50), 0 2px 4px rgba(245, 158, 11, 0.30);
-  filter: brightness(1.05);
+  box-shadow: 0 2px 6px rgba(15, 76, 129, 0.20);
+  transition: filter 0.1s ease;
 }
 .sintha-btn-book:active {
-  transform: scale(0.98);
-  filter: brightness(0.95);
+  filter: brightness(0.92);
 }
 .sintha-btn-book:disabled {
   background: #CBD5E1;
@@ -413,62 +305,50 @@
   cursor: not-allowed;
 }
 
-/* Material-style outlined button — glassmorphism */
+/* Outlined button — static */
 .sintha-btn-outlined {
-  background: rgba(255, 255, 255, 0.6);
+  background: transparent;
   color: #0F4C81;
   border: 2px solid #0F4C81;
-  border-radius: 14px;
+  border-radius: 12px;
   min-height: 48px;
   font-weight: 600;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sintha-btn-outlined:hover {
-  background: rgba(15, 76, 129, 0.08);
-  border-color: #667eea;
-  color: #667eea;
+  transition: background 0.1s ease;
 }
 .sintha-btn-outlined:active {
-  background: rgba(15, 76, 129, 0.14);
+  background: rgba(15, 76, 129, 0.08);
 }
 
-/* Material-style chip — colorful */
+/* Chip — static */
 .sintha-chip {
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf3 100%);
+  background: #F1F5F9;
   color: #1F2937;
   border-radius: 8px;
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
   border: 1px solid #E2E8F0;
-  transition: all 0.2s ease;
 }
 .sintha-chip-active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #0F4C81;
   color: #FFFFFF;
-  border-color: transparent;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.30);
+  border-color: #0F4C81;
 }
 
-/* Material-style card — glassmorphism */
+/* Material card — solid, no blur */
 .sintha-material-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #FFFFFF;
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: none;
 }
 
-/* Material-style bottom navigation — glassmorphism */
+/* Bottom navigation — solid white */
 .sintha-bottom-nav {
-  background: rgba(255, 255, 255, 0.90);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 -4px 20px rgba(102, 126, 234, 0.08);
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  background: #FFFFFF;
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.06);
+  border-top: none;
 }
 .sintha-bottom-nav-item {
   display: flex;
@@ -479,232 +359,33 @@
   font-size: 11px;
   font-weight: 500;
   color: #64748B;
-  transition: color 0.15s ease;
 }
 .sintha-bottom-nav-item-active {
-  color: #667eea;
+  color: #0F4C81;
 }
 
-/* Material-style status badges — vibrant gradients */
+/* Verified badge — solid blue */
 .sintha-badge-verified {
-  background: linear-gradient(135deg, #2af598 0%, #009efd 100%);
-  color: #FFFFFF;
-  border: none;
+  background: #EFF6FF;
+  color: #0F4C81;
+  border: 1px solid #BFDBFE;
   border-radius: 9999px;
-  padding: 2px 10px;
+  padding: 2px 8px;
   font-size: 11px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(42, 245, 152, 0.30);
-}
-
-/* ─── NEW: Provider card design (gradient header + centered avatar) ─── */
-.sintha-provider-card {
-  background: #FFFFFF;
-  border-radius: 22px;
-  overflow: hidden;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.10), 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: none;
-}
-.sintha-provider-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(102, 126, 234, 0.18), 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-
-.sintha-provider-card-header {
-  height: 80px;
-  background: linear-gradient(135deg, #667eea 0%, #0F4C81 50%, #764ba2 100%);
-  background-size: 200% 200%;
-  animation: gradient-slide 8s ease infinite;
-}
-
-.sintha-provider-card-avatar {
-  margin-top: -40px;
-  border: 5px solid #FFFFFF;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.sintha-info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 14px;
-  border-bottom: 1px solid #F1F5F9;
-}
-.sintha-info-row:last-child {
-  border-bottom: none;
-}
-.sintha-info-label {
-  color: #64748B;
-  font-weight: 500;
-}
-.sintha-info-value {
-  color: #0F172A;
-  font-weight: 600;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Provider Card V2 — matches the HTML template exactly
-   Layout: Header (avatar + info) | Body (description + details) | Footer (buttons)
+   Provider Cards — Uniform, Static, Clean
    ═══════════════════════════════════════════════════════════════ */
 
-.provider-card-v2 {
-  background: #FFFFFF;
-  width: 100%;
-  max-width: 360px;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: none;
-}
-.provider-card-v2:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-}
-
-/* Header — avatar + provider info */
-.provider-card-v2-header {
-  display: flex;
-  align-items: center;
-  padding: 24px;
-  border-bottom: 1px solid #F3F4F6;
-}
-.provider-card-v2-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #E5E7EB;
-  flex-shrink: 0;
-}
-.provider-card-v2-info {
-  margin-left: 16px;
-  flex: 1;
-  min-width: 0;
-}
-.provider-card-v2-name {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #111827;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.provider-card-v2-title {
-  font-size: 0.875rem;
-  color: #6B7280;
-  margin-top: 4px;
-}
-.provider-card-v2-rating {
-  display: flex;
-  align-items: center;
-  font-size: 0.875rem;
-  color: #F59E0B;
-  margin-top: 6px;
-  font-weight: 600;
-}
-.provider-card-v2-rating span {
-  color: #9CA3AF;
-  font-weight: 400;
-  margin-left: 4px;
-}
-
-/* Body — description + job details */
-.provider-card-v2-body {
-  padding: 24px;
-}
-.provider-card-v2-description {
-  font-size: 0.875rem;
-  color: #4B5563;
-  line-height: 1.5;
-  margin-bottom: 16px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.provider-card-v2-details {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.provider-card-v2-details li {
-  font-size: 0.875rem;
-  color: #374151;
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.provider-card-v2-details li:last-child {
-  margin-bottom: 0;
-}
-.provider-card-v2-detail-icon {
-  margin-right: 8px;
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
-/* Footer — buttons */
-.provider-card-v2-footer {
-  padding: 0 24px 24px 24px;
-  display: flex;
-  gap: 12px;
-}
-.provider-card-v2-footer button {
-  flex: 1;
-  padding: 12px 0;
-  border-radius: 10px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-}
-/* Book Now button — blue (matches HTML template) */
-.provider-card-v2-btn-book {
-  background-color: #0F4C81;
-  color: #FFFFFF;
-  box-shadow: 0 4px 6px rgba(15, 76, 129, 0.2);
-}
-.provider-card-v2-btn-book:hover {
-  background-color: #0A3A61;
-}
-.provider-card-v2-btn-book:active {
-  transform: scale(0.98);
-}
-/* Call button — light gray with border */
-.provider-card-v2-btn-call {
-  background-color: #F3F4F6;
-  color: #111827;
-  border: 1px solid #D1D5DB;
-}
-.provider-card-v2-btn-call:hover {
-  background-color: #E5E7EB;
-}
-.provider-card-v2-btn-call:active {
-  transform: scale(0.98);
-}
-/* ═══════════════════════════════════════════════════════════════
-   Provider Card — Uniform Medium Size (all cards same size)
-   Text truncates to fit. No card grows taller than another.
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Vertical card (search results + verified providers) */
 .provider-card-uniform {
   background: #FFFFFF;
   border-radius: 16px;
   padding: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid #E2E8F0;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: none;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -712,22 +393,14 @@
   width: 100%;
   overflow: hidden;
 }
-.provider-card-uniform:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(15, 76, 129, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-.provider-card-uniform:active {
-  transform: scale(0.99);
-}
 
-/* Horizontal scroll card — FIXED size (200px wide, 280px tall) */
+/* Horizontal card (nearby scroll) — fixed size */
 .provider-card-horizontal {
   background: #FFFFFF;
   border-radius: 16px;
   padding: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid #E2E8F0;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -735,19 +408,12 @@
   width: 200px;
   min-width: 200px;
   max-width: 200px;
-  height: 280px;
+  height: 290px;
   overflow: hidden;
   position: relative;
 }
-.provider-card-horizontal:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(15, 76, 129, 0.12), 0 2px 6px rgba(0, 0, 0, 0.06);
-}
-.provider-card-horizontal:active {
-  transform: scale(0.99);
-}
 
-/* Text truncation — single line (clean ellipsis cut) */
+/* Text truncation */
 .text-truncate-1 {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -755,7 +421,6 @@
   display: block;
   width: 100%;
 }
-/* Text truncation — 2 lines max */
 .text-truncate-2 {
   overflow: hidden;
   display: -webkit-box;
@@ -766,7 +431,7 @@
   width: 100%;
 }
 
-/* Card content area — fixed height sections so all cards align */
+/* Card content sections */
 .provider-card-content {
   flex: 1;
   min-width: 0;
@@ -817,4 +482,98 @@
   gap: 2px;
   color: #9CA3AF;
   max-width: 70px;
+}
+
+/* Provider card with gradient header (used on profile screen) */
+.sintha-provider-card {
+  background: #FFFFFF;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: none;
+}
+
+.sintha-provider-card-header {
+  height: 80px;
+  background: linear-gradient(135deg, #0F4C81 0%, #0A3A61 100%);
+}
+
+.sintha-provider-card-avatar {
+  margin-top: -40px;
+  border: 5px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.sintha-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #F1F5F9;
+}
+.sintha-info-row:last-child {
+  border-bottom: none;
+}
+.sintha-info-label {
+  color: #64748B;
+  font-weight: 500;
+}
+.sintha-info-value {
+  color: #0F172A;
+  font-weight: 600;
+}
+
+/* Highlight box (provider profile description) */
+.sintha-highlight-box {
+  background: #F0F9FF;
+  border-left: 4px solid #0F4C81;
+  border-radius: 0 12px 12px 0;
+  padding: 16px 18px;
+}
+.sintha-highlight-title {
+  color: #0F4C81;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.sintha-highlight-body {
+  color: #1E3A5F;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Snackbar */
+.sintha-snackbar {
+  background: #1F2937;
+  color: #FFFFFF;
+  border-radius: 8px;
+  padding: 14px 16px;
+  min-height: 48px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.20);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* List item */
+.sintha-list-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  min-height: 56px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #F1F5F9;
+}
+.sintha-list-item:active {
+  background: #F8FAFC;
+}
+
+/* Divider */
+.sintha-divider {
+  height: 1px;
+  background: #E2E8F0;
+  margin: 16px 0;
 }
